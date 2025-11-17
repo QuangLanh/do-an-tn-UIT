@@ -18,10 +18,10 @@ front_end_project/
 │
 ├── 📂 src/                       # Source code
 │   ├── 📄 main.tsx               # React entry point
-│   ├── 📄 App.tsx                # Root component
-│   ├── 📄 index.css              # Global styles
+│   ├── 📄 UngDung.tsx            # Root component (App)
+│   ├── 📄 chi-so.css             # Global styles
 │   │
-│   ├── 📂 domains/               # 🔵 DOMAIN LAYER (Business Logic)
+│   ├── 📂 linh-vuc/              # 🔵 DOMAIN LAYER (Business Logic)
 │   │   │
 │   │   ├── 📂 products/          # Product domain
 │   │   │   ├── 📂 entities/
@@ -54,49 +54,55 @@ front_end_project/
 │   │       └── 📂 services/
 │   │           └── AuthService.ts        # Authentication
 │   │
-│   ├── 📂 ui/                    # 🟢 PRESENTATION LAYER (UI)
+│   ├── 📂 giao-dien/             # 🟢 PRESENTATION LAYER (UI)
 │   │   │
 │   │   ├── 📂 components/        # Reusable components
-│   │   │   ├── Badge.tsx         # Badge component
-│   │   │   ├── Button.tsx        # Button component
-│   │   │   ├── Card.tsx          # Card component
-│   │   │   ├── Input.tsx         # Input component
-│   │   │   ├── Modal.tsx         # Modal component
-│   │   │   ├── StatCard.tsx      # Stat card component
-│   │   │   └── Table.tsx         # Table component
+│   │   │   ├── HuyHieu.tsx       # Badge component
+│   │   │   ├── NutBam.tsx        # Button component
+│   │   │   ├── TheThongTin.tsx   # Card component
+│   │   │   ├── NhapLieu.tsx      # Input component
+│   │   │   ├── HopThoai.tsx      # Modal component
+│   │   │   ├── TheThongKe.tsx    # Stat card component
+│   │   │   └── BangDuLieu.tsx    # Table component
 │   │   │
 │   │   ├── 📂 layouts/           # Layout components
-│   │   │   ├── MainLayout.tsx    # Main layout wrapper
-│   │   │   ├── Navbar.tsx        # Top navigation bar
-│   │   │   └── Sidebar.tsx       # Side menu
+│   │   │   ├── BoCucChinh.tsx    # Main layout wrapper
+│   │   │   ├── ThanhDieuHuong.tsx# Top navigation bar
+│   │   │   └── ThanhBen.tsx      # Side menu
 │   │   │
-│   │   └── 📂 pages/             # Page components
-│   │       ├── LoginPage.tsx     # Login page
-│   │       ├── DashboardPage.tsx # Dashboard page
-│   │       ├── ProductsPage.tsx  # Products management page
-│   │       ├── InventoryPage.tsx # Inventory page
-│   │       ├── ReportsPage.tsx   # Reports page
-│   │       └── NotFoundPage.tsx  # 404 page
+│   │   └── 📂 pages/             # Page components (đặt tên thuần Việt)
+│   │       ├── TrangDangNhap.tsx
+│   │       ├── TrangBangDieuKhien.tsx
+│   │       ├── TrangSanPham.tsx
+│   │       ├── TrangKiemKe.tsx
+│   │       ├── TrangBaoCao.tsx
+│   │       ├── TrangDonHang.tsx
+│   │       ├── TrangNhapHang.tsx
+│   │       ├── TrangTaoDonHang.tsx
+│   │       ├── TrangTaoNhapHang.tsx
+│   │       └── TrangKhongTimThay.tsx
 │   │
-│   ├── 📂 infra/                 # 🟣 INFRASTRUCTURE LAYER
+│   ├── 📂 ha-tang/               # 🟣 INFRASTRUCTURE LAYER
 │   │   ├── 📂 api/
-│   │   │   └── productApi.ts     # Product API factory
+│   │   │   ├── productApi.ts     # Product API factory
+│   │   │   ├── orderApi.ts
+│   │   │   ├── purchaseApi.ts
+│   │   │   └── reportApi.ts
 │   │   └── 📂 utils/
 │   │       └── formatters.ts     # Utility functions
 │   │
-│   ├── 📂 store/                 # 🟡 STATE MANAGEMENT
-│   │   ├── authStore.ts          # Auth state (Zustand)
-│   │   ├── themeStore.ts         # Theme state (Zustand)
-│   │   └── sidebarStore.ts       # Sidebar state (Zustand)
+│   ├── 📂 kho-trang-thai/        # 🟡 STATE MANAGEMENT (Zustand)
+│   │   ├── khoXacThuc.ts         # Auth state
+│   │   ├── khoChuDe.ts           # Theme state
+│   │   └── khoThanhBen.ts        # Sidebar state
 │   │
-│   └── 📂 router/                # 🔴 ROUTING
-│       ├── AppRouter.tsx         # Main router
-│       └── ProtectedRoute.tsx    # Protected route wrapper
+│   └── 📂 dinh-tuyen/            # 🔴 ROUTING
+│       ├── UngDungDinhTuyen.tsx  # Main router
+│       └── TuyenBaoVe.tsx        # Protected route wrapper
 │
-└── 📚 Docs/                      # Documentation
-    ├── README.md                 # Main documentation (English)
-    ├── HUONG_DAN.md              # Vietnamese guide
-    ├── QUICK_START.md            # Quick start guide
+└── 📚 documents/                 # Documentation
+    ├── README.md                 # Documentation index
+    ├── GETTING_STARTED.md        # Quick start guide
     ├── FEATURES.md               # Features list
     └── PROJECT_STRUCTURE.md      # This file
 ```
@@ -126,29 +132,28 @@ front_end_project/
 - Orchestrate services và repositories
 - Single Responsibility Principle
 
-### 🟢 PRESENTATION LAYER (UI)
+### 🟢 PRESENTATION LAYER (UI - `giao-dien/`)
 **Mục đích:** Hiển thị UI và xử lý user interactions
 
 #### Components
-- Reusable components
+- Các component tái sử dụng (NutBam, NhapLieu, HuyHieu, BangDuLieu…)
 - Props-driven
 - TypeScript typed
 
 #### Layouts
-- Layout wrappers
-- Navbar, Sidebar
+- BoCucChinh, ThanhDieuHuong, ThanhBen
 - Consistent structure
 
 #### Pages
-- Full page components
+- Các trang đặt tên thuần Việt (`TrangBangDieuKhien`, `TrangSanPham`, …)
 - Connect to domain layer
 - Handle routing
 
-### 🟣 INFRASTRUCTURE LAYER
+### 🟣 INFRASTRUCTURE LAYER (`ha-tang/`)
 **Mục đích:** Technical details, utilities
 
 #### API
-- API clients
+- API clients (productApi, orderApi, purchaseApi, reportApi)
 - Factory pattern
 - Dependency injection
 
@@ -157,18 +162,18 @@ front_end_project/
 - Formatters
 - Constants
 
-### 🟡 STATE MANAGEMENT (Zustand)
+### 🟡 STATE MANAGEMENT (Zustand - `kho-trang-thai/`)
 **Mục đích:** Global state management
 
-- `authStore` - Authentication & user info
-- `themeStore` - Dark/Light mode
-- `sidebarStore` - Sidebar open/close
+- `khoXacThuc` - Authentication & user info
+- `khoChuDe` - Dark/Light mode
+- `khoThanhBen` - Sidebar open/close
 
-### 🔴 ROUTING (React Router v6)
+### 🔴 ROUTING (React Router v6 - `dinh-tuyen/`)
 **Mục đích:** Navigation và route protection
 
-- `AppRouter` - Route definitions
-- `ProtectedRoute` - Auth guard
+- `UngDungDinhTuyen` - Route definitions
+- `TuyenBaoVe` - Auth guard
 - Permission-based access
 
 ## 📊 Data Flow

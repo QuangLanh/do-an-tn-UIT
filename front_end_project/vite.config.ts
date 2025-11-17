@@ -8,10 +8,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@/domains': path.resolve(__dirname, './src/domains'),
-      '@/ui': path.resolve(__dirname, './src/ui'),
-      '@/infra': path.resolve(__dirname, './src/infra'),
-      '@/store': path.resolve(__dirname, './src/store'),
+      '@/linh-vuc': path.resolve(__dirname, './src/linh-vuc'),
+      '@/giao-dien': path.resolve(__dirname, './src/giao-dien'),
+      '@/ha-tang': path.resolve(__dirname, './src/ha-tang'),
+      '@/kho-trang-thai': path.resolve(__dirname, './src/kho-trang-thai'),
+      '@/dinh-tuyen': path.resolve(__dirname, './src/dinh-tuyen'),
     },
   },
 })

@@ -25,10 +25,11 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@/domains/*": ["./src/domains/*"],
-      "@/ui/*": ["./src/ui/*"],
-      "@/infra/*": ["./src/infra/*"],
-      "@/store/*": ["./src/store/*"]
+      "@/linh-vuc/*": ["./src/linh-vuc/*"],
+      "@/giao-dien/*": ["./src/giao-dien/*"],
+      "@/ha-tang/*": ["./src/ha-tang/*"],
+      "@/kho-trang-thai/*": ["./src/kho-trang-thai/*"],
+      "@/dinh-tuyen/*": ["./src/dinh-tuyen/*"]
     }
   },
   "include": ["src"],
