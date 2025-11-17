@@ -1,11 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { UngDungPhanHe } from './ung-dung.phan-he';
+import { BoLocNgoaiLeHttp } from './dung-chung/bo-loc/bo-loc-ngoai-le-http';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(UngDungPhanHe);
   const logger = new Logger('Bootstrap');
 
   // Global prefix
@@ -32,21 +32,21 @@ async function bootstrap() {
   );
 
   // Global exception filter
-  app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalFilters(new BoLocNgoaiLeHttp());
 
   // Swagger configuration
   const config = new DocumentBuilder()
-    .setTitle('Grocery Store Management API')
-    .setDescription('Backend API for Grocery Store Management System')
+    .setTitle('API Quản lý Cửa hàng Tạp hóa')
+    .setDescription('Hệ thống backend phục vụ quản lý vận hành cửa hàng tại Việt Nam')
     .setVersion('1.0')
-    .addTag('auth', 'Authentication endpoints')
-    .addTag('users', 'User management endpoints')
-    .addTag('products', 'Product management endpoints')
-    .addTag('orders', 'Order management endpoints')
-    .addTag('purchases', 'Purchase management endpoints')
-    .addTag('transactions', 'Transaction endpoints')
-    .addTag('reports', 'Report generation endpoints')
-    .addTag('dashboard', 'Dashboard data endpoints')
+    .addTag('xac-thuc', 'Các điểm cuối xác thực')
+    .addTag('nguoi-dung', 'Quản lý người dùng')
+    .addTag('san-pham', 'Quản lý sản phẩm')
+    .addTag('don-hang', 'Quản lý đơn hàng')
+    .addTag('nhap-hang', 'Quản lý nhập hàng')
+    .addTag('giao-dich', 'Thống kê giao dịch')
+    .addTag('bao-cao', 'Báo cáo và xuất file')
+    .addTag('bang-dieu-khien', 'Dữ liệu tổng quan dashboard')
     .addBearerAuth()
     .build();
 

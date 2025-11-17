@@ -9,103 +9,102 @@ back_end_project/
 │
 ├── src/                                    # Source code
 │   │
-│   ├── modules/                           # Feature modules (Domain Layer)
+│   ├── phan-he/                            # Feature modules (Domain Layer)
 │   │   │
-│   │   ├── auth/                          # Authentication Module
+│   │   ├── xac-thuc/                       # Authentication Module
 │   │   │   ├── dto/                       # Data Transfer Objects
-│   │   │   │   ├── login.dto.ts          # Login request DTO
-│   │   │   │   └── register.dto.ts       # Register request DTO
-│   │   │   ├── strategies/               # Passport strategies
-│   │   │   │   ├── jwt.strategy.ts       # JWT validation strategy
-│   │   │   │   └── local.strategy.ts     # Local auth strategy
-│   │   │   ├── auth.controller.ts        # Auth endpoints
-│   │   │   ├── auth.service.ts           # Auth business logic
-│   │   │   └── auth.module.ts            # Auth module definition
+│   │   │   │   ├── dang-nhap.dto.ts       # Login request DTO
+│   │   │   │   └── dang-ky.dto.ts         # Register request DTO
+│   │   │   ├── chien-luoc/                # Passport strategies
+│   │   │   │   ├── chien-luoc-jwt.ts      # JWT validation strategy
+│   │   │   │   └── chien-luoc-dia-phuong.ts # Local auth strategy
+│   │   │   ├── xac-thuc.dieu-khien.ts     # Auth controller
+│   │   │   ├── xac-thuc.dich-vu.ts        # Auth service
+│   │   │   └── xac-thuc.phan-he.ts        # Auth module definition
 │   │   │
-│   │   ├── user/                          # User Management Module
+│   │   ├── nguoi-dung/                    # User Management Module
 │   │   │   ├── schemas/                   # Database schemas
-│   │   │   │   └── user.schema.ts        # User mongoose schema
+│   │   │   │   └── user.schema.ts
 │   │   │   ├── dto/                       # DTOs
-│   │   │   │   ├── create-user.dto.ts    # Create user DTO
-│   │   │   │   └── update-user.dto.ts    # Update user DTO
-│   │   │   ├── user.controller.ts        # User endpoints
-│   │   │   ├── user.service.ts           # User business logic
-│   │   │   └── user.module.ts            # User module definition
+│   │   │   │   ├── tao-nguoi-dung.dto.ts
+│   │   │   │   └── cap-nhat-nguoi-dung.dto.ts
+│   │   │   ├── nguoi-dung.dieu-khien.ts
+│   │   │   ├── nguoi-dung.dich-vu.ts
+│   │   │   └── nguoi-dung.phan-he.ts
 │   │   │
-│   │   ├── product/                       # Product Management Module
-│   │   │   ├── schemas/
-│   │   │   │   └── product.schema.ts     # Product schema
+│   │   ├── san-pham/
+│   │   │   ├── schemas/product.schema.ts
 │   │   │   ├── dto/
-│   │   │   │   ├── create-product.dto.ts
-│   │   │   │   ├── update-product.dto.ts
-│   │   │   │   └── update-stock.dto.ts   # Stock management DTO
-│   │   │   ├── product.controller.ts
-│   │   │   ├── product.service.ts
-│   │   │   └── product.module.ts
+│   │   │   │   ├── tao-san-pham.dto.ts
+│   │   │   │   ├── cap-nhat-san-pham.dto.ts
+│   │   │   │   └── cap-nhat-ton-kho.dto.ts
+│   │   │   ├── san-pham.dieu-khien.ts
+│   │   │   ├── san-pham.dich-vu.ts
+│   │   │   └── san-pham.phan-he.ts
 │   │   │
-│   │   ├── order/                         # Order Management Module
-│   │   │   ├── schemas/
-│   │   │   │   └── order.schema.ts       # Order & OrderItem schemas
+│   │   ├── don-hang/
+│   │   │   ├── schemas/order.schema.ts
 │   │   │   ├── dto/
-│   │   │   │   ├── create-order.dto.ts
-│   │   │   │   └── update-order-status.dto.ts
-│   │   │   ├── order.controller.ts
-│   │   │   ├── order.service.ts
-│   │   │   └── order.module.ts
+│   │   │   │   ├── tao-don-hang.dto.ts
+│   │   │   │   └── cap-nhat-trang-thai-don-hang.dto.ts
+│   │   │   ├── don-hang.dieu-khien.ts
+│   │   │   ├── don-hang.dich-vu.ts
+│   │   │   └── don-hang.phan-he.ts
 │   │   │
-│   │   ├── purchase/                      # Purchase Management Module
-│   │   │   ├── schemas/
-│   │   │   │   └── purchase.schema.ts    # Purchase schema
+│   │   ├── nhap-hang/
+│   │   │   ├── schemas/purchase.schema.ts
 │   │   │   ├── dto/
-│   │   │   │   └── create-purchase.dto.ts
-│   │   │   ├── purchase.controller.ts
-│   │   │   ├── purchase.service.ts
-│   │   │   └── purchase.module.ts
+│   │   │   │   ├── tao-nhap-hang.dto.ts
+│   │   │   │   └── goi-y-nhap-hang.dto.ts
+│   │   │   ├── nhap-hang.dieu-khien.ts
+│   │   │   ├── nhap-hang.dich-vu.ts
+│   │   │   └── nhap-hang.phan-he.ts
 │   │   │
-│   │   ├── transaction/                   # Transaction Aggregation Module
-│   │   │   ├── transaction.controller.ts # Transaction endpoints
-│   │   │   ├── transaction.service.ts    # Transaction calculations
-│   │   │   └── transaction.module.ts
+│   │   ├── giao-dich/                      # Transaction Aggregation Module
+│   │   │   ├── giao-dich.dieu-khien.ts
+│   │   │   ├── giao-dich.dich-vu.ts
+│   │   │   └── giao-dich.phan-he.ts
 │   │   │
-│   │   ├── report/                        # Reporting Module
-│   │   │   ├── report.controller.ts      # Report endpoints
-│   │   │   ├── report.service.ts         # Report generation & PDF
-│   │   │   └── report.module.ts
+│   │   ├── bao-cao/
+│   │   │   ├── bao-cao.dieu-khien.ts
+│   │   │   ├── bao-cao.dich-vu.ts
+│   │   │   └── bao-cao.phan-he.ts
 │   │   │
-│   │   └── dashboard/                     # Dashboard Module
-│   │       ├── dashboard.controller.ts   # Dashboard endpoints
-│   │       ├── dashboard.service.ts      # Dashboard data aggregation
-│   │       └── dashboard.module.ts
+│   │   └── bang-dieu-khien/
+│   │       ├── bang-dieu-khien.dieu-khien.ts
+│   │       ├── bang-dieu-khien.dich-vu.ts
+│   │       └── bang-dieu-khien.phan-he.ts
 │   │
-│   ├── common/                            # Shared resources
+│   ├── dung-chung/                          # Shared resources
 │   │   │
-│   │   ├── decorators/                    # Custom decorators
-│   │   │   ├── roles.decorator.ts        # @Roles decorator for RBAC
-│   │   │   └── current-user.decorator.ts # @CurrentUser decorator
+│   │   ├── trang-tri/                      # Decorators
+│   │   │   ├── vai-tro.trang-tri.ts
+│   │   │   └── nguoi-dung-hien-tai.trang-tri.ts
 │   │   │
-│   │   ├── guards/                        # Route guards
-│   │   │   ├── jwt-auth.guard.ts         # JWT authentication guard
-│   │   │   └── roles.guard.ts            # Role-based authorization guard
+│   │   ├── bao-ve/                          # Route guards
+│   │   │   ├── bao-ve-jwt.ts
+│   │   │   └── bao-ve-vai-tro.ts
 │   │   │
-│   │   ├── filters/                       # Exception filters
-│   │   │   └── http-exception.filter.ts  # Global exception handler
+│   │   ├── bo-loc/                          # Exception filters
+│   │   │   └── bo-loc-ngoai-le-http.ts
 │   │   │
-│   │   ├── enums/                         # Shared enumerations
-│   │   │   ├── user-role.enum.ts         # User roles
-│   │   │   ├── order-status.enum.ts      # Order statuses
-│   │   │   └── transaction-type.enum.ts  # Transaction types
+│   │   ├── liet-ke/                        # Shared enums
+│   │   │   ├── vai-tro-nguoi-dung.enum.ts
+│   │   │   ├── trang-thai-don-hang.enum.ts
+│   │   │   └── loai-giao-dich.enum.ts
 │   │   │
-│   │   └── interfaces/                    # Type definitions
-│   │       └── jwt-payload.interface.ts  # JWT token payload
+│   │   └── giao-dien/                      # Interfaces
+│   │       └── jwt-payload.giao-dien.ts
 │   │
-│   ├── config/                            # Configuration files
-│   │   ├── database.config.ts            # MongoDB configuration
-│   │   └── jwt.config.ts                 # JWT configuration
+│   ├── cau-hinh/                            # Configuration files
+│   │   ├── cau-hinh-co-so-du-lieu.ts
+│   │   └── cau-hinh-jwt.ts
 │   │
-│   ├── app.module.ts                      # Root application module
-│   ├── app.controller.ts                  # Root controller (health checks)
-│   ├── app.service.ts                     # Root service
-│   └── main.ts                            # Application entry point
+│   ├── ung-dung.phan-he.ts                  # Root application module
+│   ├── ung-dung.dieu-khien.ts               # Root controller (health checks)
+│   ├── ung-dung.dich-vu.ts                  # Root service
+│   ├── main.ts                              # Application entry point
+│   └── gieo-du-lieu.ts                      # Database seeder
 │
 ├── uploads/                               # Upload directory
 │   └── pdfs/                              # Generated PDF files
