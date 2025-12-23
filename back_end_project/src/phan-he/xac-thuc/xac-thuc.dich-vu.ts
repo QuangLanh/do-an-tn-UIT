@@ -4,9 +4,11 @@ import * as bcrypt from 'bcrypt';
 import { DichVuNguoiDung } from '../nguoi-dung/nguoi-dung.dich-vu';
 import { DangKyDto } from './dto/dang-ky.dto';
 import { DangNhapDto } from './dto/dang-nhap.dto';
+import { DangNhapKhachHangDto } from './dto/dang-nhap-khach-hang.dto';
 import { JwtTaiDuLieu } from '../../dung-chung/giao-dien/jwt-payload.giao-dien';
 import { VaiTroNguoiDung } from '../../dung-chung/liet-ke/vai-tro-nguoi-dung.enum';
 import { UserDocument } from '../nguoi-dung/schemas/user.schema';
+import { DichVuKhachHang } from '../khach-hang/khach-hang.dich-vu';
 
 @Injectable()
 export class DichVuXacThuc {
@@ -14,6 +16,7 @@ export class DichVuXacThuc {
 
   constructor(
     private dichVuNguoiDung: DichVuNguoiDung,
+    private dichVuKhachHang: DichVuKhachHang,
     private jwtService: JwtService,
   ) {}
 
@@ -87,6 +90,36 @@ export class DichVuXacThuc {
         email: user.email,
         fullName: user.fullName,
         role: user.role,
+      },
+    };
+  }
+
+  /**
+   * Đăng nhập khách hàng bằng số điện thoại (OTP giả lập / login đơn giản).
+   * - Không dùng mật khẩu
+   * - Nếu chưa có khách hàng => tạo mới
+   */
+  async dangNhapKhachHang(dto: DangNhapKhachHangDto) {
+    const khachHang = await this.dichVuKhachHang.taoNeuChuaCo(
+      dto.soDienThoai,
+      dto.ten,
+    );
+
+    const payload: JwtTaiDuLieu = {
+      sub: khachHang._id.toString(),
+      soDienThoai: khachHang.soDienThoai,
+      role: VaiTroNguoiDung.CUSTOMER,
+    };
+
+    this.logger.log(`Customer logged in: ${khachHang.soDienThoai}`);
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      customer: {
+        id: khachHang._id,
+        soDienThoai: khachHang.soDienThoai,
+        ten: khachHang.ten,
+        role: khachHang.role,
       },
     };
   }

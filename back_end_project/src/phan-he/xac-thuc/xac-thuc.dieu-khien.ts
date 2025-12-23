@@ -8,6 +8,7 @@ import {
 import { DichVuXacThuc } from './xac-thuc.dich-vu';
 import { DangKyDto } from './dto/dang-ky.dto';
 import { DangNhapDto } from './dto/dang-nhap.dto';
+import { DangNhapKhachHangDto } from './dto/dang-nhap-khach-hang.dto';
 import { BaoVeJwt } from '../../dung-chung/bao-ve/bao-ve-jwt';
 import { BaoVeVaiTro } from '../../dung-chung/bao-ve/bao-ve-vai-tro';
 import { VaiTro } from '../../dung-chung/trang-tri/vai-tro.trang-tri';
@@ -34,6 +35,23 @@ export class DieuKhienXacThuc {
   @ApiResponse({ status: 200, description: 'User logged in successfully' })
   login(@Body() loginDto: DangNhapDto) {
     return this.dichVuXacThuc.login(loginDto);
+  }
+
+  @Post('customer/login')
+  @ApiOperation({ summary: 'Đăng nhập khách hàng bằng số điện thoại' })
+  @ApiResponse({ status: 200, description: 'Customer logged in successfully' })
+  dangNhapKhachHang(@Body() dto: DangNhapKhachHangDto) {
+    return this.dichVuXacThuc.dangNhapKhachHang(dto);
+  }
+
+  @Get('customer/me')
+  @UseGuards(BaoVeJwt, BaoVeVaiTro)
+  @VaiTro(VaiTroNguoiDung.CUSTOMER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy thông tin khách hàng hiện tại' })
+  @ApiResponse({ status: 200, description: 'Return current customer profile' })
+  thongTinKhachHang(@NguoiDungHienTai() user: any) {
+    return user;
   }
 
   @Get('profile')

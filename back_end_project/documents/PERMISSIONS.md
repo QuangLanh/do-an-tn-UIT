@@ -2,7 +2,10 @@
 
 ## 📋 Tổng Quan
 
-Hệ thống Quản Lý Tạp Hóa sử dụng **Role-Based Access Control (RBAC)** với **4 vai trò** người dùng chính.
+Hệ thống Quản Lý Tạp Hóa sử dụng **Role-Based Access Control (RBAC)** với **3 vai trò** người dùng:
+- **ADMIN**: cao nhất
+- **STAFF**: nhân viên
+- **KHACH_HANG**: khách hàng (read-only + danh sách mua)
 
 ---
 
@@ -27,121 +30,50 @@ Hệ thống Quản Lý Tạp Hóa sử dụng **Role-Based Access Control (RBAC
 ---
 
 ### 2️⃣ Staff (Nhân Viên Bán Hàng)
-**Quyền bán hàng cơ bản**
+**Quyền vận hành/bán hàng**
 
 #### Quyền Hạn:
-- ✅ **Tạo đơn hàng**: Tạo đơn hàng mới
-- ✅ **Xem sản phẩm**: Xem danh sách và chi tiết sản phẩm
-- ✅ **In hóa đơn**: Xem và in hóa đơn đơn hàng
-- ✅ **Tính toán**: Tính tổng tiền, thuế, giảm giá
+- ✅ **Sản phẩm**: tạo/sửa (không xoá)
+- ✅ **Đơn hàng**: tạo, xem danh sách, xem chi tiết/in hoá đơn
+- ✅ **Nhập hàng**: tạo/cập nhật cơ bản
+- ✅ **Báo cáo/Dashboard/Giao dịch**: xem (tuỳ cấu hình)
 
 #### Hạn Chế:
-- ❌ **Không xem đơn hàng**: Không xem danh sách đơn hàng của người khác
-- ❌ **Không chỉnh sửa**: Không sửa/xóa đơn hàng
-- ❌ **Không xem báo cáo tài chính**: Không xem doanh thu, chi phí, lợi nhuận
-- ❌ **Không quản lý sản phẩm**: Không tạo/sửa/xóa sản phẩm
-- ❌ **Không nhập hàng**: Không tạo phiếu nhập
+- ❌ **Không xoá sản phẩm**
 - ❌ **Không quản lý người dùng**
+- ❌ **Không thao tác dữ liệu khách hàng**
 
 ---
 
-### 3️⃣ Manager (Quản Lý Cửa Hàng)
-**Quyền quản lý và giám sát**
+### 3️⃣ Khách hàng (KHACH_HANG)
+**Quyền dành cho khách hàng (không thanh toán online)**
 
 #### Quyền Hạn:
-- ✅ **Xem đơn hàng**: Xem và duyệt đơn hàng
-- ✅ **Quản lý sản phẩm**: Tạo, sửa sản phẩm (không xóa)
-- ✅ **Nhập hàng**: Tạo phiếu nhập kho
-- ✅ **Theo dõi tồn kho**: Xem tồn kho và cảnh báo
-- ✅ **Báo cáo**: Xem báo cáo doanh thu, chi phí, lợi nhuận
-- ✅ **Dashboard**: Truy cập đầy đủ dashboard
-- ✅ **Xem người dùng**: Xem danh sách người dùng
+- ✅ **Xem sản phẩm**: `GET /products`, `GET /products/:id`
+- ✅ **Danh sách mua hàng**: tạo/cập nhật/xoá/hoàn thành danh sách mua (không phải Order)
+- ✅ **Lịch sử mua hàng**: `GET /orders/history` (đơn do nhân viên tạo)
 
 #### Hạn Chế:
-- ❌ **Không xóa đơn hàng**: Chỉ xem và duyệt
-- ❌ **Không xóa sản phẩm**: Không thể xóa sản phẩm
-- ❌ **Không quản lý người dùng**: Không tạo/sửa/xóa người dùng
-- ❌ **Không phân quyền**: Không thể gán vai trò
-- ❌ **Không xuất PDF**: Chỉ xem báo cáo, không xuất file
+- ❌ Không tạo đơn hàng
+- ❌ Không thanh toán
+- ❌ Không quản lý kho/sản phẩm
+- ✅ Chỉ thao tác dữ liệu của chính mình
 
 ---
 
-### 4️⃣ Accountant (Kế Toán)
-**Quyền chỉ đọc tài chính**
+## 📊 Bảng phân quyền (tóm tắt)
 
-#### Quyền Hạn:
-- ✅ **Xem báo cáo**: Xem doanh thu, chi phí, lợi nhuận
-- ✅ **Xem giao dịch**: Xem lịch sử giao dịch
-- ✅ **Xuất báo cáo**: Xuất PDF/Excel
-- ✅ **Xem đơn hàng**: Xem danh sách đơn hàng
-- ✅ **Xem nhập hàng**: Xem phiếu nhập kho
-- ✅ **Dashboard**: Xem dashboard tổng quan
-
-#### Hạn Chế:
-- ❌ **Không CRUD**: Không tạo/sửa/xóa bất kỳ dữ liệu nào
-- ❌ **Chỉ đọc**: Chỉ xem và xuất báo cáo
-- ❌ **Không quản lý**: Không thể quản lý sản phẩm, đơn hàng, nhập hàng
-
----
-
-## 📊 Bảng Phân Quyền Chi Tiết
-
-| Module | Endpoint | Method | Admin | Staff | Manager | Accountant |
-|--------|----------|--------|-------|-------|---------|------------|
-| **Auth** |
-| | `/api/auth/register` | POST | ✅ | ❌ | ❌ | ❌ |
-| | `/api/auth/login` | POST | ✅ | ✅ | ✅ | ✅ |
-| | `/api/auth/profile` | GET | ✅ | ✅ | ✅ | ✅ |
-| **Users** |
-| | `/api/users` | GET | ✅ | ❌ | ✅ | ❌ |
-| | `/api/users/:id` | GET | ✅ | ❌ | ❌ | ❌ |
-| | `/api/users` | POST | ✅ | ❌ | ❌ | ❌ |
-| | `/api/users/:id` | PATCH | ✅ | ❌ | ❌ | ❌ |
-| | `/api/users/:id` | DELETE | ✅ | ❌ | ❌ | ❌ |
-| **Products** |
-| | `/api/products` | GET | ✅ | ✅ | ✅ | ✅ |
-| | `/api/products/:id` | GET | ✅ | ✅ | ✅ | ✅ |
-| | `/api/products` | POST | ✅ | ❌ | ✅ | ❌ |
-| | `/api/products/:id` | PATCH | ✅ | ❌ | ✅ | ❌ |
-| | `/api/products/:id/stock` | PATCH | ✅ | ❌ | ✅ | ❌ |
-| | `/api/products/:id` | DELETE | ✅ | ❌ | ❌ | ❌ |
-| | `/api/products/low-stock` | GET | ✅ | ✅ | ✅ | ✅ |
-| | `/api/products/categories` | GET | ✅ | ✅ | ✅ | ✅ |
-| **Orders** |
-| | `/api/orders` | GET | ✅ | ❌ | ✅ | ✅ |
-| | `/api/orders/:id` | GET | ✅ | ✅ | ✅ | ✅ |
-| | `/api/orders` | POST | ✅ | ✅ | ❌ | ❌ |
-| | `/api/orders/:id/status` | PATCH | ✅ | ❌ | ❌ | ❌ |
-| | `/api/orders/:id` | DELETE | ✅ | ❌ | ❌ | ❌ |
-| | `/api/orders/:id/invoice` | GET | ✅ | ✅ | ✅ | ✅ |
-| | `/api/orders/statistics` | GET | ✅ | ❌ | ✅ | ✅ |
-| | `/api/orders/top-products` | GET | ✅ | ✅ | ✅ | ✅ |
-| **Purchases** |
-| | `/api/purchases` | GET | ✅ | ❌ | ✅ | ✅ |
-| | `/api/purchases/:id` | GET | ✅ | ❌ | ✅ | ✅ |
-| | `/api/purchases` | POST | ✅ | ❌ | ✅ | ❌ |
-| | `/api/purchases/:id` | PATCH | ✅ | ❌ | ❌ | ❌ |
-| | `/api/purchases/:id` | DELETE | ✅ | ❌ | ❌ | ❌ |
-| | `/api/purchases/statistics` | GET | ✅ | ❌ | ✅ | ✅ |
-| | `/api/purchases/suppliers` | GET | ✅ | ✅ | ✅ | ✅ |
-| | `/api/purchases/recommendations` | GET | ✅ | ❌ | ✅ | ❌ |
-| | `/api/purchases/recommendations/high-priority` | GET | ✅ | ❌ | ✅ | ❌ |
-| | `/api/purchases/recommendations/low-priority` | GET | ✅ | ❌ | ✅ | ❌ |
-| **Transactions** |
-| | `/api/transactions/summary` | GET | ✅ | ❌ | ✅ | ✅ |
-| | `/api/transactions/monthly` | GET | ✅ | ❌ | ✅ | ✅ |
-| **Reports** |
-| | `/api/reports/summary` | GET | ✅ | ❌ | ✅ | ✅ |
-| | `/api/reports/revenue` | GET | ✅ | ❌ | ✅ | ✅ |
-| | `/api/reports/profit` | GET | ✅ | ❌ | ✅ | ✅ |
-| | `/api/reports/export` | GET | ✅ | ❌ | ❌ | ✅ |
-| | `/api/reports/inventory` | GET | ✅ | ❌ | ✅ | ✅ |
-| **Dashboard** |
-| | `/api/dashboard/summary` | GET | ✅ | ❌ | ✅ | ✅ |
-| | `/api/dashboard/overview` | GET | ✅ | ❌ | ✅ | ✅ |
-| | `/api/dashboard/top-products` | GET | ✅ | ❌ | ✅ | ✅ |
-| | `/api/dashboard/orders-trend` | GET | ✅ | ❌ | ✅ | ✅ |
-| | `/api/dashboard/recent-activity` | GET | ✅ | ❌ | ✅ | ✅ |
+| Nhóm API | Endpoint | Admin | Staff | Khách hàng |
+|---|---|---:|---:|---:|
+| Auth | `POST /auth/login` | ✅ | ✅ | ❌ |
+| Auth | `POST /auth/customer/login` | ✅ | ✅ | ✅ |
+| Auth | `GET /auth/profile` | ✅ | ✅ | ❌ |
+| Auth | `GET /auth/customer/me` | ❌ | ❌ | ✅ |
+| Products | `GET /products`, `GET /products/:id` | ✅ | ✅ | ✅ |
+| Products | `POST/PATCH/DELETE /products...` | ✅ | ✅(không xoá) | ❌ |
+| Orders | `POST /orders` | ✅ | ✅ | ❌ |
+| Orders | `GET /orders/history` | ❌ | ❌ | ✅ |
+| Shopping Lists | `/shopping-lists...` | ❌ | ❌ | ✅ |
 
 ---
 
@@ -152,7 +84,7 @@ Hệ thống Quản Lý Tạp Hóa sử dụng **Role-Based Access Control (RBAC
 #### Guards và Decorators:
 ```typescript
 // Sử dụng @Roles decorator để bảo vệ routes
-@Roles(UserRole.ADMIN, UserRole.MANAGER)
+@Roles(UserRole.ADMIN, UserRole.STAFF)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Get('products')
 findAll() { ... }
@@ -195,17 +127,15 @@ Sau khi chạy `yarn seed` hoặc `npm run seed`:
 |------|-------|----------|-------------|
 | Admin | `admin@taphoa.com` | `admin123` | Full access |
 | Staff | `staff@taphoa.com` | `staff123` | Sales only |
-| Manager | `manager@taphoa.com` | `manager123` | Management |
-| Accountant | `accountant@taphoa.com` | `accountant123` | Read-only financial |
+| Khách hàng | Đăng nhập bằng `soDienThoai` | (không mật khẩu) | Customer flow |
 
 ---
 
 ## 📝 Notes
 
-1. **Staff không thể xem danh sách orders**: Chỉ có thể tạo đơn mới và xem invoice của đơn đã tạo
-2. **Manager không thể xóa**: Chỉ Admin mới có quyền xóa
-3. **Accountant chỉ đọc**: Tất cả endpoints đều là GET, không có POST/PATCH/DELETE
-4. **Register chỉ Admin**: Chỉ Admin mới có quyền tạo tài khoản mới
+1. **Staff**: tạo đơn hàng tại cửa hàng + xem danh sách/chi tiết/invoice.
+2. **Khách hàng**: chỉ thao tác dữ liệu của chính mình (shopping list + order history).
+3. **Register chỉ Admin**: Chỉ Admin mới có quyền tạo tài khoản mới (nhân viên).
 
 ---
 

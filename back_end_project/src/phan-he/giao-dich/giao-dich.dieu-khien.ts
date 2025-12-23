@@ -20,7 +20,7 @@ export class DieuKhienGiaoDich {
   constructor(private readonly dichVuGiaoDich: DichVuGiaoDich) {}
 
   @Get('summary')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER, VaiTroNguoiDung.ACCOUNTANT)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({
     summary: 'Get transaction summary (Admin, Manager, Accountant)',
   })
@@ -34,7 +34,7 @@ export class DieuKhienGiaoDich {
   }
 
   @Get('monthly')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER, VaiTroNguoiDung.ACCOUNTANT)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({
     summary: 'Get monthly transaction data (Admin, Manager, Accountant)',
   })

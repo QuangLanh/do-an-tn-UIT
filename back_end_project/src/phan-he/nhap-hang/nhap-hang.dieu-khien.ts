@@ -36,7 +36,7 @@ export class DieuKhienNhapHang {
   ) {}
 
   @Post()
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Create new purchase (Admin, Manager)' })
   @ApiResponse({ status: 201, description: 'Purchase created successfully' })
   create(
@@ -47,11 +47,7 @@ export class DieuKhienNhapHang {
   }
 
   @Get()
-  @VaiTro(
-    VaiTroNguoiDung.ADMIN,
-    VaiTroNguoiDung.MANAGER,
-    VaiTroNguoiDung.ACCOUNTANT,
-  )
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Get all purchases (Admin, Manager, Accountant)' })
   @ApiResponse({ status: 200, description: 'Return all purchases' })
   @ApiQuery({ name: 'supplier', required: false })
@@ -80,7 +76,7 @@ export class DieuKhienNhapHang {
   }
 
   @Get('recommendations')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({
     summary: 'Get purchase recommendations based on sales data (Admin, Manager)',
   })
@@ -93,7 +89,7 @@ export class DieuKhienNhapHang {
   }
 
   @Get('recommendations/high-priority')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({
     summary: 'Get high priority purchase recommendations (Admin, Manager)',
   })
@@ -106,7 +102,7 @@ export class DieuKhienNhapHang {
   }
 
   @Get('recommendations/low-priority')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({
     summary: 'Get low priority purchase recommendations (Admin, Manager)',
   })
@@ -119,11 +115,7 @@ export class DieuKhienNhapHang {
   }
 
   @Get(':id')
-  @VaiTro(
-    VaiTroNguoiDung.ADMIN,
-    VaiTroNguoiDung.MANAGER,
-    VaiTroNguoiDung.ACCOUNTANT,
-  )
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Get purchase by ID (Admin, Manager, Accountant)' })
   @ApiResponse({ status: 200, description: 'Return purchase' })
   findOne(@Param('id') id: string) {

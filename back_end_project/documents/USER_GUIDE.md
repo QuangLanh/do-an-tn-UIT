@@ -27,7 +27,7 @@ Hệ thống backend này cung cấp giải pháp hoàn chỉnh cho việc quả
 ### 🔐 Xác Thực và Phân Quyền
 - Xác thực dựa trên JWT
 - Phân quyền theo vai trò (RBAC)
-- Bốn vai trò người dùng: Admin, Staff, Manager, Accountant
+- Ba vai trò người dùng: Admin, Staff, Khách hàng
 - Mã hóa mật khẩu an toàn với bcrypt
 
 ### 📦 Quản Lý Sản Phẩm
@@ -161,66 +161,37 @@ back_end_project/
 ## 🔌 API Endpoints
 
 ### Xác Thực (Authentication)
-- `POST /api/auth/register` - Đăng ký người dùng mới (Chỉ Admin)
-- `POST /api/auth/login` - Đăng nhập (Public)
-- `GET /api/auth/profile` - Lấy thông tin profile (Tất cả roles)
+- `POST /api/auth/login` - Đăng nhập nhân viên (Admin/Staff)
+- `GET /api/auth/profile` - Profile nhân viên (Admin/Staff)
+- `POST /api/auth/customer/login` - Đăng nhập khách hàng bằng số điện thoại
+- `GET /api/auth/customer/me` - Thông tin khách hàng hiện tại
 
 ### Người Dùng (Users)
-- `GET /api/users` - Lấy danh sách người dùng (Admin, Manager)
-- `GET /api/users/:id` - Lấy thông tin người dùng (Admin only)
-- `POST /api/users` - Tạo người dùng mới (Admin only)
-- `PATCH /api/users/:id` - Cập nhật người dùng (Admin only)
-- `DELETE /api/users/:id` - Xóa người dùng (Admin only)
+- `GET /api/users` - Danh sách người dùng (Admin)
+- `POST /api/users` - Tạo người dùng mới (Admin)
+- `PATCH /api/users/:id` - Cập nhật người dùng (Admin)
+- `DELETE /api/users/:id` - Xóa người dùng (Admin)
 
-### Sản Phẩm (Products)
-- `GET /api/products` - Lấy danh sách sản phẩm (Tất cả roles)
-- `GET /api/products/:id` - Lấy thông tin sản phẩm (Tất cả roles)
-- `POST /api/products` - Tạo sản phẩm mới (Admin, Manager)
-- `PATCH /api/products/:id` - Cập nhật sản phẩm (Admin, Manager)
-- `PATCH /api/products/:id/stock` - Cập nhật tồn kho (Admin, Manager)
-- `DELETE /api/products/:id` - Xóa sản phẩm (Admin only)
-- `GET /api/products/low-stock` - Lấy sản phẩm tồn kho thấp (Tất cả roles)
-- `GET /api/products/categories` - Lấy danh sách danh mục (Tất cả roles)
+### Sản Phẩm (Products) - Read-only cho Khách hàng
+- `GET /api/products` - Danh sách sản phẩm (Admin/Staff/Khách hàng)
+- `GET /api/products/:id` - Chi tiết sản phẩm (Admin/Staff/Khách hàng)
+- `POST /api/products` - Tạo sản phẩm (Admin/Staff)
+- `PATCH /api/products/:id` - Cập nhật sản phẩm (Admin/Staff)
+- `DELETE /api/products/:id` - Xóa sản phẩm (Admin)
 
 ### Đơn Hàng (Orders)
-- `GET /api/orders` - Lấy danh sách đơn hàng (Admin, Manager, Accountant)
-- `GET /api/orders/:id` - Lấy thông tin đơn hàng (Tất cả roles)
-- `POST /api/orders` - Tạo đơn hàng mới (Staff, Admin)
-- `PATCH /api/orders/:id/status` - Cập nhật trạng thái (Admin only)
-- `DELETE /api/orders/:id` - Xóa đơn hàng (Admin only)
-- `GET /api/orders/:id/invoice` - Lấy hóa đơn đơn hàng (Staff, Manager, Accountant)
-- `GET /api/orders/statistics` - Thống kê đơn hàng (Admin, Manager, Accountant)
-- `GET /api/orders/top-products` - Sản phẩm bán chạy (Tất cả roles)
+- `POST /api/orders` - Tạo đơn hàng (Admin/Staff)
+- `GET /api/orders` - Danh sách đơn hàng (Admin/Staff)
+- `GET /api/orders/:id` - Chi tiết đơn hàng (Admin/Staff)
+- `GET /api/orders/:id/invoice` - Hoá đơn (Admin/Staff)
+- `GET /api/orders/history` - Lịch sử mua hàng của khách (Khách hàng - read only)
 
-### Nhập Hàng (Purchases)
-- `GET /api/purchases` - Lấy danh sách phiếu nhập (Admin, Manager, Accountant)
-- `GET /api/purchases/:id` - Lấy thông tin phiếu nhập (Admin, Manager, Accountant)
-- `POST /api/purchases` - Tạo phiếu nhập mới (Admin, Manager)
-- `PATCH /api/purchases/:id` - Cập nhật phiếu nhập (Admin only)
-- `DELETE /api/purchases/:id` - Xóa phiếu nhập (Admin only)
-- `GET /api/purchases/statistics` - Thống kê nhập hàng (Admin, Manager, Accountant)
-- `GET /api/purchases/suppliers` - Danh sách nhà cung cấp (Tất cả roles)
-- `GET /api/purchases/recommendations` - Gợi ý nhập hàng thông minh theo mức độ ưu tiên (Admin, Manager)
-- `GET /api/purchases/recommendations/high-priority` - Sản phẩm cần nhập gấp (Admin, Manager)
-- `GET /api/purchases/recommendations/low-priority` - Sản phẩm nên nhập ít (Admin, Manager)
-
-### Giao Dịch (Transactions)
-- `GET /api/transactions/summary` - Tổng kết giao dịch (Admin, Manager, Accountant)
-- `GET /api/transactions/monthly` - Dữ liệu theo tháng (Admin, Manager, Accountant)
-
-### Báo Cáo (Reports)
-- `GET /api/reports/summary` - Tổng kết báo cáo (Admin, Manager, Accountant)
-- `GET /api/reports/revenue` - Báo cáo doanh thu (Admin, Manager, Accountant)
-- `GET /api/reports/profit` - Báo cáo lợi nhuận (Admin, Manager, Accountant)
-- `GET /api/reports/export` - Xuất PDF (Admin, Accountant)
-- `GET /api/reports/inventory` - Báo cáo tồn kho (Admin, Manager, Accountant)
-
-### Bảng Điều Khiển (Dashboard)
-- `GET /api/dashboard/summary` - Tổng quan dashboard (Admin, Manager, Accountant)
-- `GET /api/dashboard/overview` - Tổng quan dashboard (Admin, Manager, Accountant)
-- `GET /api/dashboard/top-products` - Top sản phẩm (Admin, Manager, Accountant)
-- `GET /api/dashboard/orders-trend` - Xu hướng đơn hàng (Admin, Manager, Accountant)
-- `GET /api/dashboard/recent-activity` - Hoạt động gần đây (Admin, Manager, Accountant)
+### Danh Sách Mua Hàng (Shopping Lists)
+- `POST /api/shopping-lists` - Tạo/cập nhật danh sách ACTIVE (Khách hàng)
+- `GET /api/shopping-lists/active` - Lấy danh sách ACTIVE (Khách hàng)
+- `PUT /api/shopping-lists/:id` - Cập nhật danh sách (Khách hàng)
+- `DELETE /api/shopping-lists/:id` - Xoá danh sách (Khách hàng)
+- `PATCH /api/shopping-lists/:id/complete` - Hoàn thành danh sách (Khách hàng)
 
 ## 🔐 Xác Thực và Phân Quyền
 
@@ -232,25 +203,16 @@ back_end_project/
    - Xem mọi báo cáo và thống kê
    - Xuất báo cáo PDF
 
-2. **Staff (Nhân viên bán hàng)** - Quyền bán hàng
-   - Tạo đơn hàng mới
-   - Thêm sản phẩm vào đơn hàng
-   - Tính tổng tiền, giảm giá, in hóa đơn
-   - Không được xóa hoặc chỉnh sửa đơn hàng của người khác
-   - Không xem báo cáo tài chính
+2. **Staff (Nhân viên)** - Quyền vận hành
+   - Tạo đơn hàng tại cửa hàng
+   - Quản lý sản phẩm/nhập hàng ở mức cho phép
+   - Xem báo cáo/dữ liệu tổng hợp (tuỳ cấu hình)
 
-3. **Manager (Quản lý cửa hàng)** - Quyền quản lý
-   - Xem và duyệt đơn hàng
-   - Theo dõi tồn kho, nhập hàng
-   - Xem báo cáo tổng hợp doanh thu, chi phí, lợi nhuận
-   - Tạo và quản lý sản phẩm
-   - Không được tạo tài khoản mới hoặc phân quyền
-
-4. **Accountant (Kế toán)** - Chỉ đọc tài chính
-   - Xem doanh thu, chi phí, lợi nhuận thực tế
-   - Xem lịch sử giao dịch (transaction)
-   - Xuất báo cáo PDF hoặc Excel
-   - Không được CRUD dữ liệu
+3. **Khách hàng (KHACH_HANG)** - Quyền dành cho khách
+   - Đăng nhập bằng số điện thoại (không mật khẩu)
+   - Xem sản phẩm
+   - Tạo danh sách mua hàng trước khi đi chợ (không phải Order)
+   - Xem lịch sử mua hàng (đơn do nhân viên tạo)
 
 ### Ví Dụ Sử Dụng
 

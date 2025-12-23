@@ -25,7 +25,7 @@ export class DieuKhienBaoCao {
   ) {}
 
   @Get('summary')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER, VaiTroNguoiDung.ACCOUNTANT)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Get report summary (Admin, Manager, Accountant)' })
   @ApiResponse({ status: 200, description: 'Return report summary' })
   @ApiQuery({ name: 'from', required: false })
@@ -37,7 +37,7 @@ export class DieuKhienBaoCao {
   }
 
   @Get('revenue')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER, VaiTroNguoiDung.ACCOUNTANT)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Get revenue report (Admin, Manager, Accountant)' })
   @ApiResponse({ status: 200, description: 'Return revenue report' })
   @ApiQuery({ name: 'from', required: false })
@@ -49,7 +49,7 @@ export class DieuKhienBaoCao {
   }
 
   @Get('profit')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER, VaiTroNguoiDung.ACCOUNTANT)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Get profit report (Admin, Manager, Accountant)' })
   @ApiResponse({ status: 200, description: 'Return profit report' })
   @ApiQuery({ name: 'from', required: false })
@@ -68,7 +68,7 @@ export class DieuKhienBaoCao {
   }
 
   @Get('export')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.ACCOUNTANT)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Export revenue report as PDF (Admin, Accountant)' })
   @ApiResponse({ status: 200, description: 'Return PDF file' })
   @ApiQuery({ name: 'from', required: false })
@@ -84,7 +84,7 @@ export class DieuKhienBaoCao {
   }
 
   @Get('inventory')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER, VaiTroNguoiDung.ACCOUNTANT)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Get inventory report (Admin, Manager, Accountant)' })
   @ApiResponse({ status: 200, description: 'Return inventory report' })
   getInventoryReport() {

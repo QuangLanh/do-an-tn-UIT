@@ -38,7 +38,7 @@ export class DieuKhienNguoiDung {
   }
 
   @Get()
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER)
+  @VaiTro(VaiTroNguoiDung.ADMIN)
   @ApiOperation({ summary: 'Get all users (Admin, Manager)' })
   @ApiResponse({ status: 200, description: 'Return all users' })
   findAll() {

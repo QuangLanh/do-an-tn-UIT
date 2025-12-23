@@ -47,3 +47,9 @@ export const ProductSchema = SchemaFactory.createForClass(Product);
 // Index for better search performance
 ProductSchema.index({ name: 'text', sku: 'text', barcode: 'text' });
 
+// Uniqueness constraints to prevent duplicate products
+// - SKU: required => unique
+// - Barcode: optional => unique if provided (sparse)
+ProductSchema.index({ sku: 1 }, { unique: true });
+ProductSchema.index({ barcode: 1 }, { unique: true, sparse: true });
+

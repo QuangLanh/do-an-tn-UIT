@@ -33,7 +33,7 @@ export class DieuKhienSanPham {
   constructor(private readonly dichVuSanPham: DichVuSanPham) {}
 
   @Post()
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Create new product (Admin, Manager)' })
   @ApiResponse({ status: 201, description: 'Product created successfully' })
   create(@Body() createProductDto: TaoSanPhamDto) {
@@ -72,7 +72,7 @@ export class DieuKhienSanPham {
   }
 
   @Patch(':id')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Update product (Admin, Manager)' })
   @ApiResponse({ status: 200, description: 'Product updated successfully' })
   update(
@@ -83,7 +83,7 @@ export class DieuKhienSanPham {
   }
 
   @Patch(':id/stock')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Update product stock (Admin, Manager)' })
   @ApiResponse({ status: 200, description: 'Stock updated successfully' })
   updateStock(

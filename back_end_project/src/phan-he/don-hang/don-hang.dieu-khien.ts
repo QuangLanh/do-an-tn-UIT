@@ -46,10 +46,9 @@ export class DieuKhienDonHang {
   @Get()
   @VaiTro(
     VaiTroNguoiDung.ADMIN,
-    VaiTroNguoiDung.MANAGER,
-    VaiTroNguoiDung.ACCOUNTANT,
+    VaiTroNguoiDung.STAFF,
   )
-  @ApiOperation({ summary: 'Get all orders (Admin, Manager, Accountant)' })
+  @ApiOperation({ summary: 'Get all orders (Admin, Staff)' })
   @ApiResponse({ status: 200, description: 'Return all orders' })
   @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'from', required: false })
@@ -58,7 +57,16 @@ export class DieuKhienDonHang {
     return this.dichVuDonHang.findAll(query);
   }
 
+  @Get('history')
+  @VaiTro(VaiTroNguoiDung.CUSTOMER)
+  @ApiOperation({ summary: 'Lịch sử mua hàng của khách (Customer - read only)' })
+  @ApiResponse({ status: 200, description: 'Return order history for current customer' })
+  layLichSuMuaHang(@NguoiDungHienTai('soDienThoai') soDienThoai: string) {
+    return this.dichVuDonHang.layLichSuMuaHangTheoSoDienThoai(soDienThoai);
+  }
+
   @Get('statistics')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Get order statistics' })
   @ApiResponse({ status: 200, description: 'Return order statistics' })
   @ApiQuery({ name: 'from', required: false })
@@ -70,6 +78,7 @@ export class DieuKhienDonHang {
   }
 
   @Get('top-products')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Get top selling products' })
   @ApiResponse({ status: 200, description: 'Return top products' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -78,6 +87,7 @@ export class DieuKhienDonHang {
   }
 
   @Get(':id')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Get order by ID' })
   @ApiResponse({ status: 200, description: 'Return order' })
   findOne(@Param('id') id: string) {
@@ -106,10 +116,9 @@ export class DieuKhienDonHang {
   @Get(':id/invoice')
   @VaiTro(
     VaiTroNguoiDung.STAFF,
-    VaiTroNguoiDung.MANAGER,
-    VaiTroNguoiDung.ACCOUNTANT,
+    VaiTroNguoiDung.ADMIN,
   )
-  @ApiOperation({ summary: 'Get order invoice (Staff, Manager, Accountant)' })
+  @ApiOperation({ summary: 'Get order invoice (Staff, Admin)' })
   @ApiResponse({ status: 200, description: 'Return order invoice' })
   getInvoice(@Param('id') id: string) {
     return this.dichVuDonHang.findOne(id);

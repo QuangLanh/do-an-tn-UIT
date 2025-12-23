@@ -20,7 +20,7 @@ export class DieuKhienBangDieuKhien {
   constructor(private readonly bangDieuKhienDichVu: DichVuBangDieuKhien) {}
 
   @Get('summary')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER, VaiTroNguoiDung.ACCOUNTANT)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Get dashboard overview (Admin, Manager, Accountant)' })
   @ApiResponse({ status: 200, description: 'Return dashboard summary' })
   getSummary() {
@@ -28,7 +28,7 @@ export class DieuKhienBangDieuKhien {
   }
 
   @Get('overview')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER, VaiTroNguoiDung.ACCOUNTANT)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Get dashboard overview (Admin, Manager, Accountant)' })
   @ApiResponse({ status: 200, description: 'Return dashboard overview' })
   getOverview() {
@@ -36,7 +36,7 @@ export class DieuKhienBangDieuKhien {
   }
 
   @Get('top-products')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER, VaiTroNguoiDung.ACCOUNTANT)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Get top products (Admin, Manager, Accountant)' })
   @ApiResponse({ status: 200, description: 'Return top products' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -45,7 +45,7 @@ export class DieuKhienBangDieuKhien {
   }
 
   @Get('orders-trend')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER, VaiTroNguoiDung.ACCOUNTANT)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Get orders trend (Admin, Manager, Accountant)' })
   @ApiResponse({ status: 200, description: 'Return orders trend' })
   @ApiQuery({ name: 'days', required: false, type: Number })
@@ -54,7 +54,7 @@ export class DieuKhienBangDieuKhien {
   }
 
   @Get('recent-activity')
-  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.MANAGER, VaiTroNguoiDung.ACCOUNTANT)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Get recent activity (Admin, Manager, Accountant)' })
   @ApiResponse({ status: 200, description: 'Return recent activity' })
   getRecentActivity() {

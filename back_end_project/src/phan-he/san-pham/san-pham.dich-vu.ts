@@ -20,6 +20,51 @@ export class DichVuSanPham {
   ) {}
 
   async create(createProductDto: TaoSanPhamDto): Promise<Product> {
+    const sku = (createProductDto.sku || '').trim();
+    const barcode = (createProductDto.barcode || '').trim();
+
+    if (!sku) {
+      throw new BadRequestException('SKU is required');
+    }
+
+    // Normalize stored values to avoid whitespace-caused duplicates
+    (createProductDto as any).sku = sku;
+    if (barcode) (createProductDto as any).barcode = barcode;
+    else delete (createProductDto as any).barcode;
+
+    // Nếu SKU (hoặc barcode) đã tồn tại => gộp tồn kho (cộng dồn), tránh tạo bản ghi trùng.
+    const existing = await this.productModel
+      .findOne({
+        $or: [
+          { sku },
+          ...(barcode ? [{ barcode }] : []),
+        ],
+      })
+      .exec();
+
+    if (existing) {
+      const stockToAdd = Number(createProductDto.stock || 0);
+      existing.stock = (Number(existing.stock) || 0) + stockToAdd;
+
+      // Đồng bộ một số trường theo dữ liệu mới (best-effort)
+      existing.name = createProductDto.name ?? existing.name;
+      existing.category = createProductDto.category ?? existing.category;
+      existing.description = createProductDto.description ?? existing.description;
+      existing.purchasePrice = createProductDto.purchasePrice ?? existing.purchasePrice;
+      existing.salePrice = createProductDto.salePrice ?? existing.salePrice;
+      existing.minStockLevel = createProductDto.minStockLevel ?? existing.minStockLevel;
+      existing.unit = createProductDto.unit ?? existing.unit;
+      if (barcode) existing.barcode = barcode;
+      if (createProductDto.imageUrl !== undefined) existing.imageUrl = createProductDto.imageUrl;
+      existing.isActive = createProductDto.isActive ?? existing.isActive;
+
+      const saved = await existing.save();
+      this.logger.warn(
+        `Product existed (sku/barcode). Merged stock: ${saved.name} => ${saved.stock}`,
+      );
+      return saved;
+    }
+
     const product = new this.productModel(createProductDto);
     const savedProduct = await product.save();
     this.logger.log(`Product created: ${savedProduct.name}`);

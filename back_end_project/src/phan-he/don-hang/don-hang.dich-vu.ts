@@ -127,6 +127,22 @@ export class DichVuDonHang {
       .exec();
   }
 
+  /**
+   * Lịch sử mua hàng cho khách (READ-ONLY)
+   * - Dựa trên số điện thoại khách hàng đã được lưu trong Order (customerPhone)
+   * - Đơn hàng do nhân viên tạo và đã hoàn tất tại cửa hàng
+   */
+  async layLichSuMuaHangTheoSoDienThoai(soDienThoai: string): Promise<Order[]> {
+    return this.orderModel
+      .find({
+        customerPhone: soDienThoai,
+        status: TrangThaiDonHang.COMPLETED,
+      })
+      .populate('items.product')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
   async findOne(id: string): Promise<Order> {
     const order = await this.orderModel
       .findById(id)

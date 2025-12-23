@@ -24,7 +24,7 @@ Chúc mừng! Dự án backend NestJS cho Hệ thống Quản Lý Tạp Hóa đ�
 
 #### 👥 User Module
 - CRUD người dùng (Admin only)
-- 4 vai trò: Admin, Staff, Manager, Accountant
+- 3 vai trò: Admin, Staff, Khách hàng
 - Quản lý trạng thái active/inactive
 
 #### 📦 Product Module
@@ -116,14 +116,13 @@ npm run seed
 ```
 
 Lệnh này sẽ tạo:
-- 4 users (Admin, Staff, Manager, Accountant)
+- Users mẫu: Admin, Staff (và Khách hàng đăng nhập bằng số điện thoại)
 - 15 sản phẩm mẫu
 
 **Test credentials**:
 - Admin: `admin@taphoa.com` / `admin123`
 - Staff: `staff@taphoa.com` / `staff123`
-- Manager: `manager@taphoa.com` / `manager123`
-- Accountant: `accountant@taphoa.com` / `accountant123`
+- Khách hàng: đăng nhập bằng `soDienThoai` (không mật khẩu) qua `/api/auth/customer/login`
 
 ### Bước 5: Chạy Server
 

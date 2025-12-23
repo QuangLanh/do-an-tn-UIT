@@ -40,6 +40,24 @@ curl -X POST http://localhost:4000/api/auth/login \
   }'
 ```
 
+### Customer Login (Phone Number)
+
+```bash
+curl -X POST http://localhost:4000/api/auth/customer/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "soDienThoai": "0901234567",
+    "ten": "Cô Lan"
+  }'
+```
+
+### Customer Me
+
+```bash
+curl -X GET http://localhost:4000/api/auth/customer/me \
+  -H "Authorization: Bearer YOUR_CUSTOMER_TOKEN"
+```
+
 ## Products
 
 ### Create a Product
@@ -67,6 +85,44 @@ curl -X POST http://localhost:4000/api/products \
 ```bash
 curl -X GET "http://localhost:4000/api/products" \
   -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+## Shopping Lists (Customer)
+
+### Create/Upsert Active Shopping List
+
+```bash
+curl -X POST http://localhost:4000/api/shopping-lists \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_CUSTOMER_TOKEN" \
+  -d '{
+    "items": [
+      { "productId": "507f1f77bcf86cd799439011", "quantity": 2 }
+    ]
+  }'
+```
+
+### Get Active Shopping List
+
+```bash
+curl -X GET http://localhost:4000/api/shopping-lists/active \
+  -H "Authorization: Bearer YOUR_CUSTOMER_TOKEN"
+```
+
+### Complete Shopping List
+
+```bash
+curl -X PATCH http://localhost:4000/api/shopping-lists/SHOPPING_LIST_ID/complete \
+  -H "Authorization: Bearer YOUR_CUSTOMER_TOKEN"
+```
+
+## Orders (Customer)
+
+### Order History (Read-only)
+
+```bash
+curl -X GET http://localhost:4000/api/orders/history \
+  -H "Authorization: Bearer YOUR_CUSTOMER_TOKEN"
 ```
 
 ### Get Products by Category
