@@ -81,8 +81,7 @@ export const TrangDangNhap = () => {
             <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
               <p>👨‍💼 Admin: admin@taphoa.com / admin123</p>
               <p>👨‍💻 Nhân viên: staff@taphoa.com / staff123</p>
-              <p>👨‍💼 Quản lý: manager@taphoa.com / manager123</p>
-              <p>👨‍💼 Kế toán: accountant@taphoa.com / accountant123</p>
+              {/* Đã loại bỏ role Quản lý/Kế toán theo yêu cầu */}
               <p className="mt-2 text-xs text-gray-500 dark:text-gray-500">
                 💡 Bạn cũng có thể nhập: admin / admin123 (tự động chuyển thành email)
               </p>

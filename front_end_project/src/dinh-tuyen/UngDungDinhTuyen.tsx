@@ -6,6 +6,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
 import { BoCucChinh } from '@/giao-dien/layouts/BoCucChinh'
+import { BoCucKhachHang } from '@/giao-dien/layouts/BoCucKhachHang'
 import { TuyenBaoVe } from './TuyenBaoVe'
 
 // Pages
@@ -19,23 +20,38 @@ import { TrangTaoDonHang } from '@/giao-dien/pages/TrangTaoDonHang'
 import { TrangNhapHang } from '@/giao-dien/pages/TrangNhapHang'
 import { TrangTaoNhapHang } from '@/giao-dien/pages/TrangTaoNhapHang'
 import { TrangKhongTimThay } from '@/giao-dien/pages/TrangKhongTimThay'
+import { TrangDangNhapKhachHang } from '@/giao-dien/pages/khach-hang/TrangDangNhapKhachHang'
+import { TrangSanPhamKhachHang } from '@/giao-dien/pages/khach-hang/TrangSanPhamKhachHang'
+import { TrangChiTietSanPham } from '@/giao-dien/pages/khach-hang/TrangChiTietSanPham'
+import { TrangDanhSachMuaHang } from '@/giao-dien/pages/khach-hang/TrangDanhSachMuaHang'
+import { TrangLichSuMuaHang } from '@/giao-dien/pages/khach-hang/TrangLichSuMuaHang'
 
 const UngDungDinhTuyen = () => {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
+  const vaiTro = user?.role
 
   return (
     <Routes>
       {/* Public Routes */}
       <Route
         path="/login"
-        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <TrangDangNhap />}
+        element={
+          isAuthenticated
+            ? <Navigate to={vaiTro === 'customer' ? '/khach-hang/san-pham' : '/dashboard'} replace />
+            : <TrangDangNhap />
+        }
+      />
+
+      <Route
+        path="/khach-hang/dang-nhap"
+        element={isAuthenticated ? <Navigate to="/khach-hang/san-pham" replace /> : <TrangDangNhapKhachHang />}
       />
 
       {/* Protected Routes */}
       <Route
         path="/dashboard"
         element={
-          <TuyenBaoVe>
+          <TuyenBaoVe requiredRoles={['admin', 'staff']}>
             <BoCucChinh>
               <TrangBangDieuKhien />
             </BoCucChinh>
@@ -46,7 +62,7 @@ const UngDungDinhTuyen = () => {
       <Route
         path="/products"
         element={
-          <TuyenBaoVe>
+          <TuyenBaoVe requiredRoles={['admin', 'staff']}>
             <BoCucChinh>
               <TrangSanPham />
             </BoCucChinh>
@@ -57,7 +73,7 @@ const UngDungDinhTuyen = () => {
       <Route
         path="/inventory"
         element={
-          <TuyenBaoVe>
+          <TuyenBaoVe requiredRoles={['admin', 'staff']}>
             <BoCucChinh>
               <TrangKiemKe />
             </BoCucChinh>
@@ -68,7 +84,7 @@ const UngDungDinhTuyen = () => {
       <Route
         path="/orders"
         element={
-          <TuyenBaoVe>
+          <TuyenBaoVe requiredRoles={['admin', 'staff']}>
             <BoCucChinh>
               <TrangDonHang />
             </BoCucChinh>
@@ -79,7 +95,7 @@ const UngDungDinhTuyen = () => {
       <Route
         path="/orders/new"
         element={
-          <TuyenBaoVe>
+          <TuyenBaoVe requiredRoles={['admin', 'staff']} requiredPermission="create_order">
             <BoCucChinh>
               <TrangTaoDonHang />
             </BoCucChinh>
@@ -90,7 +106,7 @@ const UngDungDinhTuyen = () => {
       <Route
         path="/orders/:id"
         element={
-          <TuyenBaoVe>
+          <TuyenBaoVe requiredRoles={['admin', 'staff']} requiredPermission="view_orders">
             <BoCucChinh>
               <TrangTaoDonHang />
             </BoCucChinh>
@@ -101,7 +117,7 @@ const UngDungDinhTuyen = () => {
       <Route
         path="/purchases"
         element={
-          <TuyenBaoVe>
+          <TuyenBaoVe requiredRoles={['admin', 'staff']}>
             <BoCucChinh>
               <TrangNhapHang />
             </BoCucChinh>
@@ -112,7 +128,7 @@ const UngDungDinhTuyen = () => {
       <Route
         path="/purchases/new"
         element={
-          <TuyenBaoVe>
+          <TuyenBaoVe requiredRoles={['admin', 'staff']} requiredPermission="create_purchase">
             <BoCucChinh>
               <TrangTaoNhapHang />
             </BoCucChinh>
@@ -123,7 +139,7 @@ const UngDungDinhTuyen = () => {
       <Route
         path="/purchases/:id"
         element={
-          <TuyenBaoVe>
+          <TuyenBaoVe requiredRoles={['admin', 'staff']} requiredPermission="view_purchases">
             <BoCucChinh>
               <TrangTaoNhapHang />
             </BoCucChinh>
@@ -134,10 +150,52 @@ const UngDungDinhTuyen = () => {
       <Route
         path="/reports"
         element={
-          <TuyenBaoVe requiredPermission="view_reports">
+          <TuyenBaoVe requiredRoles={['admin']} requiredPermission="view_reports">
             <BoCucChinh>
               <TrangBaoCao />
             </BoCucChinh>
+          </TuyenBaoVe>
+        }
+      />
+
+      {/* Customer Routes */}
+      <Route
+        path="/khach-hang/san-pham"
+        element={
+          <TuyenBaoVe requiredRoles="customer">
+            <BoCucKhachHang>
+              <TrangSanPhamKhachHang />
+            </BoCucKhachHang>
+          </TuyenBaoVe>
+        }
+      />
+      <Route
+        path="/khach-hang/san-pham/:id"
+        element={
+          <TuyenBaoVe requiredRoles="customer">
+            <BoCucKhachHang>
+              <TrangChiTietSanPham />
+            </BoCucKhachHang>
+          </TuyenBaoVe>
+        }
+      />
+      <Route
+        path="/khach-hang/danh-sach-mua"
+        element={
+          <TuyenBaoVe requiredRoles="customer">
+            <BoCucKhachHang>
+              <TrangDanhSachMuaHang />
+            </BoCucKhachHang>
+          </TuyenBaoVe>
+        }
+      />
+      <Route
+        path="/khach-hang/lich-su-mua"
+        element={
+          <TuyenBaoVe requiredRoles="customer">
+            <BoCucKhachHang>
+              <TrangLichSuMuaHang />
+            </BoCucKhachHang>
           </TuyenBaoVe>
         }
       />
@@ -146,7 +204,9 @@ const UngDungDinhTuyen = () => {
       <Route
         path="/"
         element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
+          isAuthenticated
+            ? <Navigate to={vaiTro === 'customer' ? '/khach-hang/san-pham' : '/dashboard'} replace />
+            : <Navigate to="/login" replace />
         }
       />
 

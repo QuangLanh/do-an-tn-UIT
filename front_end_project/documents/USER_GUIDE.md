@@ -33,21 +33,22 @@ Mở trình duyệt và truy cập: `http://localhost:5173`
   - ✅ Xem báo cáo
 
 #### 👨‍💻 Tài khoản Nhân viên
-- Username: `employee`
-- Password: `employee123`
+- Username: `staff`
+- Password: `staff123`
 - Quyền hạn:
   - ✅ Xem dashboard
   - ✅ Thêm và sửa sản phẩm
   - ❌ KHÔNG được xóa sản phẩm
-  - ❌ KHÔNG xem được báo cáo
-
-#### 👨‍💼 Tài khoản Kế toán
-- Username: `accountant`
-- Password: `accountant123`
-- Quyền hạn:
-  - ✅ Xem dashboard
   - ✅ Xem báo cáo
-  - ❌ KHÔNG được sửa sản phẩm
+
+#### 🙋‍♂️ Khách hàng (Customer)
+- Đăng nhập bằng **Số điện thoại** (không mật khẩu)
+- Truy cập: `/khach-hang/dang-nhap`
+- Quyền hạn:
+  - ✅ Xem sản phẩm
+  - ✅ Tạo danh sách mua hàng trước khi đi chợ
+  - ✅ Xem lịch sử mua hàng (đơn do nhân viên tạo)
+  - ❌ Không tạo đơn hàng / không thanh toán / không quản lý kho
 
 ## 📊 Bước 3: Sử dụng Dashboard
 
@@ -147,7 +148,7 @@ Hiển thị các sản phẩm cần nhập hàng với:
 
 ## 📈 Bước 6: Xem và xuất báo cáo
 
-⚠️ **Chỉ Admin và Kế toán** được truy cập trang này!
+⚠️ **Chỉ Admin và Nhân viên (Staff)** được truy cập trang này!
 
 ### Xem báo cáo
 1. Click menu **"Báo cáo"** ở sidebar
@@ -214,7 +215,7 @@ Thông báo xuất hiện ở **góc trên phải** và tự động biến mấ
 **A:** Chỉ Admin mới có quyền xóa. Đăng nhập với tài khoản `admin/admin123`.
 
 ### Q: Tại sao không vào được trang Báo cáo?
-**A:** Chỉ Admin và Kế toán được xem báo cáo. Nhân viên không có quyền.
+**A:** Admin và Nhân viên (Staff) đều có thể xem báo cáo.
 
 ### Q: Giá bán phải lớn hơn giá nhập bao nhiêu?
 **A:** Hệ thống chỉ yêu cầu giá bán > giá nhập. Tùy bạn quyết định tỷ suất lợi nhuận.

@@ -13,6 +13,11 @@ export class ApiService extends BaseApiService {
     login: (credentials: { email: string; password: string }) =>
       this.post(API_ENDPOINTS.auth.login(), credentials),
 
+    customerLogin: (payload: { soDienThoai: string; ten?: string }) =>
+      this.post(API_ENDPOINTS.auth.customerLogin(), payload),
+
+    customerMe: () => this.get(API_ENDPOINTS.auth.customerMe()),
+
     register: (userData: any) =>
       this.post(API_ENDPOINTS.auth.register(), userData),
 
@@ -79,6 +84,23 @@ export class ApiService extends BaseApiService {
 
     topProducts: (limit?: number) =>
       this.get(API_ENDPOINTS.orders.topProducts(limit)),
+
+    history: () => this.get(API_ENDPOINTS.orders.history()),
+  }
+
+  // ==================== SHOPPING LISTS ====================
+  shoppingLists = {
+    create: (data: { items: Array<{ productId: string; quantity: number }> }) =>
+      this.post(API_ENDPOINTS.shoppingLists.create(), data),
+
+    active: () => this.get(API_ENDPOINTS.shoppingLists.active()),
+
+    update: (id: string, data: { items: Array<{ productId: string; quantity: number }> }) =>
+      this.put(API_ENDPOINTS.shoppingLists.update(id), data),
+
+    delete: (id: string) => this.delete(API_ENDPOINTS.shoppingLists.delete(id)),
+
+    complete: (id: string) => this.patch(API_ENDPOINTS.shoppingLists.complete(id)),
   }
 
   // ==================== PURCHASES ====================

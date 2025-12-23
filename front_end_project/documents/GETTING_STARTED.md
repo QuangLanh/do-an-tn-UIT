@@ -33,17 +33,15 @@ Username: admin
 Password: admin123
 ```
 
-### Nhân viên (Không xóa được)
+### Nhân viên (Staff)
 ```
-Username: employee
-Password: employee123
+Username: staff
+Password: staff123
 ```
 
-### Kế toán (Chỉ xem báo cáo)
-```
-Username: accountant
-Password: accountant123
-```
+### Khách hàng
+- Truy cập: **/khach-hang/dang-nhap**
+- Đăng nhập bằng **số điện thoại** (không cần mật khẩu)
 
 ## ✅ Test ngay 5 tính năng chính
 

@@ -3,7 +3,8 @@
 ## ✅ Đã hoàn thành
 
 ### 🔐 Authentication & Authorization
-- [x] Đăng nhập với 3 loại tài khoản (Admin, Employee, Accountant)
+- [x] Đăng nhập nhân viên (Admin, Staff)
+- [x] Đăng nhập khách hàng bằng số điện thoại (KHACH_HANG)
 - [x] Logout
 - [x] Protected routes
 - [x] Permission-based access control
@@ -43,7 +44,7 @@
 - [x] Phân tích tỷ suất lợi nhuận
 - [x] Xuất báo cáo ra PDF
 - [x] PDF bao gồm biểu đồ và bảng số liệu
-- [x] Chỉ Admin và Accountant được xem
+- [x] Chỉ Admin và Staff được xem
 
 ### 🎨 UI/UX
 - [x] Dark/Light mode với toggle
@@ -66,7 +67,14 @@
 - [x] Service layer
 - [x] Use cases
 - [x] Type-safe với TypeScript
-- [x] Path aliases (@/domains, @/ui, @/infra, @/store)
+- [x] Path aliases (@/linh-vuc, @/giao-dien, @/ha-tang, @/kho-trang-thai, @/dinh-tuyen)
+
+### 🙋‍♂️ Khách hàng (Customer)
+- [x] Xem danh sách sản phẩm
+- [x] Xem chi tiết sản phẩm
+- [x] Tạo/Cập nhật/Xoá danh sách mua hàng (Shopping List)
+- [x] Đánh dấu hoàn thành danh sách mua hàng
+- [x] Xem lịch sử mua hàng (read-only từ các đơn đã thanh toán tại cửa hàng)
 
 ### 🔧 Technical
 - [x] React 18 với hooks

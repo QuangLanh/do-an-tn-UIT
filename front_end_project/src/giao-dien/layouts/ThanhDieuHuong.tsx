@@ -56,7 +56,11 @@ export const ThanhDieuHuong = () => {
                     {user.fullName}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                    {user?.role === 'admin' ? 'Quản trị viên' : user?.role === 'staff' ? 'Nhân viên' : 'Kế toán'}
+                    {user?.role === 'admin'
+                      ? 'Quản trị viên'
+                      : user?.role === 'staff'
+                        ? 'Nhân viên'
+                        : 'Khách hàng'}
                   </p>
                 </div>
                 <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-300">

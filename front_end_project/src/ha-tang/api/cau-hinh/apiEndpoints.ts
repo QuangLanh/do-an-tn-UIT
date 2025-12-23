@@ -8,6 +8,8 @@ export const API_ENDPOINTS = {
   // ==================== AUTH ====================
   auth: {
     login: () => '/auth/login',
+    customerLogin: () => '/auth/customer/login',
+    customerMe: () => '/auth/customer/me',
     register: () => '/auth/register',
     profile: () => '/auth/profile',
   },
@@ -68,6 +70,16 @@ export const API_ENDPOINTS = {
       const queryString = query.toString()
       return `/orders/top-products${queryString ? `?${queryString}` : ''}`
     },
+    history: () => '/orders/history',
+  },
+
+  // ==================== SHOPPING LISTS ====================
+  shoppingLists: {
+    create: () => '/shopping-lists',
+    active: () => '/shopping-lists/active',
+    update: (id: string) => `/shopping-lists/${id}`,
+    delete: (id: string) => `/shopping-lists/${id}`,
+    complete: (id: string) => `/shopping-lists/${id}/complete`,
   },
 
   // ==================== PURCHASES ====================

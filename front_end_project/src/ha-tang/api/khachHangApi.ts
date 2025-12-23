@@ -57,7 +57,8 @@ apiClient.interceptors.response.use(
       if (status === 401) {
         // Unauthorized - xóa token và redirect to login
         localStorage.removeItem('auth-storage')
-        window.location.href = '/login'
+        const isCustomerArea = window.location.pathname.startsWith('/khach-hang')
+        window.location.href = isCustomerArea ? '/khach-hang/dang-nhap' : '/login'
       }
       
       // Throw error với message từ server

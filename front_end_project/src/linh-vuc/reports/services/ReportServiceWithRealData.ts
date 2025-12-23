@@ -94,7 +94,7 @@ export class ReportServiceWithRealData {
   }
 
   // Tạo báo cáo tháng từ dữ liệu đơn hàng thực tế
-  generateMonthlyReportFromOrders(orders: Order[], products: Product[]): MonthlyReport {
+  generateMonthlyReportFromOrders(orders: Order[], _products: Product[]): MonthlyReport {
     const today = new Date()
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
     

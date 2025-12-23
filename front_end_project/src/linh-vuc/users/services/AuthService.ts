@@ -35,30 +35,6 @@ export class AuthService {
         createdAt: new Date(),
       },
     },
-    {
-      username: 'manager',
-      password: 'manager123',
-      user: {
-        id: '3',
-        username: 'manager',
-        fullName: 'Quản Lý',
-        email: 'manager@grocery.com',
-        role: 'manager',
-        createdAt: new Date(),
-      },
-    },
-    {
-      username: 'accountant',
-      password: 'accountant123',
-      user: {
-        id: '4',
-        username: 'accountant',
-        fullName: 'Kế Toán',
-        email: 'accountant@grocery.com',
-        role: 'accountant',
-        createdAt: new Date(),
-      },
-    },
   ]
 
   async login(credentials: LoginCredentials): Promise<User> {
@@ -97,19 +73,19 @@ export class AuthService {
   }
 
   canEditProduct(userRole: UserRole): boolean {
-    return userRole === 'admin' || userRole === 'manager'
+    return userRole === 'admin' || userRole === 'staff'
   }
 
   canCreateProduct(userRole: UserRole): boolean {
-    return userRole === 'admin' || userRole === 'manager'
+    return userRole === 'admin'
   }
 
   canViewReports(userRole: UserRole): boolean {
-    return userRole === 'admin' || userRole === 'manager' || userRole === 'accountant'
+    return userRole === 'admin'
   }
 
   canExportReports(userRole: UserRole): boolean {
-    return userRole === 'admin' || userRole === 'accountant'
+    return userRole === 'admin'
   }
 
   canCreateOrder(userRole: UserRole): boolean {
@@ -117,15 +93,15 @@ export class AuthService {
   }
 
   canCreatePurchase(userRole: UserRole): boolean {
-    return userRole === 'admin' || userRole === 'manager'
+    return userRole === 'admin' || userRole === 'staff'
   }
 
   canViewOrders(userRole: UserRole): boolean {
-    return userRole === 'admin' || userRole === 'manager' || userRole === 'accountant'
+    return userRole === 'admin' || userRole === 'staff'
   }
 
   canViewPurchases(userRole: UserRole): boolean {
-    return userRole === 'admin' || userRole === 'manager' || userRole === 'accountant'
+    return userRole === 'admin' || userRole === 'staff'
   }
 
   canManageUsers(userRole: UserRole): boolean {

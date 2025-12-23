@@ -3,12 +3,13 @@
  * Component form tạo và chỉnh sửa đơn hàng
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { NutBam } from './NutBam'
 import { NhapLieu } from './NhapLieu'
 import { TheThongTin } from './TheThongTin'
 import { BangDuLieu } from './BangDuLieu'
 import { HuyHieu } from './HuyHieu'
+import { PhanTrang } from './PhanTrang'
 import { Product } from '@/linh-vuc/products/entities/Product'
 import { OrderItem, Order } from '@/linh-vuc/orders/entities/Order'
 import { orderApi } from '@/ha-tang/api/orderApi'
@@ -38,6 +39,8 @@ export const BieuMauDonHang = ({
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredProducts, setFilteredProducts] = useState<Product[]>(products)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(12)
 
   useEffect(() => {
     if (searchQuery) {
@@ -50,7 +53,16 @@ export const BieuMauDonHang = ({
     } else {
       setFilteredProducts(products)
     }
+    // Reset về trang 1 khi tìm kiếm
+    setCurrentPage(1)
   }, [searchQuery, products])
+
+  // Tính toán dữ liệu phân trang
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    return filteredProducts.slice(startIndex, endIndex)
+  }, [filteredProducts, currentPage, itemsPerPage])
 
   const handleAddItem = (product: Product) => {
     // Kiểm tra nếu sản phẩm đã có trong đơn hàng
@@ -302,15 +314,33 @@ export const BieuMauDonHang = ({
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProducts.map((product) => (
+          {paginatedProducts.map((product) => (
             <div
               key={product.id}
-              className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-800"
+              className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
             >
-              <div>
-                <h4 className="font-medium">{product.name}</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{formatCurrency(product.salePrice)} / {product.unit}</p>
-                <div className="mt-1">
+              {/* Ảnh sản phẩm */}
+              <div className="w-full h-32 bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                {product.imageUrl ? (
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs">
+                    Chưa có ảnh
+                  </div>
+                )}
+              </div>
+
+              {/* Thông tin */}
+              <div className="p-4">
+                <h4 className="font-medium text-gray-900 dark:text-white mb-2">{product.name}</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                  {formatCurrency(product.salePrice)} / {product.unit}
+                </p>
+                <div className="mb-3">
                   {product.stock > 0 ? (
                     <HuyHieu variant={product.stock < 10 ? 'warning' : 'success'}>
                       Còn {product.stock} {product.unit}
@@ -319,18 +349,31 @@ export const BieuMauDonHang = ({
                     <HuyHieu variant="danger">Hết hàng</HuyHieu>
                   )}
                 </div>
+                <NutBam
+                  type="button"
+                  onClick={() => handleAddItem(product)}
+                  size="sm"
+                  disabled={product.stock <= 0}
+                  className="w-full"
+                >
+                  <Plus size={16} className="mr-1" /> Thêm
+                </NutBam>
               </div>
-              <NutBam
-                type="button"
-                onClick={() => handleAddItem(product)}
-                size="sm"
-                disabled={product.stock <= 0}
-              >
-                <Plus size={16} className="mr-1" /> Thêm
-              </NutBam>
             </div>
           ))}
         </div>
+
+        {/* Pagination */}
+        {filteredProducts.length > 0 && (
+          <PhanTrang
+            currentPage={currentPage}
+            totalItems={filteredProducts.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+            itemsPerPageOptions={[12, 24, 48, 96]}
+          />
+        )}
       </TheThongTin>
 
       {/* Ghi chú */}

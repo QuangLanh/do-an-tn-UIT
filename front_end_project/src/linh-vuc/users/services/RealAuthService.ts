@@ -3,7 +3,7 @@
  * Sử dụng API thực từ backend thay vì mock users
  */
 
-import { User, LoginCredentials, UserRole } from '../entities/User'
+import { DangNhapKhachHangDuLieu, User, LoginCredentials, UserRole } from '../entities/User'
 import { apiService } from '@/ha-tang/api'
 
 /**
@@ -33,13 +33,10 @@ function mapBackendToFrontend(backendUser: any): User {
 function mapBackendRoleToFrontend(backendRole: string): UserRole {
   const roleMap: Record<string, UserRole> = {
     ADMIN: 'admin',
-    MANAGER: 'manager',
     STAFF: 'staff',
-    ACCOUNTANT: 'accountant',
+    CUSTOMER: 'customer',
     admin: 'admin',
-    manager: 'manager',
     staff: 'staff',
-    accountant: 'accountant',
   }
   return roleMap[backendRole] || 'staff'
 }
@@ -54,11 +51,9 @@ export class RealAuthService {
       // If username doesn't contain @, try to map it to email
       if (!email.includes('@')) {
         const usernameMap: Record<string, string> = {
-          'admin': 'admin@taphoa.com',
-          'staff': 'staff@taphoa.com',
-          'employee': 'staff@taphoa.com',
-          'manager': 'manager@taphoa.com',
-          'accountant': 'accountant@taphoa.com',
+          admin: 'admin@taphoa.com',
+          staff: 'staff@taphoa.com',
+          employee: 'staff@taphoa.com',
         }
         email = usernameMap[email.toLowerCase()] || email
       }
@@ -130,19 +125,19 @@ export class RealAuthService {
   }
 
   canEditProduct(userRole: UserRole): boolean {
-    return userRole === 'admin' || userRole === 'manager'
+    return userRole === 'admin' || userRole === 'staff'
   }
 
   canCreateProduct(userRole: UserRole): boolean {
-    return userRole === 'admin' || userRole === 'manager'
+    return userRole === 'admin'
   }
 
   canViewReports(userRole: UserRole): boolean {
-    return userRole === 'admin' || userRole === 'manager' || userRole === 'accountant'
+    return userRole === 'admin'
   }
 
   canExportReports(userRole: UserRole): boolean {
-    return userRole === 'admin' || userRole === 'accountant'
+    return userRole === 'admin'
   }
 
   canCreateOrder(userRole: UserRole): boolean {
@@ -150,19 +145,64 @@ export class RealAuthService {
   }
 
   canCreatePurchase(userRole: UserRole): boolean {
-    return userRole === 'admin' || userRole === 'manager'
+    return userRole === 'admin' || userRole === 'staff'
   }
 
   canViewOrders(userRole: UserRole): boolean {
-    return userRole === 'admin' || userRole === 'manager' || userRole === 'accountant'
+    return userRole === 'admin' || userRole === 'staff'
   }
 
   canViewPurchases(userRole: UserRole): boolean {
-    return userRole === 'admin' || userRole === 'manager' || userRole === 'accountant'
+    return userRole === 'admin' || userRole === 'staff'
   }
 
   canManageUsers(userRole: UserRole): boolean {
     return userRole === 'admin'
+  }
+
+  /**
+   * Đăng nhập khách hàng bằng số điện thoại
+   * Backend: POST /auth/customer/login
+   */
+  async dangNhapKhachHang(
+    duLieu: DangNhapKhachHangDuLieu,
+  ): Promise<{ user: User; token: string }> {
+    const response = await apiService.auth.customerLogin({
+      soDienThoai: duLieu.soDienThoai,
+      ten: duLieu.ten,
+    })
+
+    const token = (response as any).access_token || (response as any).token
+    const customer = (response as any).customer
+
+    if (!token || !customer) {
+      throw new Error('Không nhận được dữ liệu đăng nhập khách hàng từ server')
+    }
+
+    const user: User = {
+      id: String(customer.id || customer._id || ''),
+      soDienThoai: customer.soDienThoai,
+      fullName: customer.ten,
+      role: 'customer',
+      createdAt: customer.createdAt ? new Date(customer.createdAt) : new Date(),
+    }
+
+    return { user, token }
+  }
+
+  async layKhachHangHienTai(): Promise<User | null> {
+    try {
+      const me = await apiService.auth.customerMe()
+      return {
+        id: String((me as any).id || (me as any)._id || ''),
+        soDienThoai: (me as any).soDienThoai,
+        fullName: (me as any).ten,
+        role: 'customer',
+      }
+    } catch (error) {
+      console.error('Error fetching customer profile:', error)
+      return null
+    }
   }
 }
 

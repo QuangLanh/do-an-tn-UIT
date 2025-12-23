@@ -124,7 +124,7 @@ export const ExamplePurchaseRecommendations = () => {
 
 // ==================== Example 7: Dashboard Data ====================
 export const ExampleDashboard = () => {
-  const [summary, setSummary] = useState<any | null>(null)
+  const [, setSummary] = useState<any | null>(null)
 
   useEffect(() => {
     const loadDashboard = async () => {

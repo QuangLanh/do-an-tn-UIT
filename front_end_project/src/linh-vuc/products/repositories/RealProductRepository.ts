@@ -21,6 +21,7 @@ function mapBackendToFrontend(backendProduct: any): Product {
     unit: backendProduct.unit || '',
     supplier: backendProduct.supplier || '',
     description: backendProduct.description,
+    imageUrl: backendProduct.imageUrl,
     createdAt: new Date(backendProduct.createdAt || Date.now()),
     updatedAt: new Date(backendProduct.updatedAt || Date.now()),
   }
@@ -43,6 +44,11 @@ function mapFrontendToBackend(product: CreateProductDto | UpdateProductDto): any
   // Add optional fields if they exist
   if ('supplier' in product) {
     // Backend doesn't have supplier field in schema, but we'll keep it for compatibility
+  }
+
+  // Add imageUrl if it exists
+  if ('imageUrl' in product && product.imageUrl) {
+    dto.imageUrl = product.imageUrl
   }
 
   return dto

@@ -3,21 +3,27 @@
  * Người dùng và phân quyền
  */
 
-export type UserRole = 'admin' | 'staff' | 'manager' | 'accountant'
+export type UserRole = 'admin' | 'staff' | 'customer'
 
 export interface User {
   id: string
-  username: string
-  fullName: string
-  email: string
+  username?: string
+  fullName?: string
+  email?: string
+  soDienThoai?: string
   role: UserRole
   avatar?: string
-  createdAt: Date
+  createdAt?: Date
 }
 
 export interface LoginCredentials {
   username: string
   password: string
+}
+
+export interface DangNhapKhachHangDuLieu {
+  soDienThoai: string
+  ten?: string
 }
 
 export interface AuthResponse {

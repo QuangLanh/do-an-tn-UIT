@@ -5,7 +5,6 @@
 
 import { Product } from '../../products/entities/Product'
 import { DailySalesReport, ProductSalesReport, DashboardStats } from '../entities/Report'
-import { OrderSummary } from '../../orders/entities/Order'
 
 export class ReportService {
   // Generate mock data for daily sales (last 7 days)

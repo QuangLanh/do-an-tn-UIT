@@ -3,12 +3,13 @@
  * Trang quản lý tồn kho với cảnh báo sắp hết hàng
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { AlertTriangle, Package, TrendingDown } from 'lucide-react'
 import { TheThongTin } from '@/giao-dien/components/TheThongTin'
 import { BangDuLieu } from '@/giao-dien/components/BangDuLieu'
 import { HuyHieu } from '@/giao-dien/components/HuyHieu'
 import { TheThongKe } from '@/giao-dien/components/TheThongKe'
+import { PhanTrang } from '@/giao-dien/components/PhanTrang'
 import { Product } from '@/linh-vuc/products/entities/Product'
 import { InventoryAlert } from '@/linh-vuc/inventory/entities/InventoryAlert'
 import { productApi } from '@/ha-tang/api/productApi'
@@ -22,6 +23,10 @@ export const TrangKiemKe = () => {
   const [products, setProducts] = useState<Product[]>([])
   const [alerts, setAlerts] = useState<InventoryAlert[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [alertsCurrentPage, setAlertsCurrentPage] = useState(1)
+  const [alertsItemsPerPage, setAlertsItemsPerPage] = useState(10)
+  const [productsCurrentPage, setProductsCurrentPage] = useState(1)
+  const [productsItemsPerPage, setProductsItemsPerPage] = useState(10)
 
   useEffect(() => {
     loadData()
@@ -40,6 +45,37 @@ export const TrangKiemKe = () => {
     }
   }
 
+  // Tính toán các giá trị thống kê
+  const lowStockProducts = useMemo(() => {
+    return inventoryService.getLowStockProducts(products)
+  }, [products])
+
+  const criticalStockProducts = useMemo(() => {
+    return inventoryService.getCriticalStockProducts(products)
+  }, [products])
+
+  const outOfStockProducts = useMemo(() => {
+    return inventoryService.getOutOfStockProducts(products)
+  }, [products])
+
+  const totalInventoryValue = useMemo(() => {
+    return inventoryService.calculateTotalInventoryValue(products)
+  }, [products])
+
+  // Tính toán dữ liệu phân trang cho alerts
+  const paginatedAlerts = useMemo(() => {
+    const startIndex = (alertsCurrentPage - 1) * alertsItemsPerPage
+    const endIndex = startIndex + alertsItemsPerPage
+    return alerts.slice(startIndex, endIndex)
+  }, [alerts, alertsCurrentPage, alertsItemsPerPage])
+
+  // Tính toán dữ liệu phân trang cho products
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (productsCurrentPage - 1) * productsItemsPerPage
+    const endIndex = startIndex + productsItemsPerPage
+    return products.slice(startIndex, endIndex)
+  }, [products, productsCurrentPage, productsItemsPerPage])
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -47,11 +83,6 @@ export const TrangKiemKe = () => {
       </div>
     )
   }
-
-  const lowStockProducts = inventoryService.getLowStockProducts(products)
-  const criticalStockProducts = inventoryService.getCriticalStockProducts(products)
-  const outOfStockProducts = inventoryService.getOutOfStockProducts(products)
-  const totalInventoryValue = inventoryService.calculateTotalInventoryValue(products)
 
   const alertColumns = [
     {
@@ -192,14 +223,32 @@ export const TrangKiemKe = () => {
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Các sản phẩm sau cần được nhập thêm hàng:
             </p>
-            <BangDuLieu data={alerts} columns={alertColumns} />
+            <BangDuLieu data={paginatedAlerts} columns={alertColumns} />
+            {alerts.length > 0 && (
+              <PhanTrang
+                currentPage={alertsCurrentPage}
+                totalItems={alerts.length}
+                itemsPerPage={alertsItemsPerPage}
+                onPageChange={setAlertsCurrentPage}
+                onItemsPerPageChange={setAlertsItemsPerPage}
+              />
+            )}
           </div>
         </TheThongTin>
       )}
 
       {/* All Products Inventory */}
       <TheThongTin title="Tồn kho tất cả sản phẩm">
-        <BangDuLieu data={products} columns={allProductsColumns} />
+        <BangDuLieu data={paginatedProducts} columns={allProductsColumns} />
+        {products.length > 0 && (
+          <PhanTrang
+            currentPage={productsCurrentPage}
+            totalItems={products.length}
+            itemsPerPage={productsItemsPerPage}
+            onPageChange={setProductsCurrentPage}
+            onItemsPerPageChange={setProductsItemsPerPage}
+          />
+        )}
       </TheThongTin>
 
       {/* Recommendations */}

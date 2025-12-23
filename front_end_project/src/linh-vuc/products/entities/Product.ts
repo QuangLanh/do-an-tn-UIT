@@ -13,6 +13,7 @@ export interface Product {
   unit: string // Đơn vị tính (kg, hộp, chai, v.v.)
   supplier: string
   description?: string
+  imageUrl?: string // URL ảnh sản phẩm
   createdAt: Date
   updatedAt: Date
 }

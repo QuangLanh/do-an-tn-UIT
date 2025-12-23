@@ -3,13 +3,16 @@
  * Trang quản lý sản phẩm với CRUD operations
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Plus, Search, Edit, Trash2 } from 'lucide-react'
 import { NutBam } from '@/giao-dien/components/NutBam'
 import { NhapLieu } from '@/giao-dien/components/NhapLieu'
 import { BangDuLieu } from '@/giao-dien/components/BangDuLieu'
 import { HuyHieu } from '@/giao-dien/components/HuyHieu'
 import { HopThoai } from '@/giao-dien/components/HopThoai'
+import { PhanTrang } from '@/giao-dien/components/PhanTrang'
+import { DropdownTimKiem } from '@/giao-dien/components/DropdownTimKiem'
+import { UploadAnh } from '@/giao-dien/components/UploadAnh'
 import { Product, CreateProductDto } from '@/linh-vuc/products/entities/Product'
 import { productApi } from '@/ha-tang/api/productApi'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
@@ -23,6 +26,8 @@ export const TrangSanPham = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [isHopThoaiOpen, setIsHopThoaiOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
   const { hasPermission } = useAuthStore()
 
   useEffect(() => {
@@ -41,7 +46,16 @@ export const TrangSanPham = () => {
     } else {
       setFilteredProducts(products)
     }
+    // Reset về trang 1 khi tìm kiếm
+    setCurrentPage(1)
   }, [searchQuery, products])
+
+  // Tính toán dữ liệu phân trang
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    return filteredProducts.slice(startIndex, endIndex)
+  }, [filteredProducts, currentPage, itemsPerPage])
 
   const loadProducts = async () => {
     try {
@@ -94,6 +108,24 @@ export const TrangSanPham = () => {
   }
 
   const columns = [
+    {
+      header: 'Ảnh',
+      accessor: (product: Product) => (
+        <div className="w-12 h-12 flex items-center justify-center">
+          {product.imageUrl ? (
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="w-full h-full object-cover rounded-lg"
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+              <span className="text-xs text-gray-500">No image</span>
+            </div>
+          )}
+        </div>
+      ),
+    },
     { header: 'Tên sản phẩm', accessor: 'name' as keyof Product },
     { header: 'Danh mục', accessor: 'category' as keyof Product },
     {
@@ -151,10 +183,10 @@ export const TrangSanPham = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Quản lý sản phẩm</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Tổng số: {products.length} sản phẩm
+            Tổng số: {filteredProducts.length} sản phẩm
           </p>
         </div>
-        {hasPermission('edit_product') && (
+        {hasPermission('create_product') && (
           <NutBam onClick={handleCreate}>
             <Plus size={20} className="mr-2" />
             Thêm sản phẩm
@@ -180,7 +212,18 @@ export const TrangSanPham = () => {
       </div>
 
       {/* BangDuLieu */}
-      <BangDuLieu data={filteredProducts} columns={columns} />
+      <BangDuLieu data={paginatedProducts} columns={columns} />
+
+      {/* Pagination */}
+      {filteredProducts.length > 0 && (
+        <PhanTrang
+          currentPage={currentPage}
+          totalItems={filteredProducts.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
+      )}
 
       {/* HopThoai */}
       <ProductHopThoai
@@ -214,8 +257,33 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
     unit: '',
     supplier: '',
     description: '',
+    imageUrl: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [allProducts, setAllProducts] = useState<Product[]>([])
+
+  // Load products để lấy danh sách unique values
+  useEffect(() => {
+    if (isOpen) {
+      productApi.getAllProducts.execute().then(setAllProducts).catch(() => {})
+    }
+  }, [isOpen])
+
+  // Lấy danh sách unique values từ products
+  const categories = useMemo(() => {
+    const uniqueCategories = Array.from(new Set(allProducts.map((p) => p.category).filter(Boolean)))
+    return uniqueCategories.sort()
+  }, [allProducts])
+
+  const suppliers = useMemo(() => {
+    const uniqueSuppliers = Array.from(new Set(allProducts.map((p) => p.supplier).filter(Boolean)))
+    return uniqueSuppliers.sort()
+  }, [allProducts])
+
+  const units = useMemo(() => {
+    const uniqueUnits = Array.from(new Set(allProducts.map((p) => p.unit).filter(Boolean)))
+    return uniqueUnits.sort()
+  }, [allProducts])
 
   useEffect(() => {
     if (product) {
@@ -228,6 +296,7 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
         unit: product.unit,
         supplier: product.supplier,
         description: product.description,
+        imageUrl: product.imageUrl || '',
       })
     } else {
       setFormData({
@@ -239,6 +308,7 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
         unit: '',
         supplier: '',
         description: '',
+        imageUrl: '',
       })
     }
   }, [product, isOpen])
@@ -267,6 +337,13 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
   return (
     <HopThoai isOpen={isOpen} onClose={onClose} title={product ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Upload ảnh */}
+        <UploadAnh
+          label="Ảnh sản phẩm"
+          value={formData.imageUrl}
+          onChange={(value) => setFormData({ ...formData, imageUrl: value })}
+        />
+
         <div className="grid grid-cols-2 gap-4">
           <NhapLieu
             label="Tên sản phẩm"
@@ -274,11 +351,14 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required
           />
-          <NhapLieu
+          <DropdownTimKiem
             label="Danh mục"
             value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            onChange={(value) => setFormData({ ...formData, category: value })}
+            options={categories}
+            placeholder="Chọn hoặc tìm kiếm danh mục"
             required
+            allowCustom={true}
           />
         </div>
 
@@ -310,20 +390,25 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
             required
             min={0}
           />
-          <NhapLieu
+          <DropdownTimKiem
             label="Đơn vị"
             value={formData.unit}
-            onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-            placeholder="kg, hộp, chai..."
+            onChange={(value) => setFormData({ ...formData, unit: value })}
+            options={units}
+            placeholder="Chọn hoặc tìm kiếm đơn vị"
             required
+            allowCustom={true}
           />
         </div>
 
-        <NhapLieu
+        <DropdownTimKiem
           label="Nhà cung cấp"
           value={formData.supplier}
-          onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+          onChange={(value) => setFormData({ ...formData, supplier: value })}
+          options={suppliers}
+          placeholder="Chọn hoặc tìm kiếm nhà cung cấp"
           required
+          allowCustom={true}
         />
 
         <div>
