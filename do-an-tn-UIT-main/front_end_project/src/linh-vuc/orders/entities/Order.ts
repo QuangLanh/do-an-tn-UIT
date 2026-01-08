@@ -1,0 +1,44 @@
+/**
+ * Order Entity - Domain Model
+ * Đại diện cho đơn hàng trong hệ thống
+ */
+
+import { Product } from '../../products/entities/Product'
+
+export interface OrderItem {
+  id: string
+  productId: string
+  product: Product
+  quantity: number
+  unitPrice: number
+  subtotal: number
+}
+
+export type OrderStatus = 'pending' | 'completed' | 'cancelled'
+
+export interface Order {
+  id: string
+  orderNumber: string
+  items: OrderItem[]
+  totalAmount: number
+  discount: number
+  tax: number
+  finalAmount: number
+  status: OrderStatus
+  customerName?: string
+  customerPhone?: string
+  notes?: string
+  createdAt: Date
+  updatedAt: Date
+  completedAt?: Date
+}
+
+export type CreateOrderDto = Omit<Order, 'id' | 'createdAt' | 'updatedAt'>
+export type UpdateOrderDto = Partial<CreateOrderDto>
+
+export interface OrderSummary {
+  totalOrders: number
+  totalRevenue: number
+  totalProfit: number
+  averageOrderValue: number
+}
