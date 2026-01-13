@@ -37,15 +37,15 @@ export const TrangBangDieuKhien = () => {
     loadData()
   }, [])
 
-  const loadData = async () => {
+const loadData = async () => {
     try {
       setIsLoading(true)
       
-      // Tải danh sách sản phẩm
+      // 1. Tải danh sách sản phẩm (giữ nguyên)
       const productsData = await productApi.getAllProducts.execute()
       setProducts(productsData)
       
-      // Tải thông tin đơn hàng hôm nay
+      // 2. Tải thông tin đơn hàng HÔM NAY (giữ nguyên)
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       const todayEnd = new Date()
@@ -62,12 +62,11 @@ export const TrangBangDieuKhien = () => {
         orders: todaySummaryResponse.totalOrders || 0,
       })
       
-      // Tải dữ liệu doanh thu 7 ngày
+      // 3. Tải dữ liệu biểu đồ 7 ngày (SỬA ĐOẠN NÀY)
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
       sevenDaysAgo.setHours(0, 0, 0, 0)
       
-      // Tạo mảng ngày trong 7 ngày gần nhất
       const days = []
       for (let i = 0; i < 7; i++) {
         const date = new Date(sevenDaysAgo)
@@ -75,45 +74,42 @@ export const TrangBangDieuKhien = () => {
         days.push(date)
       }
       
-      // Lấy dữ liệu đơn hàng cho từng ngày
       const salesData = []
+      
+      // --- BẮT ĐẦU SỬA ---
+      // Thay vì gọi orderApi rồi tự cộng, ta gọi api transaction summary cho từng ngày
+      // Cách này đảm bảo logic tính lợi nhuận Y HỆT như Backend
       for (const day of days) {
-        const nextDay = new Date(day)
-        nextDay.setDate(nextDay.getDate() + 1)
+        const startOfDay = new Date(day);
+        startOfDay.setHours(0, 0, 0, 0);
         
-        // Lấy đơn hàng trong ngày
-        const orders = await orderApi.service.getOrdersByDateRange(day, nextDay)
+        const endOfDay = new Date(day);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Gọi API thống kê cho ngày 'day'
+        const dailySummary = await apiService.transactions.summary({
+            from: startOfDay.toISOString(),
+            to: endOfDay.toISOString()
+        });
         
-        // Tính tổng doanh thu và lợi nhuận
-        let revenue = 0
-        let profit = 0
-        
-        for (const order of orders) {
-          if (order.status === 'completed') {
-            revenue += order.finalAmount
-            
-            // Tính lợi nhuận từ các sản phẩm trong đơn hàng
-            for (const item of order.items) {
-              const importPrice =
-                item.product.importPrice ??
-                (item.product as any)?.purchasePrice ??
-                0
-              const itemProfit = (item.unitPrice - importPrice) * item.quantity
-              profit += itemProfit
-            }
-          }
-        }
-        
+        // Format ngày hiển thị VN
+        const year = day.getFullYear();
+        const month = String(day.getMonth() + 1).padStart(2, '0');
+        const dateNum = String(day.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${dateNum}`;
+
         salesData.push({
-          date: day.toISOString().split('T')[0],
-          revenue,
-          profit,
-          orders: orders.length
+          date: dateStr,
+          revenue: dailySummary.revenue || 0,
+          profit: dailySummary.profit || 0, // Lấy trực tiếp từ Backend (đã trừ giá vốn đúng)
+          orders: dailySummary.totalOrders || 0
         })
       }
+      // --- KẾT THÚC SỬA ---
+
       setDailySales(salesData)
 
-      // Tổng kết doanh thu/lợi nhuận cho giai đoạn 7 ngày
+      // 4. Tổng kết 7 ngày (giữ nguyên)
       const summary = await apiService.transactions.summary({
         from: sevenDaysAgo.toISOString(),
         to: todayEnd.toISOString(),
@@ -125,11 +121,9 @@ export const TrangBangDieuKhien = () => {
         cost: summary.cost || 0,
       })
       
-      // Tính toán top sản phẩm bán chạy
+      // 5. Top sản phẩm (giữ nguyên logic hoặc tối ưu sau)
       const allOrders = await orderApi.getAllOrders.execute()
       const completedOrders = allOrders.filter(o => o.status === 'completed')
-      
-      // Tạo map để đếm số lượng bán của từng sản phẩm
       const productSales = new Map()
       
       for (const order of completedOrders) {
@@ -142,21 +136,20 @@ export const TrangBangDieuKhien = () => {
             revenue: 0,
             profit: 0
           }
-          
           currentSales.quantitySold += item.quantity
           currentSales.revenue += item.subtotal
-          currentSales.profit += (item.unitPrice - item.product.importPrice) * item.quantity
-          
+          // Phần top sản phẩm này chỉ để hiển thị tương đối, có thể giữ nguyên
+          currentSales.profit += (item.unitPrice - (item.product.importPrice || 0)) * item.quantity
           productSales.set(productId, currentSales)
         }
       }
       
-      // Chuyển map thành array và sắp xếp theo số lượng bán
       const topProductsData = Array.from(productSales.values())
         .sort((a, b) => b.quantitySold - a.quantitySold)
         .slice(0, 5)
       
       setTopProducts(topProductsData)
+
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {
@@ -227,6 +220,11 @@ export const TrangBangDieuKhien = () => {
                 dataKey="date" 
                 stroke="#6B7280"
                 tick={{ fill: '#6B7280' }}
+                // Thêm dòng này:
+                tickFormatter={(value) => {
+                  const [y, m, d] = value.split('-');
+                  return `${d}/${m}`;
+                }}
               />
               <YAxis 
                 stroke="#6B7280"

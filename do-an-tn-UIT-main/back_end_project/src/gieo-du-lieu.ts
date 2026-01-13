@@ -7,7 +7,9 @@ import { Connection } from 'mongoose';
 import * as fs from 'fs';
 import * as path from 'path';
 
+// Hàm tạo SKU an toàn (Chống lỗi undefined)
 function taoSKU(ten: string): string {
+  if (!ten) return 'SKU-UNKNOWN-' + Math.floor(Math.random() * 10000);
   return ten
     .toUpperCase()
     .normalize("NFD")
@@ -21,6 +23,7 @@ function taoSKU(ten: string): string {
 async function gieoDuLieu() {
   const logger = new Logger('GieoDuLieuTapHoa');
   const app = await NestFactory.createApplicationContext(UngDungPhanHe);
+  
   const dichVuSanPham = app.get(DichVuSanPham);
   const connection = app.get<Connection>(getConnectionToken());
 
@@ -29,78 +32,98 @@ async function gieoDuLieu() {
     logger.log(`🔌 ĐANG KẾT NỐI DATABASE: [ ${connection.name.toUpperCase()} ]`);
     console.log('==================================================\n');
 
-    // Kiểm tra tên DB. Nếu là 'test' thì có thể đang sai cấu hình
-    if (connection.name === 'test') {
-        logger.warn('⚠️ CẢNH BÁO: Bạn đang kết nối vào DB "test". Dữ liệu thật có thể nằm ở DB "taphoa"!');
-    }
-
-    logger.log('🔥 BẮT ĐẦU QUY TRÌNH RESET DỮ LIỆU...');
-
-    // Lấy danh sách tất cả các bảng hiện có
+    // --- BƯỚC 1: XÓA DỮ LIỆU CŨ ---
     const collections = await connection.db.listCollections().toArray();
     const collectionNames = collections.map(c => c.name);
-    logger.log(`📂 Các bảng hiện có trong DB: ${collectionNames.join(', ')}`);
-
-    // --- XÓA SẠCH SẼ ---
-    // Danh sách các tên bảng có thể chứa sản phẩm (thử hết các trường hợp)
     const targetCollections = ['products', 'sanphams', 'product', 'sanpham'];
 
     for (const name of targetCollections) {
         if (collectionNames.includes(name)) {
-            logger.log(`🗑️  Đang xóa bảng: "${name}"...`);
-            try {
-                // Drop collection là xóa sạch cả bảng, nhanh và sạch hơn deleteMany
-                await connection.db.dropCollection(name);
-                logger.log(`✅ Đã xóa thành công bảng "${name}"`);
-            } catch (e) {
-                logger.error(`❌ Lỗi khi xóa bảng ${name}: ${e.message}`);
-            }
+            logger.log(`🗑️  Đang xóa bảng cũ: "${name}"...`);
+            await connection.db.dropCollection(name);
         }
     }
 
-    // --- NẠP DỮ LIỆU MỚI ---
-    logger.log('\n🌱 Đang đọc file du-lieu-san-pham.json...');
-    const tenFileDuLieu = 'du-lieu-san-pham.json';
+    // --- BƯỚC 2: ĐỌC FILE JSON ---
+    const tenFileDuLieu = 'du-lieu-san-pham.json'; 
     const duongDanFile = path.join(process.cwd(), tenFileDuLieu);
 
     if (!fs.existsSync(duongDanFile)) {
-      throw new Error(`Không tìm thấy file ${tenFileDuLieu}!`);
+      throw new Error(`❌ KHÔNG TÌM THẤY FILE: ${tenFileDuLieu} tại ${duongDanFile}`);
     }
 
     const duLieuTho = fs.readFileSync(duongDanFile, 'utf8');
-    const danhSachSanPham = JSON.parse(duLieuTho);
+    
+    let danhSachSanPham;
+    try {
+        danhSachSanPham = JSON.parse(duLieuTho);
+    } catch (e) {
+        throw new Error("❌ File JSON bị lỗi cú pháp! Hãy kiểm tra lại file du-lieu-san-pham.json");
+    }
 
-    logger.log(`📦 Tìm thấy ${danhSachSanPham.length} sản phẩm. Đang nạp...`);
+    // Kiểm tra xem dữ liệu có phải là mảng không
+    if (!Array.isArray(danhSachSanPham)) {
+        throw new Error("❌ Dữ liệu trong file JSON không phải là một danh sách (Array)!");
+    }
 
+    logger.log(`📦 Tìm thấy ${danhSachSanPham.length} mục trong file. Đang kiểm tra và nạp...`);
+
+    // --- BƯỚC 3: NẠP DỮ LIỆU ---
     let thanhCong = 0;
-    for (const sp of danhSachSanPham) {
+    let thatBai = 0;
+
+    // Duyệt vòng lặp
+    for (let i = 0; i < danhSachSanPham.length; i++) {
+      const sp = danhSachSanPham[i];
+      
+      // KIỂM TRA DỮ LIỆU ĐẦU VÀO (QUAN TRỌNG)
+      if (!sp || typeof sp !== 'object') {
+          console.log(`\n⚠️ Bỏ qua mục số ${i + 1}: Dữ liệu không hợp lệ (null hoặc không phải object).`);
+          thatBai++;
+          continue;
+      }
+      
+      // Nếu thiếu tên, gán tên mặc định để không lỗi code
+      const tenSanPham = sp.name || `Sản phẩm không tên ${i + 1}`;
+
       try {
         const sanPhamMoi = {
-          name: sp.name,
-          sku: taoSKU(sp.name) + '-' + Math.floor(Math.random() * 100000),
-          description: `Sản phẩm ${sp.name}`,
-          category: sp.category,
-          purchasePrice: Math.round(sp.price * 0.7),
-          salePrice: sp.price,
-          stock: 50,
+          name: tenSanPham,
+          sku: taoSKU(tenSanPham) + '-' + Math.floor(Math.random() * 10000),
+          
+          description: sp.description || `<div>Sản phẩm ${tenSanPham}</div>`,
+          category: sp.category || 'Chưa phân loại',
+          
+          purchasePrice: sp.importPrice || (sp.price ? Math.round(sp.price * 0.7) : 0),
+          salePrice: sp.price || 0,
+          
+          stock: 100,
           minStockLevel: 5,
-          unit: sp.unit,
-          imageUrl: sp.imageUrl,
+          unit: sp.unit || 'cái',
+          
+          imageUrl: sp.imageUrl || '', 
+          images: sp.images || (sp.imageUrl ? [sp.imageUrl] : []), 
+          
+          status: 'active'
         };
 
         await dichVuSanPham.create(sanPhamMoi);
         thanhCong++;
-        process.stdout.write('.');
+        process.stdout.write('✅'); 
+        
       } catch (error) {
-        // Bỏ qua lỗi trùng
+        thatBai++;
+        process.stdout.write('❌');
+        console.log(`\n⚠️ LỖI NẠP [${tenSanPham}]: ${error.message}`);
       }
     }
 
-    console.log('\n');
-    logger.log(`🎉 HOÀN TẤT! Đã nạp ${thanhCong} sản phẩm vào Database "${connection.name}".`);
+    console.log('\n\n==================================================');
+    logger.log(`🎉 KẾT QUẢ: Thành công ${thanhCong} | Thất bại ${thatBai}`);
+    console.log('==================================================\n');
 
   } catch (error) {
-    logger.error('❌ Lỗi chương trình:', error.message);
+    logger.error('❌ LỖI CHƯƠNG TRÌNH:', error.message);
   } finally {
     await app.close();
   }

@@ -15,14 +15,20 @@ export class OrderItem {
   quantity: number;
 
   @Prop({ required: true })
-  price: number;
+  price: number; // Đây là GIÁ BÁN
+
+  // --- BỔ SUNG ĐOẠN NÀY ---
+  @Prop({ required: true, default: 0 }) 
+  importPrice: number; // Đây là GIÁ NHẬP (GIÁ VỐN)
+  // ------------------------
 
   @Prop({ required: true })
-  subtotal: number;
+  subtotal: number; // Thường là price * quantity
 }
 
 @Schema({ timestamps: true })
 export class Order {
+  // ... (Giữ nguyên các phần khác của Order)
   @Prop({ required: true, unique: true })
   orderNumber: string;
 
@@ -66,8 +72,7 @@ export class Order {
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
 
-// Index for better query performance
+// Index
 OrderSchema.index({ orderNumber: 1 });
 OrderSchema.index({ status: 1 });
 OrderSchema.index({ createdAt: -1 });
-

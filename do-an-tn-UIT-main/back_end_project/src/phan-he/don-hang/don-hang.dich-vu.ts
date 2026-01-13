@@ -34,7 +34,7 @@ export class DichVuDonHang {
     return `ORD${year}${month}${day}${orderNum}`;
   }
 
-  async create(createOrderDto: TaoDonHangDto, userId: string): Promise<Order> {
+async create(createOrderDto: TaoDonHangDto, userId: string): Promise<Order> {
     // Validate and calculate order items
     const orderItems = [];
     let subtotal = 0;
@@ -52,16 +52,23 @@ export class DichVuDonHang {
         );
       }
 
-      const itemSubtotal = product.salePrice * item.quantity;
+      const itemSubtotal = product.salePrice * item.quantity; // Hoặc product.price tùy model của bạn
       subtotal += itemSubtotal;
+
+      // --- ĐOẠN CẦN SỬA Ở ĐÂY ---
+      // Kiểm tra xem trong Model Product của bạn tên biến là 'importPrice' hay 'purchasePrice'
+      // Để an toàn, mình sẽ lấy cả 2, cái nào có dữ liệu thì dùng.
+      const giaVon = product['importPrice'] || product['purchasePrice'] || 0;
 
       orderItems.push({
         product: new Types.ObjectId(item.productId),
         productName: product.name,
         quantity: item.quantity,
-        price: product.salePrice,
+        price: product.salePrice, // Giá bán
         subtotal: itemSubtotal,
+        importPrice: giaVon // <--- QUAN TRỌNG: Phải lưu giá vốn vào đây!
       });
+      // --------------------------
     }
 
     // Calculate total
@@ -101,7 +108,6 @@ export class DichVuDonHang {
     this.logger.log(`Order created: ${savedOrder.orderNumber}`);
     return savedOrder;
   }
-
   async findAll(query?: any): Promise<Order[]> {
     const filter: any = {};
 

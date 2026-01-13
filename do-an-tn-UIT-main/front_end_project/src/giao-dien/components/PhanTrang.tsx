@@ -1,10 +1,10 @@
 /**
  * Pagination Component
  * Component phân trang với item per page selector
+ * ĐÃ SỬA LỖI: Thêm type="button" để ngăn submit form
  */
 
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { NhapLieu } from './NhapLieu'
 
 interface PhanTrangProps {
   currentPage: number
@@ -82,8 +82,13 @@ export const PhanTrang = ({
 
         {/* Navigation buttons */}
         <div className="flex items-center gap-2">
+          {/* NÚT TRANG TRƯỚC */}
           <button
-            onClick={handlePrevious}
+            type="button" // <--- QUAN TRỌNG: Thêm type="button"
+            onClick={(e) => {
+                e.preventDefault();
+                handlePrevious();
+            }}
             disabled={currentPage === 1}
             className={`p-2 rounded-lg border ${
               currentPage === 1
@@ -111,8 +116,13 @@ export const PhanTrang = ({
                     {showEllipsisBefore && (
                       <span className="px-2 text-gray-500 dark:text-gray-400">...</span>
                     )}
+                    {/* NÚT SỐ TRANG */}
                     <button
-                      onClick={() => onPageChange(page)}
+                      type="button" // <--- QUAN TRỌNG: Thêm type="button"
+                      onClick={(e) => {
+                          e.preventDefault();
+                          onPageChange(page);
+                      }}
                       className={`min-w-[36px] px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         page === currentPage
                           ? 'bg-primary-600 text-white'
@@ -126,8 +136,13 @@ export const PhanTrang = ({
               })}
           </div>
 
+          {/* NÚT TRANG SAU */}
           <button
-            onClick={handleNext}
+            type="button" // <--- QUAN TRỌNG: Thêm type="button"
+            onClick={(e) => {
+                e.preventDefault();
+                handleNext();
+            }}
             disabled={currentPage === totalPages}
             className={`p-2 rounded-lg border ${
               currentPage === totalPages
@@ -143,4 +158,3 @@ export const PhanTrang = ({
     </div>
   )
 }
-

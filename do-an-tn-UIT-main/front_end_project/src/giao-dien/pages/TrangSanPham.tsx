@@ -19,6 +19,11 @@ import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
 import { formatCurrency } from '@/ha-tang/utils/formatters'
 import toast from 'react-hot-toast'
 
+// --- 1. IMPORT REACT QUILL ---
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css'; // Import giao diện soạn thảo
+// -----------------------------
+
 export const TrangSanPham = () => {
   const [products, setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
@@ -111,20 +116,11 @@ export const TrangSanPham = () => {
     {
       header: 'Ảnh',
       accessor: (product: Product) => {
-        // Hàm xử lý link ảnh thông minh (Smart URL Handler)
-        // Cho phép nhận cả dữ liệu trống
-        // Hàm xử lý link ảnh thông minh (Đã sửa lỗi type string | undefined)
         const getImageUrl = (url?: string) => {
-          // 1. Nếu không có link hoặc undefined => Trả về chuỗi rỗng
           if (!url) return '';
-          
-          // 2. Nếu là link online (bắt đầu bằng http/https) => Giữ nguyên
           if (url.startsWith('http')) return url;
-          
-          // 3. Nếu là link nội bộ
           const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
           const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-          
           return `${apiUrl}${cleanUrl}`;
         };
 
@@ -137,10 +133,9 @@ export const TrangSanPham = () => {
                 src={finalUrl}
                 alt={product.name}
                 className="w-full h-full object-cover rounded-lg border border-gray-200 dark:border-gray-700"
-                // Thêm xử lý: Nếu ảnh bị lỗi (chết link) thì hiện ảnh mặc định
                 onError={(e) => {
                   e.currentTarget.src = 'https://via.placeholder.com/50?text=IMG';
-                  e.currentTarget.onerror = null; // Tránh lặp vô hạn
+                  e.currentTarget.onerror = null;
                 }}
               />
             ) : (
@@ -360,6 +355,17 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
     }
   }
 
+  // --- 2. CẤU HÌNH TOOLBAR CHO EDITOR ---
+  const quillModules = {
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ list: 'ordered' }, { list: 'bullet' }],
+      ['link', 'clean'],
+    ],
+  };
+  // --------------------------------------
+
   return (
     <HopThoai isOpen={isOpen} onClose={onClose} title={product ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}>
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -437,17 +443,23 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
           allowCustom={true}
         />
 
-        <div>
+        {/* --- 3. THAY THẾ TEXTAREA BẰNG REACT QUILL --- */}
+        <div className="mb-8">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Mô tả
+            Mô tả sản phẩm
           </label>
-          <textarea
-            className="input-field min-h-[80px]"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Mô tả sản phẩm..."
-          />
+          <div className="bg-white text-gray-900 rounded-lg overflow-hidden">
+             {/* Lưu ý: ReactQuill cần nền trắng để hiển thị icon toolbar rõ ràng */}
+            <ReactQuill
+              theme="snow"
+              value={formData.description}
+              onChange={(value) => setFormData({ ...formData, description: value })}
+              modules={quillModules}
+              className="h-48 mb-12" // mb-12 để chừa chỗ cho thanh trạng thái của editor
+            />
+          </div>
         </div>
+        {/* --------------------------------------------- */}
 
         <div className="flex justify-end space-x-3 pt-4">
           <NutBam type="button" variant="secondary" onClick={onClose}>
@@ -461,4 +473,3 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
     </HopThoai>
   )
 }
-
