@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react'
 import { TheThongKe } from '@/giao-dien/components/TheThongKe'
 import { TheThongTin } from '@/giao-dien/components/TheThongTin'
-import { DollarSign, TrendingUp, ShoppingCart, Package, AlertTriangle } from 'lucide-react'
+import { DollarSign, TrendingUp, ShoppingCart, Package, AlertTriangle, CreditCard } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { productApi } from '@/ha-tang/api/productApi'
 import { orderApi } from '@/ha-tang/api/orderApi'
@@ -31,6 +31,10 @@ export const TrangBangDieuKhien = () => {
     profit: number
     orders: number
   }>({ revenue: 0, profit: 0, orders: 0 })
+  const [debtSummary, setDebtSummary] = useState<{
+    totalDebtOrders: number
+    totalDebtAmount: number
+  }>({ totalDebtOrders: 0, totalDebtAmount: 0 })
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -44,6 +48,15 @@ const loadData = async () => {
       // 1. Tải danh sách sản phẩm (giữ nguyên)
       const productsData = await productApi.getAllProducts.execute()
       setProducts(productsData)
+
+      // 2. Tải thống kê từ Dashboard API (bao gồm cả thống kê ghi nợ)
+      const dashboardSummary = await apiService.dashboard.summary()
+      if (dashboardSummary.debt) {
+        setDebtSummary({
+          totalDebtOrders: dashboardSummary.debt.totalDebtOrders || 0,
+          totalDebtAmount: dashboardSummary.debt.totalDebtAmount || 0,
+        })
+      }
       
       // 2. Tải thông tin đơn hàng HÔM NAY (giữ nguyên)
       const today = new Date()
@@ -182,7 +195,7 @@ const loadData = async () => {
       </div>
 
       {/* Stats TheThongTins */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <TheThongKe
           title="Doanh thu hôm nay"
           value={formatCurrency(todayRevenue)}
@@ -200,6 +213,12 @@ const loadData = async () => {
           value={todayOrders}
           icon={ShoppingCart}
           color="purple"
+        />
+        <TheThongKe
+          title="Đơn hàng ghi nợ"
+          value={`${debtSummary.totalDebtOrders} đơn - ${formatCurrency(debtSummary.totalDebtAmount)}`}
+          icon={CreditCard}
+          color={debtSummary.totalDebtOrders > 0 ? 'yellow' : 'green'}
         />
         <TheThongKe
           title="Sản phẩm sắp hết"

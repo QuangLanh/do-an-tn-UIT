@@ -67,6 +67,9 @@ export class DichVuBangDieuKhien {
     // 3. Sản phẩm sắp hết
     const lowStockProducts = await this.dichVuSanPham.getLowStockProducts();
 
+    // 4. Thống kê ghi nợ
+    const debtStatistics = await this.dichVuDonHang.getDebtStatistics();
+
     return {
       today: {
         revenue: todaySummary.revenue,
@@ -78,6 +81,10 @@ export class DichVuBangDieuKhien {
         orders: monthSummary.totalOrders,
         profit: monthSummary.profit,
         profitMargin: monthSummary.profitMargin,
+      },
+      debt: {
+        totalDebtOrders: debtStatistics.totalDebtOrders,
+        totalDebtAmount: debtStatistics.totalDebtAmount,
       },
       alerts: {
         lowStockCount: lowStockProducts.length,

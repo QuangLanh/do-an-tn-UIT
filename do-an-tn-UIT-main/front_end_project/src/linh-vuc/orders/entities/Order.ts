@@ -15,6 +15,7 @@ export interface OrderItem {
 }
 
 export type OrderStatus = 'pending' | 'completed' | 'cancelled'
+export type PaymentStatus = 'PAID' | 'DEBT'
 
 export interface Order {
   id: string
@@ -25,6 +26,9 @@ export interface Order {
   tax: number
   finalAmount: number
   status: OrderStatus
+  paymentStatus?: PaymentStatus
+  paidAt?: Date
+  wasDebt?: boolean
   customerName?: string
   customerPhone?: string
   notes?: string

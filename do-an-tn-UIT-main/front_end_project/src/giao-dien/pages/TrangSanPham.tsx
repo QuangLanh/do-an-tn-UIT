@@ -3,7 +3,7 @@
  * Trang quản lý sản phẩm với CRUD operations
  */
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { Plus, Search, Edit, Trash2 } from 'lucide-react'
 import { NutBam } from '@/giao-dien/components/NutBam'
 import { NhapLieu } from '@/giao-dien/components/NhapLieu'
@@ -279,9 +279,13 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
     supplier: '',
     description: '',
     imageUrl: '',
+    barcode: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [allProducts, setAllProducts] = useState<Product[]>([])
+  const [barcodeInput, setBarcodeInput] = useState('')
+  const [isCheckingBarcode, setIsCheckingBarcode] = useState(false)
+  const barcodeInputRef = useRef<HTMLInputElement | null>(null)
 
   // Load products để lấy danh sách unique values
   useEffect(() => {
@@ -318,7 +322,9 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
         supplier: product.supplier,
         description: product.description,
         imageUrl: product.imageUrl || '',
+        barcode: product.barcode || '',
       })
+      setBarcodeInput(product.barcode || '')
     } else {
       setFormData({
         name: '',
@@ -330,9 +336,70 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
         supplier: '',
         description: '',
         imageUrl: '',
+        barcode: '',
       })
+      setBarcodeInput('')
     }
   }, [product, isOpen])
+
+  // Xử lý quét/nhập barcode
+  const handleBarcodeScan = async () => {
+    const code = barcodeInput.trim()
+    if (!code) return
+
+    setIsCheckingBarcode(true)
+    try {
+      // Kiểm tra xem sản phẩm đã tồn tại chưa
+      const existingProduct = await productApi.service.getProductByBarcode(code)
+      if (existingProduct) {
+        // Nếu đã tồn tại, điền thông tin vào form
+        setFormData({
+          name: existingProduct.name,
+          category: existingProduct.category,
+          importPrice: existingProduct.importPrice,
+          salePrice: existingProduct.salePrice,
+          stock: existingProduct.stock,
+          unit: existingProduct.unit,
+          supplier: existingProduct.supplier,
+          description: existingProduct.description || '',
+          imageUrl: existingProduct.imageUrl || '',
+          barcode: code,
+        })
+        toast.success(`Đã tìm thấy sản phẩm: ${existingProduct.name}`)
+      } else {
+        // Nếu chưa tồn tại, chỉ điền barcode vào form
+        setFormData((prev) => ({ ...prev, barcode: code }))
+        toast.info('Chưa tìm thấy sản phẩm với barcode này. Vui lòng điền thông tin sản phẩm.')
+        // Focus vào trường tên sản phẩm
+        setTimeout(() => {
+          const nameInput = document.querySelector<HTMLInputElement>('input[type="text"]')
+          nameInput?.focus()
+        }, 100)
+      }
+    } catch (error) {
+      // Nếu không tìm thấy (404), chỉ điền barcode vào form
+      setFormData((prev) => ({ ...prev, barcode: code }))
+      toast.info('Chưa tìm thấy sản phẩm với barcode này. Vui lòng điền thông tin sản phẩm.')
+    } finally {
+      setIsCheckingBarcode(false)
+    }
+  }
+
+  // Auto xử lý barcode khi nhập (phù hợp máy quét)
+  useEffect(() => {
+    const code = barcodeInput.trim()
+    if (!code) return
+
+    // Chỉ auto nếu trông giống barcode (chủ yếu là số, dài >= 8)
+    const looksLikeBarcode = /^\d{8,}$/.test(code)
+    if (!looksLikeBarcode) return
+
+    const timeoutId = setTimeout(() => {
+      handleBarcodeScan()
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }, [barcodeInput])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -375,6 +442,51 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
           value={formData.imageUrl}
           onChange={(value) => setFormData({ ...formData, imageUrl: value })}
         />
+
+        {/* Quét / nhập barcode */}
+        <div className="space-y-2">
+          <NhapLieu
+            ref={barcodeInputRef}
+            label="Barcode / Mã vạch"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="Quét hoặc nhập barcode..."
+            value={barcodeInput}
+            onChange={(e) => {
+              // Chỉ cho phép nhập số
+              const value = e.target.value.replace(/[^0-9]/g, '')
+              setBarcodeInput(value)
+              setFormData({ ...formData, barcode: value })
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleBarcodeScan()
+              }
+              // Chặn các phím không phải số (trừ các phím điều hướng và chức năng)
+              if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
+                e.preventDefault()
+              }
+            }}
+          />
+          <div className="flex gap-2">
+            <NutBam
+              type="button"
+              variant="secondary"
+              onClick={handleBarcodeScan}
+              isLoading={isCheckingBarcode}
+              className="text-sm"
+            >
+              Tìm sản phẩm
+            </NutBam>
+            {barcodeInput && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 self-center">
+                Máy quét sẽ tự động tìm kiếm sau khi dừng nhập. Bạn cũng có thể nhấn Enter hoặc click "Tìm sản phẩm".
+              </p>
+            )}
+          </div>
+        </div>
 
         <div className="grid grid-cols-2 gap-4">
           <NhapLieu

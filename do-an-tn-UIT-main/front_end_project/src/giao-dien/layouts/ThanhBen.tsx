@@ -4,7 +4,7 @@
  */
 
 import { NavLink } from 'react-router-dom'
-import { Home, Package, AlertTriangle, FileText, ShoppingCart, Truck, X } from 'lucide-react'
+import { Home, Package, AlertTriangle, FileText, ShoppingCart, Truck, X, ClipboardList, CreditCard } from 'lucide-react'
 import { useSidebarStore } from '@/kho-trang-thai/khoThanhBen'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
 
@@ -26,9 +26,19 @@ export const ThanhBen = () => {
       icon: <Home size={20} />,
     },
     {
-      path: '/orders',
+      path: '/sales',
       label: 'Bán hàng',
       icon: <ShoppingCart size={20} />,
+    },
+    {
+      path: '/orders',
+      label: 'Quản lý đơn hàng',
+      icon: <ClipboardList size={20} />,
+    },
+    {
+      path: '/orders/debts',
+      label: 'Đơn hàng ghi nợ',
+      icon: <CreditCard size={20} />,
     },
     {
       path: '/purchases',
@@ -91,6 +101,7 @@ export const ThanhBen = () => {
               <NavLink
                 key={item.path}
                 to={item.path}
+                end={item.path === '/orders'} // Chỉ match exact path cho /orders, không match /orders/debts
                 className={({ isActive }) =>
                   `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                     isActive

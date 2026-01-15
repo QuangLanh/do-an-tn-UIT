@@ -16,7 +16,9 @@ import { TrangSanPham } from '@/giao-dien/pages/TrangSanPham'
 import { TrangKiemKe } from '@/giao-dien/pages/TrangKiemKe'
 import { TrangBaoCao } from '@/giao-dien/pages/TrangBaoCao'
 import { TrangDonHang } from '@/giao-dien/pages/TrangDonHang'
+import { TrangDonHangGhiNo } from '@/giao-dien/pages/TrangDonHangGhiNo'
 import { TrangTaoDonHang } from '@/giao-dien/pages/TrangTaoDonHang'
+import { TrangBanHang } from '@/giao-dien/pages/TrangBanHang'
 import { TrangNhapHang } from '@/giao-dien/pages/TrangNhapHang'
 import { TrangTaoNhapHang } from '@/giao-dien/pages/TrangTaoNhapHang'
 import { TrangKhongTimThay } from '@/giao-dien/pages/TrangKhongTimThay'
@@ -82,11 +84,33 @@ const UngDungDinhTuyen = () => {
       />
 
       <Route
+        path="/sales"
+        element={
+          <TuyenBaoVe requiredRoles={['admin', 'staff']} requiredPermission="create_order">
+            <BoCucChinh>
+              <TrangBanHang />
+            </BoCucChinh>
+          </TuyenBaoVe>
+        }
+      />
+
+      <Route
         path="/orders"
         element={
           <TuyenBaoVe requiredRoles={['admin', 'staff']}>
             <BoCucChinh>
               <TrangDonHang />
+            </BoCucChinh>
+          </TuyenBaoVe>
+        }
+      />
+
+      <Route
+        path="/orders/debts"
+        element={
+          <TuyenBaoVe requiredRoles={['admin', 'staff']}>
+            <BoCucChinh>
+              <TrangDonHangGhiNo />
             </BoCucChinh>
           </TuyenBaoVe>
         }

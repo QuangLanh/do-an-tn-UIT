@@ -93,6 +93,22 @@ export const TrangDonHang = () => {
     }
   }
 
+  const getPaymentStatusHuyHieu = (order: Order) => {
+    // Trạng thái: Chưa thanh toán (DEBT) - badge đỏ
+    if (order.paymentStatus === 'DEBT') {
+      return <HuyHieu variant="danger">Chưa thanh toán</HuyHieu>
+    }
+    
+    // Trạng thái: Đã thanh toán (từ ghi nợ) - badge cam
+    if (order.paymentStatus === 'PAID' && order.wasDebt === true) {
+      return <HuyHieu variant="orange">Đã thanh toán (từ ghi nợ)</HuyHieu>
+    }
+    
+    // Trạng thái: Đã thanh toán (bình thường) - badge xanh
+    // Nếu không có paymentStatus (đơn hàng cũ), coi như đã thanh toán bình thường
+    return <HuyHieu variant="success">Đã thanh toán</HuyHieu>
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -161,8 +177,8 @@ export const TrangDonHang = () => {
                 accessor: (order: Order) => order.items.length,
               },
               {
-                header: 'Trạng thái',
-                accessor: (order: Order) => getStatusHuyHieu(order.status),
+                header: 'Trạng thái thanh toán',
+                accessor: (order: Order) => getPaymentStatusHuyHieu(order),
               },
               {
                 header: 'Ngày tạo',

@@ -57,6 +57,14 @@ export class DieuKhienDonHang {
     return this.dichVuDonHang.findAll(query);
   }
 
+  @Get('debts')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiOperation({ summary: 'Get all debt orders (Admin, Staff)' })
+  @ApiResponse({ status: 200, description: 'Return all debt orders' })
+  findDebts() {
+    return this.dichVuDonHang.findDebts();
+  }
+
   @Get('history')
   @VaiTro(VaiTroNguoiDung.CUSTOMER)
   @ApiOperation({ summary: 'Lịch sử mua hàng của khách (Customer - read only)' })
@@ -103,6 +111,14 @@ export class DieuKhienDonHang {
     @Body() updateOrderStatusDto: CapNhatTrangThaiDonHangDto,
   ) {
     return this.dichVuDonHang.updateStatus(id, updateOrderStatusDto);
+  }
+
+  @Patch(':id/pay-debt')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiOperation({ summary: 'Pay debt for an order (Admin, Staff)' })
+  @ApiResponse({ status: 200, description: 'Debt paid successfully' })
+  payDebt(@Param('id') id: string) {
+    return this.dichVuDonHang.payDebt(id);
   }
 
   @Delete(':id')

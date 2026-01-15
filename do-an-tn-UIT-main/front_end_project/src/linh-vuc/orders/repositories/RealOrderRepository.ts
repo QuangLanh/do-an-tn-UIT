@@ -66,6 +66,9 @@ function mapBackendToFrontend(backendOrder: any): Order {
     tax: backendOrder.tax || 0,
     finalAmount: backendOrder.total || backendOrder.finalAmount || 0,
     status: backendOrder.status || 'pending',
+    paymentStatus: backendOrder.paymentStatus, // Map paymentStatus từ backend
+    paidAt: backendOrder.paidAt ? new Date(backendOrder.paidAt) : undefined, // Map paidAt từ backend
+    wasDebt: backendOrder.wasDebt || false, // Map wasDebt từ backend
     customerName: backendOrder.customerName,
     customerPhone: backendOrder.customerPhone,
     notes: backendOrder.notes,
@@ -90,6 +93,7 @@ function mapFrontendToBackend(orderDto: CreateOrderDto | UpdateOrderDto): any {
     customerPhone: orderDto.customerPhone,
     paymentMethod: 'cash', // Default payment method
     notes: orderDto.notes,
+    isDebt: (orderDto as any).isDebt || false, // Map isDebt từ frontend sang backend
   }
 }
 

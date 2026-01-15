@@ -34,6 +34,7 @@ export const API_ENDPOINTS = {
       return `/products${queryString ? `?${queryString}` : ''}`
     },
     detail: (id: string) => `/products/${id}`,
+    byBarcode: (barcode: string) => `/products/barcode/${encodeURIComponent(barcode)}`,
     create: () => '/products',
     update: (id: string) => `/products/${id}`,
     delete: (id: string) => `/products/${id}`,
@@ -71,6 +72,8 @@ export const API_ENDPOINTS = {
       return `/orders/top-products${queryString ? `?${queryString}` : ''}`
     },
     history: () => '/orders/history',
+    debts: () => '/orders/debts',
+    payDebt: (id: string) => `/orders/${id}/pay-debt`,
   },
 
   // ==================== SHOPPING LISTS ====================

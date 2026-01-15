@@ -4,6 +4,7 @@ import {
   IsString,
   IsNumber,
   IsOptional,
+  IsBoolean,
   ValidateNested,
   Min,
 } from 'class-validator';
@@ -58,5 +59,10 @@ export class TaoDonHangDto {
   @IsString()
   @IsOptional()
   paymentMethod?: string;
+
+  @ApiProperty({ example: false, default: false, required: false })
+  @IsBoolean()
+  @IsOptional()
+  isDebt?: boolean;
 }
 

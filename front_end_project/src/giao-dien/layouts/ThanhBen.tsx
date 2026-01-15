@@ -4,7 +4,7 @@
  */
 
 import { NavLink } from 'react-router-dom'
-import { Home, Package, AlertTriangle, FileText, ShoppingCart, Truck, X } from 'lucide-react'
+import { Home, Package, AlertTriangle, FileText, ShoppingCart, Truck, X, ClipboardList } from 'lucide-react'
 import { useSidebarStore } from '@/kho-trang-thai/khoThanhBen'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
 
@@ -26,9 +26,14 @@ export const ThanhBen = () => {
       icon: <Home size={20} />,
     },
     {
-      path: '/orders',
+      path: '/sales',
       label: 'Bán hàng',
       icon: <ShoppingCart size={20} />,
+    },
+    {
+      path: '/orders',
+      label: 'Quản lý đơn hàng',
+      icon: <ClipboardList size={20} />,
     },
     {
       path: '/purchases',

@@ -64,6 +64,14 @@ export class DieuKhienSanPham {
     return this.dichVuSanPham.getLowStockProducts();
   }
 
+  @Get('barcode/:barcode')
+  @ApiOperation({ summary: 'Tìm sản phẩm theo barcode (demo bán hàng)' })
+  @ApiResponse({ status: 200, description: 'Trả về sản phẩm theo barcode' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy barcode' })
+  findByBarcode(@Param('barcode') barcode: string) {
+    return this.dichVuSanPham.findByBarcode(barcode);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get product by ID' })
   @ApiResponse({ status: 200, description: 'Return product' })

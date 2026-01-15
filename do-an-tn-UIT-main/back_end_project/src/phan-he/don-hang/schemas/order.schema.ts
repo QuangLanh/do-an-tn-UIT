@@ -66,6 +66,19 @@ export class Order {
   @Prop()
   paymentMethod?: string;
 
+  @Prop({
+    type: String,
+    enum: ['PAID', 'DEBT'],
+    default: 'PAID',
+  })
+  paymentStatus: 'PAID' | 'DEBT';
+
+  @Prop()
+  paidAt?: Date;
+
+  @Prop({ default: false })
+  wasDebt: boolean;
+
   @Prop({ type: Types.ObjectId, ref: 'User' })
   createdBy: Types.ObjectId;
 }

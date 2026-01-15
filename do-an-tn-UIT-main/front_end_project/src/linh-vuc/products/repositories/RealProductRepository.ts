@@ -14,6 +14,7 @@ function mapBackendToFrontend(backendProduct: any): Product {
   return {
     id: backendProduct._id || backendProduct.id,
     name: backendProduct.name,
+    barcode: backendProduct.barcode,
     category: backendProduct.category,
     importPrice: backendProduct.purchasePrice || backendProduct.importPrice,
     salePrice: backendProduct.salePrice,
@@ -46,6 +47,11 @@ function mapFrontendToBackend(product: CreateProductDto | UpdateProductDto): any
     // Backend doesn't have supplier field in schema, but we'll keep it for compatibility
   }
 
+  // Add barcode if it exists
+  if ('barcode' in product && (product as any).barcode) {
+    dto.barcode = (product as any).barcode
+  }
+
   // Add imageUrl if it exists
   if ('imageUrl' in product && product.imageUrl) {
     dto.imageUrl = product.imageUrl
@@ -74,6 +80,16 @@ export class RealProductRepository implements IProductRepository {
       return product ? mapBackendToFrontend(product) : null
     } catch (error) {
       console.error('Error fetching product:', error)
+      return null
+    }
+  }
+
+  async findByBarcode(barcode: string): Promise<Product | null> {
+    try {
+      const product = await (apiService.products as any).byBarcode(barcode)
+      return product ? mapBackendToFrontend(product) : null
+    } catch (error) {
+      console.error('Error fetching product by barcode:', error)
       return null
     }
   }

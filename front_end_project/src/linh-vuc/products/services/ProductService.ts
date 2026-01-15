@@ -17,6 +17,10 @@ export class ProductService {
     return this.repository.findById(id)
   }
 
+  async getProductByBarcode(barcode: string): Promise<Product | null> {
+    return this.repository.findByBarcode(barcode)
+  }
+
   async createProduct(productDto: CreateProductDto): Promise<Product> {
     // Validate business rules
     if (productDto.salePrice <= productDto.importPrice) {

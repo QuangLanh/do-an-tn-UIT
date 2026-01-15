@@ -46,6 +46,8 @@ export class ApiService extends BaseApiService {
 
     detail: (id: string) => this.get(API_ENDPOINTS.products.detail(id)),
 
+    byBarcode: (barcode: string) => this.get(API_ENDPOINTS.products.byBarcode(barcode)),
+
     create: (productData: any) =>
       this.post(API_ENDPOINTS.products.create(), productData),
 
@@ -86,6 +88,10 @@ export class ApiService extends BaseApiService {
       this.get(API_ENDPOINTS.orders.topProducts(limit)),
 
     history: () => this.get(API_ENDPOINTS.orders.history()),
+
+    debts: () => this.get(API_ENDPOINTS.orders.debts()),
+
+    payDebt: (id: string) => this.patch(API_ENDPOINTS.orders.payDebt(id), {}),
   }
 
   // ==================== SHOPPING LISTS ====================

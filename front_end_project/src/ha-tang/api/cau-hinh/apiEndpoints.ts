@@ -34,6 +34,7 @@ export const API_ENDPOINTS = {
       return `/products${queryString ? `?${queryString}` : ''}`
     },
     detail: (id: string) => `/products/${id}`,
+    byBarcode: (barcode: string) => `/products/barcode/${encodeURIComponent(barcode)}`,
     create: () => '/products',
     update: (id: string) => `/products/${id}`,
     delete: (id: string) => `/products/${id}`,

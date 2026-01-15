@@ -79,6 +79,11 @@ async create(createOrderDto: TaoDonHangDto, userId: string): Promise<Order> {
     // Generate order number
     const orderNumber = await this.generateOrderNumber();
 
+    // Xử lý logic ghi nợ
+    const paymentStatus = createOrderDto.isDebt ? 'DEBT' : 'PAID';
+    const paidAt = createOrderDto.isDebt ? undefined : new Date();
+    const wasDebt = createOrderDto.isDebt ? true : false;
+
     // Create order
     const order = new this.orderModel({
       orderNumber,
@@ -91,6 +96,9 @@ async create(createOrderDto: TaoDonHangDto, userId: string): Promise<Order> {
       customerPhone: createOrderDto.customerPhone,
       notes: createOrderDto.notes,
       paymentMethod: createOrderDto.paymentMethod,
+      paymentStatus,
+      paidAt,
+      wasDebt,
       createdBy: new Types.ObjectId(userId),
       status: TrangThaiDonHang.COMPLETED,
     });
@@ -185,15 +193,45 @@ async create(createOrderDto: TaoDonHangDto, userId: string): Promise<Order> {
     return order;
   }
 
+  async payDebt(id: string): Promise<Order> {
+    const order = await this.orderModel.findById(id).exec();
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.paymentStatus !== 'DEBT') {
+      throw new BadRequestException('Order is not in debt status');
+    }
+
+    order.paymentStatus = 'PAID';
+    order.paidAt = new Date();
+
+    const updatedOrder = await order.save();
+
+    this.logger.log(`Order ${updatedOrder.orderNumber} debt paid`);
+    return updatedOrder;
+  }
+
+  async findDebts(): Promise<Order[]> {
+    return this.orderModel
+      .find({ paymentStatus: 'DEBT' })
+      .populate('createdBy', 'fullName email')
+      .populate('items.product')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
   async getStatistics(from?: Date, to?: Date): Promise<any> {
     const filter: any = {
       status: TrangThaiDonHang.COMPLETED,
+      paymentStatus: 'PAID', // Chỉ tính đơn hàng đã thanh toán
     };
 
     if (from || to) {
-      filter.createdAt = {};
-      if (from) filter.createdAt.$gte = from;
-      if (to) filter.createdAt.$lte = to;
+      filter.paidAt = {}; // Dùng paidAt thay vì createdAt để tính doanh thu
+      if (from) filter.paidAt.$gte = from;
+      if (to) filter.paidAt.$lte = to;
     }
 
     const orders = await this.orderModel
@@ -275,9 +313,31 @@ async create(createOrderDto: TaoDonHangDto, userId: string): Promise<Order> {
     };
   }
 
+  async getDebtStatistics(): Promise<any> {
+    const debtOrders = await this.orderModel
+      .find({ paymentStatus: 'DEBT' })
+      .exec();
+
+    const totalDebtOrders = debtOrders.length;
+    const totalDebtAmount = debtOrders.reduce(
+      (sum, order) => sum + (order.total || 0),
+      0,
+    );
+
+    return {
+      totalDebtOrders,
+      totalDebtAmount,
+    };
+  }
+
   async getTopProducts(limit: number = 10): Promise<any[]> {
     return this.orderModel.aggregate([
-      { $match: { status: TrangThaiDonHang.COMPLETED } },
+      { 
+        $match: { 
+          status: TrangThaiDonHang.COMPLETED,
+          paymentStatus: 'PAID' // Chỉ tính sản phẩm đã thanh toán
+        } 
+      },
       { $unwind: '$items' },
       {
         $group: {

@@ -19,6 +19,38 @@ export class DichVuSanPham {
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
   ) {}
 
+  async findByBarcode(barcode: string): Promise<{
+    id: string;
+    name: string;
+    barcode: string;
+    salePrice: number;
+    unit: string;
+    stock: number;
+  }> {
+    const normalized = (barcode || '').trim();
+    if (!normalized) {
+      throw new BadRequestException('Barcode is required');
+    }
+
+    const product = await this.productModel
+      .findOne({ barcode: normalized })
+      .select({ name: 1, barcode: 1, salePrice: 1, unit: 1, stock: 1 })
+      .exec();
+
+    if (!product) {
+      throw new NotFoundException('Không tìm thấy sản phẩm với barcode này');
+    }
+
+    return {
+      id: product._id.toString(),
+      name: product.name,
+      barcode: product.barcode || normalized,
+      salePrice: product.salePrice,
+      unit: product.unit || '',
+      stock: Number(product.stock || 0),
+    };
+  }
+
   async create(createProductDto: TaoSanPhamDto): Promise<Product> {
     const sku = (createProductDto.sku || '').trim();
     const barcode = (createProductDto.barcode || '').trim();

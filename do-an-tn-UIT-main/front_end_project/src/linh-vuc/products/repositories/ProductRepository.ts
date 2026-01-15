@@ -8,6 +8,7 @@ import { Product, CreateProductDto, UpdateProductDto } from '../entities/Product
 export interface IProductRepository {
   findAll(): Promise<Product[]>
   findById(id: string): Promise<Product | null>
+  findByBarcode(barcode: string): Promise<Product | null>
   create(product: CreateProductDto): Promise<Product>
   update(id: string, product: UpdateProductDto): Promise<Product>
   delete(id: string): Promise<void>
@@ -160,6 +161,17 @@ export class ProductRepository implements IProductRepository {
       setTimeout(() => {
         const products = this.getProducts()
         const product = products.find((p) => p.id === id)
+        resolve(product || null)
+      }, 100)
+    })
+  }
+
+  async findByBarcode(barcode: string): Promise<Product | null> {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const normalized = (barcode || '').trim()
+        const products = this.getProducts()
+        const product = products.find((p) => (p as any).barcode === normalized)
         resolve(product || null)
       }, 100)
     })

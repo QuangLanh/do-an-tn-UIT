@@ -6,6 +6,7 @@
 export interface Product {
   id: string
   name: string
+  barcode?: string
   category: string
   importPrice: number // Giá nhập
   salePrice: number // Giá bán
