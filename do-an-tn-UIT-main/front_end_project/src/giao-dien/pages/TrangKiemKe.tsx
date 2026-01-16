@@ -231,6 +231,7 @@ export const TrangKiemKe = () => {
                 itemsPerPage={alertsItemsPerPage}
                 onPageChange={setAlertsCurrentPage}
                 onItemsPerPageChange={setAlertsItemsPerPage}
+                itemsPerPageOptions={[10, 20, 50, 100]}
               />
             )}
           </div>
@@ -247,6 +248,7 @@ export const TrangKiemKe = () => {
             itemsPerPage={productsItemsPerPage}
             onPageChange={setProductsCurrentPage}
             onItemsPerPageChange={setProductsItemsPerPage}
+            itemsPerPageOptions={[10, 20, 50, 100]}
           />
         )}
       </TheThongTin>

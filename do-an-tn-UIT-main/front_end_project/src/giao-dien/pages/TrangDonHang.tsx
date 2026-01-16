@@ -3,11 +3,12 @@
  * Trang quản lý đơn hàng
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { NutBam } from '@/giao-dien/components/NutBam'
 import { TheThongTin } from '@/giao-dien/components/TheThongTin'
 import { BangDuLieu } from '@/giao-dien/components/BangDuLieu'
+import { PhanTrang } from '@/giao-dien/components/PhanTrang'
 import { HuyHieu } from '@/giao-dien/components/HuyHieu'
 import { NhapLieu } from '@/giao-dien/components/NhapLieu'
 import { Order } from '@/linh-vuc/orders/entities/Order'
@@ -22,6 +23,8 @@ export const TrangDonHang = () => {
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
   const navigate = useNavigate()
   const { hasPermission } = useAuthStore()
 
@@ -41,7 +44,16 @@ export const TrangDonHang = () => {
     } else {
       setFilteredOrders(orders)
     }
+    // Reset về trang 1 khi tìm kiếm
+    setCurrentPage(1)
   }, [searchQuery, orders])
+
+  // Tính toán dữ liệu phân trang
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    return filteredOrders.slice(startIndex, endIndex)
+  }, [filteredOrders, currentPage, itemsPerPage])
 
   const loadOrders = async () => {
     try {
@@ -157,9 +169,10 @@ export const TrangDonHang = () => {
             Không tìm thấy đơn hàng nào
           </div>
         ) : (
-          <BangDuLieu
-            data={filteredOrders}
-            columns={[
+          <>
+            <BangDuLieu
+              data={paginatedOrders}
+              columns={[
               {
                 header: 'Mã đơn hàng',
                 accessor: 'orderNumber' as keyof Order,
@@ -208,8 +221,20 @@ export const TrangDonHang = () => {
                 ),
               },
             ]}
-            onRowClick={handleViewOrder}
-          />
+              onRowClick={handleViewOrder}
+            />
+            {/* Pagination */}
+            {filteredOrders.length > 0 && (
+              <PhanTrang
+                currentPage={currentPage}
+                totalItems={filteredOrders.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                onItemsPerPageChange={setItemsPerPage}
+                itemsPerPageOptions={[10, 20, 50, 100]}
+              />
+            )}
+          </>
         )}
       </TheThongTin>
     </div>

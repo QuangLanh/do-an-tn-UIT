@@ -79,6 +79,17 @@ export class Order {
   @Prop({ default: false })
   wasDebt: boolean;
 
+  // Thêm các field cho đổi/trả hàng
+  @Prop({
+    type: String,
+    enum: ['SALE', 'EXCHANGE', 'RETURN'],
+    default: 'SALE',
+  })
+  orderType: 'SALE' | 'EXCHANGE' | 'RETURN';
+
+  @Prop()
+  relatedOrderCode?: string; // Mã đơn hàng gốc (cho EXCHANGE/RETURN)
+
   @Prop({ type: Types.ObjectId, ref: 'User' })
   createdBy: Types.ObjectId;
 }
@@ -89,3 +100,6 @@ export const OrderSchema = SchemaFactory.createForClass(Order);
 OrderSchema.index({ orderNumber: 1 });
 OrderSchema.index({ status: 1 });
 OrderSchema.index({ createdAt: -1 });
+OrderSchema.index({ orderType: 1 });
+OrderSchema.index({ relatedOrderCode: 1 });
+OrderSchema.index({ customerPhone: 1 });

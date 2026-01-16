@@ -19,6 +19,8 @@ import {
 import { DichVuDonHang } from './don-hang.dich-vu';
 import { TaoDonHangDto } from './dto/tao-don-hang.dto';
 import { CapNhatTrangThaiDonHangDto } from './dto/cap-nhat-trang-thai-don-hang.dto';
+import { DoiHangDto } from './dto/doi-hang.dto';
+import { TraHangDto } from './dto/tra-hang.dto';
 import { BaoVeJwt } from '../../dung-chung/bao-ve/bao-ve-jwt';
 import { BaoVeVaiTro } from '../../dung-chung/bao-ve/bao-ve-vai-tro';
 import { VaiTro } from '../../dung-chung/trang-tri/vai-tro.trang-tri';
@@ -92,6 +94,60 @@ export class DieuKhienDonHang {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   getTopProducts(@Query('limit') limit?: number) {
     return this.dichVuDonHang.getTopProducts(limit ? +limit : 10);
+  }
+
+  @Get('exchanges')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiOperation({ summary: 'Get all exchange orders (Admin, Staff)' })
+  @ApiResponse({ status: 200, description: 'Return all exchange orders' })
+  findExchanges() {
+    return this.dichVuDonHang.findExchanges();
+  }
+
+  @Get('returns')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiOperation({ summary: 'Get all return orders (Admin, Staff)' })
+  @ApiResponse({ status: 200, description: 'Return all return orders' })
+  findReturns() {
+    return this.dichVuDonHang.findReturns();
+  }
+
+  @Get('search/phone/:phone')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiOperation({ summary: 'Find orders by phone number (Admin, Staff)' })
+  @ApiResponse({ status: 200, description: 'Return orders' })
+  findByPhone(@Param('phone') phone: string) {
+    return this.dichVuDonHang.findByPhone(phone);
+  }
+
+  @Get('search/code/:orderNumber')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiOperation({ summary: 'Find order by order number (Admin, Staff)' })
+  @ApiResponse({ status: 200, description: 'Return order' })
+  findByOrderNumber(@Param('orderNumber') orderNumber: string) {
+    return this.dichVuDonHang.findByOrderNumber(orderNumber);
+  }
+
+  @Post('exchange')
+  @VaiTro(VaiTroNguoiDung.STAFF, VaiTroNguoiDung.ADMIN)
+  @ApiOperation({ summary: 'Create exchange order (Staff, Admin)' })
+  @ApiResponse({ status: 201, description: 'Exchange order created successfully' })
+  createExchange(
+    @Body() exchangeDto: DoiHangDto,
+    @NguoiDungHienTai('id') userId: string,
+  ) {
+    return this.dichVuDonHang.createExchange(exchangeDto, userId);
+  }
+
+  @Post('return')
+  @VaiTro(VaiTroNguoiDung.STAFF, VaiTroNguoiDung.ADMIN)
+  @ApiOperation({ summary: 'Create return order (Staff, Admin)' })
+  @ApiResponse({ status: 201, description: 'Return order created successfully' })
+  createReturn(
+    @Body() returnDto: TraHangDto,
+    @NguoiDungHienTai('id') userId: string,
+  ) {
+    return this.dichVuDonHang.createReturn(returnDto, userId);
   }
 
   @Get(':id')

@@ -3,11 +3,12 @@
  * Trang quản lý phiếu nhập hàng
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { NutBam } from '@/giao-dien/components/NutBam'
 import { TheThongTin } from '@/giao-dien/components/TheThongTin'
 import { BangDuLieu } from '@/giao-dien/components/BangDuLieu'
+import { PhanTrang } from '@/giao-dien/components/PhanTrang'
 import { HuyHieu } from '@/giao-dien/components/HuyHieu'
 import { NhapLieu } from '@/giao-dien/components/NhapLieu'
 import { Purchase } from '@/linh-vuc/purchases/entities/Purchase'
@@ -22,6 +23,8 @@ export const TrangNhapHang = () => {
   const [filteredPurchases, setFilteredPurchases] = useState<Purchase[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
   const navigate = useNavigate()
   const { hasPermission } = useAuthStore()
 
@@ -40,7 +43,16 @@ export const TrangNhapHang = () => {
     } else {
       setFilteredPurchases(purchases)
     }
+    // Reset về trang 1 khi tìm kiếm
+    setCurrentPage(1)
   }, [searchQuery, purchases])
+
+  // Tính toán dữ liệu phân trang
+  const paginatedPurchases = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    return filteredPurchases.slice(startIndex, endIndex)
+  }, [filteredPurchases, currentPage, itemsPerPage])
 
   const loadPurchases = async () => {
     try {
@@ -140,9 +152,10 @@ export const TrangNhapHang = () => {
             Không tìm thấy phiếu nhập hàng nào
           </div>
         ) : (
-          <BangDuLieu
-            data={filteredPurchases}
-            columns={[
+          <>
+            <BangDuLieu
+              data={paginatedPurchases}
+              columns={[
               {
                 header: 'Mã phiếu nhập',
                 accessor: 'purchaseNumber' as keyof Purchase,
@@ -191,8 +204,20 @@ export const TrangNhapHang = () => {
                 ),
               },
             ]}
-            onRowClick={handleViewPurchase}
-          />
+              onRowClick={handleViewPurchase}
+            />
+            {/* Pagination */}
+            {filteredPurchases.length > 0 && (
+              <PhanTrang
+                currentPage={currentPage}
+                totalItems={filteredPurchases.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                onItemsPerPageChange={setItemsPerPage}
+                itemsPerPageOptions={[10, 20, 50, 100]}
+              />
+            )}
+          </>
         )}
       </TheThongTin>
     </div>

@@ -74,6 +74,12 @@ export const API_ENDPOINTS = {
     history: () => '/orders/history',
     debts: () => '/orders/debts',
     payDebt: (id: string) => `/orders/${id}/pay-debt`,
+    exchanges: () => '/orders/exchanges',
+    returns: () => '/orders/returns',
+    exchange: () => '/orders/exchange',
+    return: () => '/orders/return',
+    searchByPhone: (phone: string) => `/orders/search/phone/${phone}`,
+    searchByCode: (code: string) => `/orders/search/code/${code}`,
   },
 
   // ==================== SHOPPING LISTS ====================

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { BangDuLieu } from '@/giao-dien/components/BangDuLieu'
+import { PhanTrang } from '@/giao-dien/components/PhanTrang'
 import { TheThongTin } from '@/giao-dien/components/TheThongTin'
 import { HuyHieu } from '@/giao-dien/components/HuyHieu'
 import { apiService } from '@/ha-tang/api'
@@ -18,6 +19,8 @@ type OrderHistoryItem = {
 export const TrangLichSuMuaHang = () => {
   const [orders, setOrders] = useState<OrderHistoryItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
 
   const taiLichSu = async () => {
     try {
@@ -53,6 +56,13 @@ export const TrangLichSuMuaHang = () => {
       })),
     [orders],
   )
+
+  // Tính toán dữ liệu phân trang
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    return data.slice(startIndex, endIndex)
+  }, [data, currentPage, itemsPerPage])
 
   const columns = [
     {
@@ -102,7 +112,19 @@ export const TrangLichSuMuaHang = () => {
       {isLoading ? (
         <div className="text-gray-500 dark:text-gray-400">Đang tải...</div>
       ) : (
-        <BangDuLieu data={data} columns={columns} />
+        <>
+          <BangDuLieu data={paginatedData} columns={columns} />
+          {data.length > 0 && (
+            <PhanTrang
+              currentPage={currentPage}
+              totalItems={data.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              onItemsPerPageChange={setItemsPerPage}
+              itemsPerPageOptions={[10, 20, 50, 100]}
+            />
+          )}
+        </>
       )}
     </div>
   )

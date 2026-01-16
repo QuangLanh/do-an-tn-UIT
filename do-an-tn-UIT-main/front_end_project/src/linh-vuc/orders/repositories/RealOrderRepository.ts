@@ -69,6 +69,8 @@ function mapBackendToFrontend(backendOrder: any): Order {
     paymentStatus: backendOrder.paymentStatus, // Map paymentStatus từ backend
     paidAt: backendOrder.paidAt ? new Date(backendOrder.paidAt) : undefined, // Map paidAt từ backend
     wasDebt: backendOrder.wasDebt || false, // Map wasDebt từ backend
+    orderType: backendOrder.orderType || 'SALE', // Map orderType từ backend
+    relatedOrderCode: backendOrder.relatedOrderCode, // Map relatedOrderCode từ backend
     customerName: backendOrder.customerName,
     customerPhone: backendOrder.customerPhone,
     notes: backendOrder.notes,

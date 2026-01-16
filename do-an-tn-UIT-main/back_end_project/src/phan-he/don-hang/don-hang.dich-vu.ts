@@ -87,6 +87,7 @@ async create(createOrderDto: TaoDonHangDto, userId: string): Promise<Order> {
     // Create order
     const order = new this.orderModel({
       orderNumber,
+      orderType: 'SALE', // Đơn bán hàng thường
       items: orderItems,
       subtotal,
       tax,
@@ -360,6 +361,254 @@ async create(createOrderDto: TaoDonHangDto, userId: string): Promise<Order> {
     }
 
     this.logger.log(`Order deleted: ${result.orderNumber}`);
+  }
+
+  // ============ ĐỔI/TRẢ HÀNG ============
+
+  private async generateExchangeNumber(): Promise<string> {
+    const date = new Date();
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+
+    const count = await this.orderModel.countDocuments({ orderType: 'EXCHANGE' });
+    const orderNum = (count + 1).toString().padStart(4, '0');
+
+    return `EX${year}${month}${day}${orderNum}`;
+  }
+
+  private async generateReturnNumber(): Promise<string> {
+    const date = new Date();
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+
+    const count = await this.orderModel.countDocuments({ orderType: 'RETURN' });
+    const orderNum = (count + 1).toString().padStart(4, '0');
+
+    return `RF${year}${month}${day}${orderNum}`;
+  }
+
+  async findByOrderNumber(orderNumber: string): Promise<Order> {
+    const order = await this.orderModel
+      .findOne({ orderNumber })
+      .populate('createdBy', 'fullName email')
+      .populate('items.product')
+      .exec();
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderNumber} not found`);
+    }
+
+    return order;
+  }
+
+  async findByPhone(phone: string): Promise<Order[]> {
+    return this.orderModel
+      .find({ 
+        customerPhone: phone,
+        status: TrangThaiDonHang.COMPLETED 
+      })
+      .populate('items.product')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async createExchange(exchangeDto: any, userId: string): Promise<Order> {
+    // Tìm đơn hàng gốc
+    const originalOrder = await this.findByOrderNumber(exchangeDto.originalOrderCode);
+
+    // Validate sản phẩm trả (phải có trong đơn gốc)
+    for (const returnItem of exchangeDto.returnItems) {
+      const orderItem = originalOrder.items.find(
+        (item) => item.product.toString() === returnItem.productId
+      );
+      if (!orderItem) {
+        throw new BadRequestException(
+          `Product ${returnItem.productId} not found in original order`
+        );
+      }
+      if (orderItem.quantity < returnItem.quantity) {
+        throw new BadRequestException(
+          `Cannot return more than purchased quantity`
+        );
+      }
+    }
+
+    // Hoàn kho sản phẩm cũ (trả lại)
+    for (const returnItem of exchangeDto.returnItems) {
+      await this.dichVuSanPham.updateStock(returnItem.productId, {
+        operation: ThaoTacTonKho.ADD,
+        quantity: returnItem.quantity,
+      });
+    }
+
+    // Validate và trừ kho sản phẩm mới
+    const exchangeItems = [];
+    let subtotal = 0;
+
+    for (const item of exchangeDto.exchangeItems) {
+      const product = await this.dichVuSanPham.findOne(item.productId);
+
+      if (!product.isActive) {
+        throw new BadRequestException(`Product ${product.name} is not active`);
+      }
+
+      if (product.stock < item.quantity) {
+        throw new BadRequestException(
+          `Insufficient stock for ${product.name}. Available: ${product.stock}`
+        );
+      }
+
+      const itemSubtotal = product.salePrice * item.quantity;
+      subtotal += itemSubtotal;
+
+      const giaVon = product['importPrice'] || product['purchasePrice'] || 0;
+
+      exchangeItems.push({
+        product: new Types.ObjectId(item.productId),
+        productName: product.name,
+        quantity: item.quantity,
+        price: product.salePrice,
+        subtotal: itemSubtotal,
+        importPrice: giaVon,
+      });
+
+      // Trừ kho sản phẩm mới
+      await this.dichVuSanPham.updateStock(item.productId, {
+        operation: ThaoTacTonKho.SUBTRACT,
+        quantity: item.quantity,
+      });
+    }
+
+    // Tính chênh lệch (nếu có)
+    const total = subtotal; // Có thể tính chênh lệch phức tạp hơn
+
+    // Tạo đơn đổi hàng
+    const exchangeNumber = await this.generateExchangeNumber();
+
+    const exchangeOrder = new this.orderModel({
+      orderNumber: exchangeNumber,
+      orderType: 'EXCHANGE',
+      relatedOrderCode: originalOrder.orderNumber,
+      items: exchangeItems,
+      subtotal,
+      tax: 0,
+      discount: 0,
+      total,
+      customerName: originalOrder.customerName,
+      customerPhone: originalOrder.customerPhone,
+      notes: `Đổi hàng từ đơn ${originalOrder.orderNumber}`,
+      paymentStatus: 'PAID',
+      paidAt: new Date(),
+      createdBy: new Types.ObjectId(userId),
+      status: TrangThaiDonHang.COMPLETED,
+    });
+
+    const savedOrder = await exchangeOrder.save();
+    this.logger.log(`Exchange order created: ${savedOrder.orderNumber}`);
+
+    return savedOrder;
+  }
+
+  async createReturn(returnDto: any, userId: string): Promise<Order> {
+    // Tìm đơn hàng gốc
+    const originalOrder = await this.findByOrderNumber(returnDto.originalOrderCode);
+
+    // Validate sản phẩm trả
+    for (const returnItem of returnDto.returnItems) {
+      const orderItem = originalOrder.items.find(
+        (item) => item.product.toString() === returnItem.productId
+      );
+      if (!orderItem) {
+        throw new BadRequestException(
+          `Product ${returnItem.productId} not found in original order`
+        );
+      }
+      if (orderItem.quantity < returnItem.quantity) {
+        throw new BadRequestException(
+          `Cannot return more than purchased quantity`
+        );
+      }
+    }
+
+    // Hoàn kho và tính tiền hoàn trả
+    const returnItems = [];
+    let subtotal = 0;
+
+    for (const returnItem of returnDto.returnItems) {
+      const orderItem = originalOrder.items.find(
+        (item) => item.product.toString() === returnItem.productId
+      );
+
+      const product = await this.dichVuSanPham.findOne(returnItem.productId);
+      
+      const itemSubtotal = orderItem.price * returnItem.quantity;
+      subtotal += itemSubtotal;
+
+      const giaVon = product['importPrice'] || product['purchasePrice'] || 0;
+
+      returnItems.push({
+        product: new Types.ObjectId(returnItem.productId),
+        productName: orderItem.productName,
+        quantity: returnItem.quantity,
+        price: orderItem.price,
+        subtotal: itemSubtotal,
+        importPrice: giaVon,
+      });
+
+      // Hoàn kho
+      await this.dichVuSanPham.updateStock(returnItem.productId, {
+        operation: ThaoTacTonKho.ADD,
+        quantity: returnItem.quantity,
+      });
+    }
+
+    const total = -subtotal; // Số âm để đại diện cho tiền hoàn trả
+
+    // Tạo đơn trả hàng
+    const returnNumber = await this.generateReturnNumber();
+
+    const returnOrder = new this.orderModel({
+      orderNumber: returnNumber,
+      orderType: 'RETURN',
+      relatedOrderCode: originalOrder.orderNumber,
+      items: returnItems,
+      subtotal: -subtotal,
+      tax: 0,
+      discount: 0,
+      total,
+      customerName: originalOrder.customerName,
+      customerPhone: originalOrder.customerPhone,
+      notes: `Trả hàng từ đơn ${originalOrder.orderNumber}`,
+      paymentStatus: 'PAID',
+      paidAt: new Date(),
+      createdBy: new Types.ObjectId(userId),
+      status: TrangThaiDonHang.COMPLETED,
+    });
+
+    const savedOrder = await returnOrder.save();
+    this.logger.log(`Return order created: ${savedOrder.orderNumber}`);
+
+    return savedOrder;
+  }
+
+  async findExchanges(): Promise<Order[]> {
+    return this.orderModel
+      .find({ orderType: 'EXCHANGE' })
+      .populate('createdBy', 'fullName email')
+      .populate('items.product')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async findReturns(): Promise<Order[]> {
+    return this.orderModel
+      .find({ orderType: 'RETURN' })
+      .populate('createdBy', 'fullName email')
+      .populate('items.product')
+      .sort({ createdAt: -1 })
+      .exec();
   }
 }
 

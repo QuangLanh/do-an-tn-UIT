@@ -92,6 +92,22 @@ export class ApiService extends BaseApiService {
     debts: () => this.get(API_ENDPOINTS.orders.debts()),
 
     payDebt: (id: string) => this.patch(API_ENDPOINTS.orders.payDebt(id), {}),
+
+    exchanges: () => this.get(API_ENDPOINTS.orders.exchanges()),
+
+    returns: () => this.get(API_ENDPOINTS.orders.returns()),
+
+    exchange: (exchangeData: any) =>
+      this.post(API_ENDPOINTS.orders.exchange(), exchangeData),
+
+    return: (returnData: any) =>
+      this.post(API_ENDPOINTS.orders.return(), returnData),
+
+    searchByPhone: (phone: string) =>
+      this.get(API_ENDPOINTS.orders.searchByPhone(phone)),
+
+    searchByCode: (code: string) =>
+      this.get(API_ENDPOINTS.orders.searchByCode(code)),
   }
 
   // ==================== SHOPPING LISTS ====================

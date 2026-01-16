@@ -4,7 +4,7 @@
  */
 
 import { NavLink } from 'react-router-dom'
-import { Home, Package, AlertTriangle, FileText, ShoppingCart, Truck, X, ClipboardList, CreditCard } from 'lucide-react'
+import { Home, Package, AlertTriangle, FileText, ShoppingCart, Truck, X, ClipboardList, CreditCard, RefreshCw } from 'lucide-react'
 import { useSidebarStore } from '@/kho-trang-thai/khoThanhBen'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
 
@@ -39,6 +39,11 @@ export const ThanhBen = () => {
       path: '/orders/debts',
       label: 'Đơn hàng ghi nợ',
       icon: <CreditCard size={20} />,
+    },
+    {
+      path: '/returns-exchanges',
+      label: 'Đổi / Trả hàng',
+      icon: <RefreshCw size={20} />,
     },
     {
       path: '/purchases',

@@ -243,6 +243,7 @@ export const TrangSanPham = () => {
           itemsPerPage={itemsPerPage}
           onPageChange={setCurrentPage}
           onItemsPerPageChange={setItemsPerPage}
+          itemsPerPageOptions={[10, 20, 50, 100]}
         />
       )}
 

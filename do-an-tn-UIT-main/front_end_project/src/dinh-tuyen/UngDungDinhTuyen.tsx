@@ -21,6 +21,7 @@ import { TrangTaoDonHang } from '@/giao-dien/pages/TrangTaoDonHang'
 import { TrangBanHang } from '@/giao-dien/pages/TrangBanHang'
 import { TrangNhapHang } from '@/giao-dien/pages/TrangNhapHang'
 import { TrangTaoNhapHang } from '@/giao-dien/pages/TrangTaoNhapHang'
+import { TrangDoiTraHang } from '@/giao-dien/pages/TrangDoiTraHang'
 import { TrangKhongTimThay } from '@/giao-dien/pages/TrangKhongTimThay'
 import { TrangDangNhapKhachHang } from '@/giao-dien/pages/khach-hang/TrangDangNhapKhachHang'
 import { TrangSanPhamKhachHang } from '@/giao-dien/pages/khach-hang/TrangSanPhamKhachHang'
@@ -133,6 +134,17 @@ const UngDungDinhTuyen = () => {
           <TuyenBaoVe requiredRoles={['admin', 'staff']} requiredPermission="view_orders">
             <BoCucChinh>
               <TrangTaoDonHang />
+            </BoCucChinh>
+          </TuyenBaoVe>
+        }
+      />
+
+      <Route
+        path="/returns-exchanges"
+        element={
+          <TuyenBaoVe requiredRoles={['admin', 'staff']}>
+            <BoCucChinh>
+              <TrangDoiTraHang />
             </BoCucChinh>
           </TuyenBaoVe>
         }
