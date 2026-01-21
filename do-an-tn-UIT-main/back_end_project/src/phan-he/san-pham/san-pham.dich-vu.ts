@@ -16,7 +16,7 @@ export class DichVuSanPham {
   private readonly logger = new Logger(DichVuSanPham.name);
 
   constructor(
-    @InjectModel(Product.name) private productModel: Model<ProductDocument>,
+    @InjectModel(Product.name) public productModel: Model<ProductDocument>,
   ) {}
 
   async findByBarcode(barcode: string): Promise<{

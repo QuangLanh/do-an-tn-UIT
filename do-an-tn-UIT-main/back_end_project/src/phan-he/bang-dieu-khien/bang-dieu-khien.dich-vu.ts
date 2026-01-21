@@ -69,7 +69,6 @@ export class DichVuBangDieuKhien {
 
     // 4. Thống kê ghi nợ
     const debtStatistics = await this.dichVuDonHang.getDebtStatistics();
-
     return {
       today: {
         revenue: todaySummary.revenue,

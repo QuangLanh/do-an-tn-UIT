@@ -1,54 +1,61 @@
 /**
  * Report API
- * Factory pattern để tạo các service cho Reports
+ * Cập nhật: Gọi trực tiếp Backend để lấy số liệu chính xác
  */
 
-import { ReportService } from '@/linh-vuc/reports/services/ReportService'
-import { ReportServiceWithRealData } from '@/linh-vuc/reports/services/ReportServiceWithRealData'
-import { orderApi } from './orderApi'
-import { productApi } from './productApi'
-
-// Singleton instances
-const reportService = new ReportService()
-const reportServiceWithRealData = new ReportServiceWithRealData()
-
-// Hàm helper để lấy dữ liệu đơn hàng và sản phẩm
-const getOrdersAndProducts = async () => {
-  const orders = await orderApi.getAllOrders.execute()
-  const products = await productApi.getAllProducts.execute()
-  return { orders, products }
-}
+// Import apiService từ file index
+import { apiService } from './index';
 
 export const reportApi = {
-  // Các service sử dụng dữ liệu giả lập (mock data)
-  mockService: reportService,
-  
-  // Các service sử dụng dữ liệu thực tế từ đơn hàng
-  realDataService: reportServiceWithRealData,
-  
-  // Các phương thức tiện ích
-  async getDailySalesReport(days: number = 7) {
-    const { orders } = await getOrdersAndProducts()
-    return reportServiceWithRealData.generateDailySalesReportFromOrders(orders, days)
+  // 1. Lấy báo cáo doanh thu theo ngày
+  getDailySalesReport: async (days: number = 30) => {
+    try {
+      // Dùng (apiService as any) để tránh lỗi 'protected'
+      const response = await (apiService as any).get(`/reports/daily-sales?days=${days}`);
+      // Kiểm tra cấu trúc trả về (có thể là response hoặc response.data)
+      return response; 
+    } catch (error) {
+      console.error("Lỗi lấy báo cáo ngày:", error);
+      return [];
+    }
   },
-  
-  async getTopProductsReport(limit: number = 5) {
-    const { orders } = await getOrdersAndProducts()
-    return reportServiceWithRealData.generateTopProductsReportFromOrders(orders, limit)
+
+  // 2. Lấy Top sản phẩm bán chạy
+  getTopProductsReport: async (limit: number = 10) => {
+    try {
+      const response = await (apiService as any).get(`/reports/top-products?limit=${limit}`);
+      return response;
+    } catch (error) {
+      console.error("Lỗi lấy top sản phẩm:", error);
+      return [];
+    }
   },
-  
-  async getMonthlyReport() {
-    const { orders, products } = await getOrdersAndProducts()
-    return reportServiceWithRealData.generateMonthlyReportFromOrders(orders, products)
+
+  // 3. Lấy số liệu tổng quan
+  getRevenueSummary: async (from?: string, to?: string) => {
+    try {
+      const response = await (apiService as any).get(`/reports/summary?from=${from || ''}&to=${to || ''}`);
+      return response;
+    } catch (error) {
+      console.error("Lỗi lấy tổng quan:", error);
+      return null;
+    }
   },
-  
-  async getDashboardStats() {
-    const { orders, products } = await getOrdersAndProducts()
-    return reportServiceWithRealData.generateDashboardStatsFromOrders(orders, products)
+
+  // --- Các hàm tiện ích giữ nguyên ---
+  calculateProfitMargin: (revenue: number, profit: number) => {
+    if (!revenue || revenue === 0) return 0;
+    return (profit / revenue) * 100;
   },
-  
-  // Các hàm tiện ích khác
-  calculateProfitMargin: reportService.calculateProfitMargin,
-  formatCurrency: reportService.formatCurrency,
-  formatNumber: reportService.formatNumber,
-}
+
+  formatCurrency: (value: number) => {
+    return new Intl.NumberFormat('vi-VN', { 
+      style: 'currency', 
+      currency: 'VND' 
+    }).format(value);
+  },
+
+  formatNumber: (value: number) => {
+    return new Intl.NumberFormat('vi-VN').format(value);
+  }
+};

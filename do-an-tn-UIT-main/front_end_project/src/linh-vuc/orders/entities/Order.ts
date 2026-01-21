@@ -15,7 +15,7 @@ export interface OrderItem {
 }
 
 export type OrderStatus = 'pending' | 'completed' | 'cancelled'
-export type PaymentStatus = 'PAID' | 'DEBT'
+export type PaymentStatus = 'PAID' | 'DEBT' | 'REFUNDED';
 export type OrderType = 'SALE' | 'EXCHANGE' | 'RETURN'
 
 export interface Order {

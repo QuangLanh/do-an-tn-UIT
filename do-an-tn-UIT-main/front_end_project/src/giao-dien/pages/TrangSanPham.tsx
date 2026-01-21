@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState, useMemo, useRef } from 'react'
-import { Plus, Search, Edit, Trash2 } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react'
 import { NutBam } from '@/giao-dien/components/NutBam'
 import { NhapLieu } from '@/giao-dien/components/NhapLieu'
 import { BangDuLieu } from '@/giao-dien/components/BangDuLieu'
@@ -19,9 +19,9 @@ import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
 import { formatCurrency } from '@/ha-tang/utils/formatters'
 import toast from 'react-hot-toast'
 
-// --- 1. IMPORT REACT QUILL ---
+// --- IMPORT REACT QUILL ---
 import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css'; // Import giao diện soạn thảo
+import 'react-quill/dist/quill.snow.css';
 // -----------------------------
 
 export const TrangSanPham = () => {
@@ -29,11 +29,34 @@ export const TrangSanPham = () => {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  
+  // State cho Modal Thêm/Sửa
   const [isHopThoaiOpen, setIsHopThoaiOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  
+  // State cho Modal Xem Chi Tiết
+  const [viewingProduct, setViewingProduct] = useState<Product | null>(null)
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
-  const { hasPermission } = useAuthStore()
+  
+  const { user } = useAuthStore();
+
+  // ========================================================================
+  // 🔥 FIX LỖI QUYỀN ADMIN (CHẤP NHẬN CẢ HOA LẪN THƯỜNG)
+  // ========================================================================
+  const isAdmin = useMemo(() => {
+    // 1. Lấy role ra, chuyển về chuỗi, xóa khoảng trắng, chuyển thành chữ HOA
+    const role = String((user as any)?.role || '').trim().toUpperCase();
+    
+    // 2. In ra Console để debug (Bạn nhớ F12 xem tab Console nhé)
+    console.log("👉 DEBUG ROLE:", role);
+
+    // 3. So sánh
+    return role === 'ADMIN' || role === 'QUAN_TRI_VIEN' || role === 'ROOT';
+  }, [user]);
+  // ========================================================================
 
   useEffect(() => {
     loadProducts()
@@ -51,11 +74,9 @@ export const TrangSanPham = () => {
     } else {
       setFilteredProducts(products)
     }
-    // Reset về trang 1 khi tìm kiếm
     setCurrentPage(1)
   }, [searchQuery, products])
 
-  // Tính toán dữ liệu phân trang
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage
     const endIndex = startIndex + itemsPerPage
@@ -74,9 +95,15 @@ export const TrangSanPham = () => {
     }
   }
 
+  // Hàm mở xem chi tiết
+  const handleViewDetail = (product: Product) => {
+    setViewingProduct(product)
+    setIsViewModalOpen(true)
+  }
+
   const handleDelete = async (id: string) => {
-    if (!hasPermission('delete_product')) {
-      toast.error('Bạn không có quyền xóa sản phẩm')
+    if (!isAdmin) {
+      toast.error('Bạn không có quyền xóa sản phẩm (Cần quyền ADMIN)')
       return
     }
 
@@ -92,8 +119,8 @@ export const TrangSanPham = () => {
   }
 
   const handleEdit = (product: Product) => {
-    if (!hasPermission('edit_product')) {
-      toast.error('Bạn không có quyền sửa sản phẩm')
+    if (!isAdmin) {
+      toast.error('Bạn không có quyền sửa sản phẩm (Cần quyền ADMIN)')
       return
     }
     setEditingProduct(product)
@@ -151,7 +178,8 @@ export const TrangSanPham = () => {
     { header: 'Danh mục', accessor: 'category' as keyof Product },
     {
       header: 'Giá nhập',
-      accessor: (product: Product) => formatCurrency(product.importPrice),
+      // Chỉ Admin mới thấy giá nhập, nhân viên thấy ***
+      accessor: (product: Product) => isAdmin ? formatCurrency(product.importPrice) : '***', 
     },
     {
       header: 'Giá bán',
@@ -166,18 +194,39 @@ export const TrangSanPham = () => {
       header: 'Thao tác',
       accessor: (product: Product) => (
         <div className="flex space-x-2">
-          {hasPermission('edit_product') && (
+          {/* Nút Xem chi tiết - Ai cũng thấy */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              handleViewDetail(product)
+            }}
+            className="p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 rounded"
+            title="Xem chi tiết"
+          >
+            <Eye size={16} />
+          </button>
+
+          {/* Nút Sửa - Chỉ Admin thấy */}
+          {isAdmin && (
             <button
-              onClick={() => handleEdit(product)}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleEdit(product)
+              }}
               className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded"
               title="Sửa"
             >
               <Edit size={16} />
             </button>
           )}
-          {hasPermission('delete_product') && (
+
+          {/* Nút Xóa - Chỉ Admin thấy */}
+          {isAdmin && (
             <button
-              onClick={() => handleDelete(product.id)}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDelete(product.id)
+              }}
               className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded"
               title="Xóa"
             >
@@ -207,7 +256,7 @@ export const TrangSanPham = () => {
             Tổng số: {filteredProducts.length} sản phẩm
           </p>
         </div>
-        {hasPermission('create_product') && (
+        {isAdmin && ( // Chỉ Admin mới có nút Thêm mới
           <NutBam onClick={handleCreate}>
             <Plus size={20} className="mr-2" />
             Thêm sản phẩm
@@ -233,7 +282,11 @@ export const TrangSanPham = () => {
       </div>
 
       {/* BangDuLieu */}
-      <BangDuLieu data={paginatedProducts} columns={columns} />
+      <BangDuLieu 
+        data={paginatedProducts} 
+        columns={columns} 
+        onRowClick={(product) => handleViewDetail(product)} // Bấm vào dòng là xem
+      />
 
       {/* Pagination */}
       {filteredProducts.length > 0 && (
@@ -247,8 +300,9 @@ export const TrangSanPham = () => {
         />
       )}
 
-      {/* HopThoai */}
+      {/* HopThoai (Create/Edit) */}
       <ProductHopThoai
+        key={editingProduct ? editingProduct.id : 'create-new'}
         isOpen={isHopThoaiOpen}
         onClose={() => {
           setIsHopThoaiOpen(false)
@@ -257,11 +311,23 @@ export const TrangSanPham = () => {
         product={editingProduct}
         onSuccess={loadProducts}
       />
+
+      {/* HopThoai (View Detail) */}
+      <ProductDetailModal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        product={viewingProduct}
+        onEdit={(p: Product) => {
+            setIsViewModalOpen(false)
+            handleEdit(p)
+        }}
+        canEdit={isAdmin}
+      />
     </div>
   )
 }
 
-// Product Form HopThoai Component
+// --- Component 1: Product Form HopThoai (Giữ nguyên) ---
 interface ProductHopThoaiProps {
   isOpen: boolean
   onClose: () => void
@@ -270,32 +336,47 @@ interface ProductHopThoaiProps {
 }
 
 const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoaiProps) => {
-  const [formData, setFormData] = useState<CreateProductDto>({
-    name: '',
-    category: '',
-    importPrice: 0,
-    salePrice: 0,
-    stock: 0,
-    unit: '',
-    supplier: '',
-    description: '',
-    imageUrl: '',
-    barcode: '',
+  const [formData, setFormData] = useState<CreateProductDto>(() => {
+    if (product) {
+      return {
+        name: product.name || '',
+        barcode: product.barcode || '',
+        category: product.category || '',
+        importPrice: product.importPrice || 0,
+        salePrice: product.salePrice || 0,
+        stock: product.stock || 0,
+        unit: product.unit || '',
+        supplier: product.supplier || '',
+        description: product.description || '',
+        imageUrl: product.imageUrl || '',
+      }
+    }
+    return {
+      name: '',
+      barcode: '',
+      category: '',
+      importPrice: 0,
+      salePrice: 0,
+      stock: 0,
+      unit: '',
+      supplier: '',
+      description: '',
+      imageUrl: '',
+    }
   })
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [allProducts, setAllProducts] = useState<Product[]>([])
-  const [barcodeInput, setBarcodeInput] = useState('')
+  const [barcodeInput, setBarcodeInput] = useState(product?.barcode || '')
   const [isCheckingBarcode, setIsCheckingBarcode] = useState(false)
   const barcodeInputRef = useRef<HTMLInputElement | null>(null)
 
-  // Load products để lấy danh sách unique values
   useEffect(() => {
     if (isOpen) {
       productApi.getAllProducts.execute().then(setAllProducts).catch(() => {})
     }
   }, [isOpen])
 
-  // Lấy danh sách unique values từ products
   const categories = useMemo(() => {
     const uniqueCategories = Array.from(new Set(allProducts.map((p) => p.category).filter(Boolean)))
     return uniqueCategories.sort()
@@ -311,49 +392,14 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
     return uniqueUnits.sort()
   }, [allProducts])
 
-  useEffect(() => {
-    if (product) {
-      setFormData({
-        name: product.name,
-        category: product.category,
-        importPrice: product.importPrice,
-        salePrice: product.salePrice,
-        stock: product.stock,
-        unit: product.unit,
-        supplier: product.supplier,
-        description: product.description,
-        imageUrl: product.imageUrl || '',
-        barcode: product.barcode || '',
-      })
-      setBarcodeInput(product.barcode || '')
-    } else {
-      setFormData({
-        name: '',
-        category: '',
-        importPrice: 0,
-        salePrice: 0,
-        stock: 0,
-        unit: '',
-        supplier: '',
-        description: '',
-        imageUrl: '',
-        barcode: '',
-      })
-      setBarcodeInput('')
-    }
-  }, [product, isOpen])
-
-  // Xử lý quét/nhập barcode
   const handleBarcodeScan = async () => {
     const code = barcodeInput.trim()
     if (!code) return
 
     setIsCheckingBarcode(true)
     try {
-      // Kiểm tra xem sản phẩm đã tồn tại chưa
       const existingProduct = await productApi.service.getProductByBarcode(code)
       if (existingProduct) {
-        // Nếu đã tồn tại, điền thông tin vào form
         setFormData({
           name: existingProduct.name,
           category: existingProduct.category,
@@ -368,30 +414,26 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
         })
         toast.success(`Đã tìm thấy sản phẩm: ${existingProduct.name}`)
       } else {
-        // Nếu chưa tồn tại, chỉ điền barcode vào form
         setFormData((prev) => ({ ...prev, barcode: code }))
-        toast.info('Chưa tìm thấy sản phẩm với barcode này. Vui lòng điền thông tin sản phẩm.')
-        // Focus vào trường tên sản phẩm
+        toast('Chưa tìm thấy sản phẩm với barcode này. Vui lòng điền thông tin sản phẩm.')
         setTimeout(() => {
-          const nameInput = document.querySelector<HTMLInputElement>('input[type="text"]')
+          const nameInput = document.querySelector<HTMLInputElement>('input[name="name"]')
           nameInput?.focus()
         }, 100)
       }
     } catch (error) {
-      // Nếu không tìm thấy (404), chỉ điền barcode vào form
       setFormData((prev) => ({ ...prev, barcode: code }))
-      toast.info('Chưa tìm thấy sản phẩm với barcode này. Vui lòng điền thông tin sản phẩm.')
+      toast('Chưa tìm thấy sản phẩm với barcode này. Vui lòng điền thông tin sản phẩm.')
     } finally {
       setIsCheckingBarcode(false)
     }
   }
 
-  // Auto xử lý barcode khi nhập (phù hợp máy quét)
   useEffect(() => {
     const code = barcodeInput.trim()
     if (!code) return
+    if (product && code === product.barcode) return
 
-    // Chỉ auto nếu trông giống barcode (chủ yếu là số, dài >= 8)
     const looksLikeBarcode = /^\d{8,}$/.test(code)
     if (!looksLikeBarcode) return
 
@@ -423,7 +465,6 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
     }
   }
 
-  // --- 2. CẤU HÌNH TOOLBAR CHO EDITOR ---
   const quillModules = {
     toolbar: [
       [{ header: [1, 2, 3, false] }],
@@ -432,30 +473,25 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
       ['link', 'clean'],
     ],
   };
-  // --------------------------------------
 
   return (
     <HopThoai isOpen={isOpen} onClose={onClose} title={product ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Upload ảnh */}
         <UploadAnh
           label="Ảnh sản phẩm"
           value={formData.imageUrl}
           onChange={(value) => setFormData({ ...formData, imageUrl: value })}
         />
 
-        {/* Quét / nhập barcode */}
         <div className="space-y-2">
           <NhapLieu
             ref={barcodeInputRef}
             label="Barcode / Mã vạch"
             type="text"
             inputMode="numeric"
-            pattern="[0-9]*"
             placeholder="Quét hoặc nhập barcode..."
             value={barcodeInput}
             onChange={(e) => {
-              // Chỉ cho phép nhập số
               const value = e.target.value.replace(/[^0-9]/g, '')
               setBarcodeInput(value)
               setFormData({ ...formData, barcode: value })
@@ -464,10 +500,6 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
               if (e.key === 'Enter') {
                 e.preventDefault()
                 handleBarcodeScan()
-              }
-              // Chặn các phím không phải số (trừ các phím điều hướng và chức năng)
-              if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
-                e.preventDefault()
               }
             }}
           />
@@ -481,17 +513,13 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
             >
               Tìm sản phẩm
             </NutBam>
-            {barcodeInput && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 self-center">
-                Máy quét sẽ tự động tìm kiếm sau khi dừng nhập. Bạn cũng có thể nhấn Enter hoặc click "Tìm sản phẩm".
-              </p>
-            )}
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <NhapLieu
             label="Tên sản phẩm"
+            name="name"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required
@@ -556,23 +584,20 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
           allowCustom={true}
         />
 
-        {/* --- 3. THAY THẾ TEXTAREA BẰNG REACT QUILL --- */}
         <div className="mb-8">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Mô tả sản phẩm
           </label>
           <div className="bg-white text-gray-900 rounded-lg overflow-hidden">
-             {/* Lưu ý: ReactQuill cần nền trắng để hiển thị icon toolbar rõ ràng */}
             <ReactQuill
               theme="snow"
               value={formData.description}
               onChange={(value) => setFormData({ ...formData, description: value })}
               modules={quillModules}
-              className="h-48 mb-12" // mb-12 để chừa chỗ cho thanh trạng thái của editor
+              className="h-48 mb-12"
             />
           </div>
         </div>
-        {/* --------------------------------------------- */}
 
         <div className="flex justify-end space-x-3 pt-4">
           <NutBam type="button" variant="secondary" onClick={onClose}>
@@ -583,6 +608,112 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
           </NutBam>
         </div>
       </form>
+    </HopThoai>
+  )
+}
+
+// --- Component 2: Modal Xem Chi Tiết ---
+interface ProductDetailModalProps {
+  isOpen: boolean
+  onClose: () => void
+  product: Product | null
+  onEdit: (product: Product) => void
+  canEdit: boolean
+}
+
+const ProductDetailModal = ({ isOpen, onClose, product, onEdit, canEdit }: ProductDetailModalProps) => {
+  if (!product) return null
+
+  // Helper xử lý ảnh
+  const getImageUrl = (url?: string) => {
+    if (!url) return 'https://via.placeholder.com/300?text=No+Image';
+    if (url.startsWith('http')) return url;
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    return `${apiUrl}${cleanUrl}`;
+  };
+
+  return (
+    <HopThoai isOpen={isOpen} onClose={onClose} title="Chi tiết sản phẩm" size="lg">
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Cột Trái: Ảnh */}
+          <div className="w-full md:w-1/3">
+            <div className="aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 flex items-center justify-center">
+              <img
+                src={getImageUrl(product.imageUrl)}
+                alt={product.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = 'https://via.placeholder.com/300?text=Error';
+                }}
+              />
+            </div>
+            <div className="mt-4 text-center">
+                <div className="text-sm text-gray-500">Barcode</div>
+                <div className="font-mono font-bold text-lg tracking-wider">{product.barcode || '---'}</div>
+            </div>
+          </div>
+
+          {/* Cột Phải: Thông tin */}
+          <div className="flex-1 space-y-4">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{product.name}</h3>
+              <span className="inline-block mt-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                {product.category}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 py-4 border-y border-gray-100 dark:border-gray-700">
+              <div>
+                <label className="text-sm text-gray-500">Giá bán</label>
+                <div className="text-xl font-bold text-blue-600">{formatCurrency(product.salePrice)}</div>
+              </div>
+              {/* Chỉ hiện giá nhập nếu có quyền sửa (Admin) */}
+              {canEdit && (
+                <div>
+                    <label className="text-sm text-gray-500">Giá nhập</label>
+                    <div className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                    {formatCurrency(product.importPrice)}
+                    </div>
+                </div>
+              )}
+              
+              <div>
+                <label className="text-sm text-gray-500">Tồn kho</label>
+                <div className={`text-lg font-bold ${product.stock < 10 ? 'text-red-600' : 'text-green-600'}`}>
+                  {product.stock} {product.unit}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">Nhà cung cấp</label>
+                <div className="text-lg font-medium">{product.supplier || '---'}</div>
+              </div>
+            </div>
+
+            {/* Mô tả HTML */}
+            <div>
+              <label className="text-sm font-semibold text-gray-900 dark:text-white mb-2 block">Mô tả</label>
+              <div 
+                className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg max-h-48 overflow-y-auto"
+                dangerouslySetInnerHTML={{ __html: product.description || '<p>Không có mô tả</p>' }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+          <NutBam variant="secondary" onClick={onClose}>
+            Đóng
+          </NutBam>
+          {canEdit && (
+            <NutBam onClick={() => onEdit(product)}>
+              <Edit size={18} className="mr-2" />
+              Chỉnh sửa
+            </NutBam>
+          )}
+        </div>
+      </div>
     </HopThoai>
   )
 }

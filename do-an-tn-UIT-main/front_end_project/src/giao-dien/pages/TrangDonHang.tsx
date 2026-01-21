@@ -14,9 +14,11 @@ import { NhapLieu } from '@/giao-dien/components/NhapLieu'
 import { Order } from '@/linh-vuc/orders/entities/Order'
 import { orderApi } from '@/ha-tang/api/orderApi'
 import { formatCurrency, formatDateTime } from '@/ha-tang/utils/formatters'
-import { Plus, Search, FileText, Trash2 } from 'lucide-react'
+import { Plus, Search, FileText, Trash2, RefreshCcw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
+// Import Component Trả hàng mới
+import { HopThoaiTraHang } from '@/giao-dien/components/HopThoaiTraHang'
 
 export const TrangDonHang = () => {
   const [orders, setOrders] = useState<Order[]>([])
@@ -25,6 +27,10 @@ export const TrangDonHang = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
+  
+  // State cho trả hàng
+  const [returningOrder, setReturningOrder] = useState<Order | null>(null)
+  
   const navigate = useNavigate()
   const { hasPermission } = useAuthStore()
 
@@ -44,11 +50,9 @@ export const TrangDonHang = () => {
     } else {
       setFilteredOrders(orders)
     }
-    // Reset về trang 1 khi tìm kiếm
     setCurrentPage(1)
   }, [searchQuery, orders])
 
-  // Tính toán dữ liệu phân trang
   const paginatedOrders = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage
     const endIndex = startIndex + itemsPerPage
@@ -59,7 +63,6 @@ export const TrangDonHang = () => {
     try {
       setIsLoading(true)
       const data = await orderApi.getAllOrders.execute()
-      // Sắp xếp theo thời gian tạo mới nhất
       const sortedData = [...data].sort((a, b) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
@@ -78,7 +81,6 @@ export const TrangDonHang = () => {
       toast.error('Bạn không có quyền xóa đơn hàng')
       return
     }
-
     if (!confirm('Bạn có chắc chắn muốn xóa đơn hàng này?')) return
 
     try {
@@ -90,34 +92,69 @@ export const TrangDonHang = () => {
     }
   }
 
+  // Hàm xử lý gửi yêu cầu trả hàng
+  const handleReturnSubmit = async (data: any) => {
+    // 1. CHUẨN BỊ PAYLOAD
+    const payload = {
+        originalOrderCode: data.originalOrderCode,
+        returnItems: data.returnItems.map((item: any) => ({
+            productId: item.productId,
+            quantity: Number(item.quantity)
+        })),
+        returnReason: data.returnReason,
+        isRestocked: Boolean(data.isRestocked),
+        notes: data.notes
+    };
+
+    // --- DEBUG LOG (Gửi cái này cho tôi) ---
+    console.log("=== FRONTEND SENDING DATA ===");
+    console.log(JSON.stringify(payload, null, 2));
+    // ---------------------------------------
+
+    try {
+        const token = localStorage.getItem('token'); 
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/orders/return`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` 
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if(!response.ok) {
+            const err = await response.json();
+            // --- DEBUG LOG LỖI (Gửi cái này cho tôi) ---
+            console.error("=== BACKEND ERROR RESPONSE ===");
+            console.error(err);
+            // ------------------------------------------
+            const message = Array.isArray(err.message) ? err.message[0] : err.message;
+            throw new Error(message || 'Lỗi khi trả hàng');
+        }
+        
+        toast.success('Đã tạo đơn trả hàng thành công');
+        setReturningOrder(null);
+        loadOrders();
+    } catch (error: any) {
+        toast.error(error.message || 'Có lỗi xảy ra');
+    }
+  }
+
   const handleViewOrder = (order: Order) => {
     navigate(`/orders/${order.id}`)
   }
 
-  const getStatusHuyHieu = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <HuyHieu variant="success">Hoàn thành</HuyHieu>
-      case 'cancelled':
-        return <HuyHieu variant="danger">Đã hủy</HuyHieu>
-      default:
-        return <HuyHieu variant="warning">Đang xử lý</HuyHieu>
-    }
-  }
-
   const getPaymentStatusHuyHieu = (order: Order) => {
-    // Trạng thái: Chưa thanh toán (DEBT) - badge đỏ
     if (order.paymentStatus === 'DEBT') {
       return <HuyHieu variant="danger">Chưa thanh toán</HuyHieu>
     }
-    
-    // Trạng thái: Đã thanh toán (từ ghi nợ) - badge cam
+    // Trạng thái đã hoàn tiền
+    if (order.paymentStatus === 'REFUNDED') {
+        return <HuyHieu variant="info">Đã hoàn tiền</HuyHieu>
+    }
     if (order.paymentStatus === 'PAID' && order.wasDebt === true) {
       return <HuyHieu variant="orange">Đã thanh toán (từ ghi nợ)</HuyHieu>
     }
-    
-    // Trạng thái: Đã thanh toán (bình thường) - badge xanh
-    // Nếu không có paymentStatus (đơn hàng cũ), coi như đã thanh toán bình thường
     return <HuyHieu variant="success">Đã thanh toán</HuyHieu>
   }
 
@@ -131,7 +168,6 @@ export const TrangDonHang = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Quản lý đơn hàng</h1>
@@ -145,7 +181,6 @@ export const TrangDonHang = () => {
         </NutBam>
       </div>
 
-      {/* Search */}
       <div className="flex items-center space-x-4">
         <div className="flex-1 relative">
           <Search
@@ -162,7 +197,6 @@ export const TrangDonHang = () => {
         </div>
       </div>
 
-      {/* Orders BangDuLieu */}
       <TheThongTin>
         {filteredOrders.length === 0 ? (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -173,57 +207,76 @@ export const TrangDonHang = () => {
             <BangDuLieu
               data={paginatedOrders}
               columns={[
-              {
-                header: 'Mã đơn hàng',
-                accessor: 'orderNumber' as keyof Order,
-              },
-              {
-                header: 'Khách hàng',
-                accessor: (order: Order) => order.customerName || 'Khách lẻ',
-              },
-              {
-                header: 'Tổng tiền',
-                accessor: (order: Order) => formatCurrency(order.finalAmount),
-              },
-              {
-                header: 'Số sản phẩm',
-                accessor: (order: Order) => order.items.length,
-              },
-              {
-                header: 'Trạng thái thanh toán',
-                accessor: (order: Order) => getPaymentStatusHuyHieu(order),
-              },
-              {
-                header: 'Ngày tạo',
-                accessor: (order: Order) => formatDateTime(new Date(order.createdAt)),
-              },
-              {
-                header: 'Thao tác',
-                accessor: (order: Order) => (
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleViewOrder(order)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded"
-                      title="Xem chi tiết"
-                    >
-                      <FileText size={16} />
-                    </button>
-                    {hasPermission('delete_product') && (
+                {
+                  header: 'Mã đơn hàng',
+                  accessor: 'orderNumber' as keyof Order,
+                },
+                {
+                  header: 'Loại',
+                  accessor: (order: Order) => (
+                      <span>
+                          {order.orderType === 'RETURN' && <span className="text-red-500 font-bold mr-1">[TRẢ]</span>}
+                          {order.customerName || 'Khách lẻ'}
+                      </span>
+                  ),
+                },
+                {
+                  header: 'Tổng tiền',
+                  accessor: (order: Order) => (
+                      <span className={order.finalAmount < 0 ? 'text-red-600 font-bold' : ''}>
+                        {formatCurrency(order.finalAmount)}
+                      </span>
+                  ),
+                },
+                {
+                  header: 'Trạng thái TT',
+                  accessor: (order: Order) => getPaymentStatusHuyHieu(order),
+                },
+                {
+                  header: 'Ngày tạo',
+                  accessor: (order: Order) => formatDateTime(new Date(order.createdAt)),
+                },
+                {
+                  header: 'Thao tác',
+                  accessor: (order: Order) => (
+                    <div className="flex space-x-2">
                       <button
-                        onClick={() => handleDelete(order.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded"
-                        title="Xóa"
+                        onClick={() => handleViewOrder(order)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded"
+                        title="Xem chi tiết"
                       >
-                        <Trash2 size={16} />
+                        <FileText size={16} />
                       </button>
-                    )}
-                  </div>
-                ),
-              },
-            ]}
+
+                      {/* NÚT TRẢ HÀNG MỚI THÊM VÀO */}
+                      {order.orderType === 'SALE' && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setReturningOrder(order);
+                            }}
+                            className="p-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900 rounded"
+                            title="Trả hàng / Hoàn tiền"
+                        >
+                            <RefreshCcw size={16} />
+                        </button>
+                      )}
+
+                      {hasPermission('delete_product') && (
+                        <button
+                          onClick={() => handleDelete(order.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded"
+                          title="Xóa"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  ),
+                },
+              ]}
               onRowClick={handleViewOrder}
             />
-            {/* Pagination */}
             {filteredOrders.length > 0 && (
               <PhanTrang
                 currentPage={currentPage}
@@ -237,6 +290,14 @@ export const TrangDonHang = () => {
           </>
         )}
       </TheThongTin>
+
+      {/* RENDER MODAL TRẢ HÀNG */}
+      <HopThoaiTraHang
+        isOpen={!!returningOrder}
+        onClose={() => setReturningOrder(null)}
+        order={returningOrder}
+        onSubmit={handleReturnSubmit}
+      />
     </div>
   )
 }

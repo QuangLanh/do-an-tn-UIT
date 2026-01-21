@@ -495,6 +495,8 @@ export const TrangDoiTraHang = () => {
           productId: item.productId,
           quantity: item.quantity,
         })),
+        returnReason: "Khách yêu cầu trả hàng", // <--- Bắt buộc phải có dòng này
+        isRestocked: true,
         exchangeItems: exchangeItems.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
@@ -514,28 +516,32 @@ export const TrangDoiTraHang = () => {
   }
 
   const handleConfirmReturn = async () => {
-    if (!selectedOrder) return
+    if (!selectedOrder) return
 
-    try {
-      const returnData = {
-        originalOrderCode: selectedOrder.orderNumber,
-        returnItems: returnOnlyItems.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-        })),
-      }
+    try {
+      const returnData = {
+        originalOrderCode: selectedOrder.orderNumber,
+        returnItems: returnOnlyItems.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        })),
+        // --- BỔ SUNG 2 DÒNG NÀY ---
+        returnReason: "Khách yêu cầu trả hàng", // <--- Backend bắt buộc
+        isRestocked: true,                      // <--- Backend cần để biết có cộng kho ko
+        // --------------------------
+      }
 
-      const result = await apiService.orders.return(returnData)
-      toast.success(`Trả hàng thành công! Mã đơn: ${result.orderNumber}`)
-      setIsModalOpen(false)
-      resetForm()
-      // Reload danh sách
-      loadLists()
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể trả hàng')
-      console.error(error)
-    }
-  }
+      const result = await apiService.orders.return(returnData)
+      toast.success(`Trả hàng thành công! Mã đơn: ${result.orderNumber}`)
+      setIsModalOpen(false)
+      resetForm()
+      // Reload danh sách
+      loadLists()
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Không thể trả hàng')
+      console.error(error)
+    }
+  }
 
   const resetForm = () => {
     setSelectedOrder(null)

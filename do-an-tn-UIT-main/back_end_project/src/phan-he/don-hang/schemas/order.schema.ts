@@ -68,10 +68,10 @@ export class Order {
 
   @Prop({
     type: String,
-    enum: ['PAID', 'DEBT'],
+    enum: ['PAID', 'DEBT', 'REFUNDED'], // <--- BỔ SUNG: REFUNDED
     default: 'PAID',
   })
-  paymentStatus: 'PAID' | 'DEBT';
+  paymentStatus: 'PAID' | 'DEBT' | 'REFUNDED';
 
   @Prop()
   paidAt?: Date;
@@ -88,7 +88,10 @@ export class Order {
   orderType: 'SALE' | 'EXCHANGE' | 'RETURN';
 
   @Prop()
-  relatedOrderCode?: string; // Mã đơn hàng gốc (cho EXCHANGE/RETURN)
+  returnReason?: string; // Lý do trả hàng (cho RETURN)
+
+  @Prop({ default: true })
+    isRestocked?: boolean; // Có nhập lại kho không? (True = cộng lại kho, False = hàng hỏng vứt đi)
 
   @Prop({ type: Types.ObjectId, ref: 'User' })
   createdBy: Types.ObjectId;
