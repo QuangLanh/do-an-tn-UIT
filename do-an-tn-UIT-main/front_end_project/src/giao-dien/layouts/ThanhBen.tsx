@@ -4,7 +4,8 @@
  */
 
 import { NavLink } from 'react-router-dom'
-import { Home, Package, AlertTriangle, FileText, ShoppingCart, Truck, X, ClipboardList, CreditCard, RefreshCw } from 'lucide-react'
+// 👇 1. THÊM 'Users' VÀO IMPORT
+import { Home, Package, AlertTriangle, FileText, ShoppingCart, Truck, X, ClipboardList, CreditCard, RefreshCw, Users } from 'lucide-react'
 import { useSidebarStore } from '@/kho-trang-thai/khoThanhBen'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
 
@@ -50,6 +51,13 @@ export const ThanhBen = () => {
       label: 'Nhập hàng',
       icon: <Truck size={20} />,
     },
+    // 👇 2. CHÈN MỤC NHÀ CUNG CẤP VÀO ĐÂY
+    {
+      path: '/nha-cung-cap',
+      label: 'Nhà cung cấp',
+      icon: <Users size={20} />,
+    },
+    // 👆 KẾT THÚC CHÈN
     {
       path: '/products',
       label: 'Sản phẩm',
@@ -138,4 +146,3 @@ export const ThanhBen = () => {
     </>
   )
 }
-

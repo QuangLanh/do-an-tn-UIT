@@ -28,6 +28,7 @@ import { TrangSanPhamKhachHang } from '@/giao-dien/pages/khach-hang/TrangSanPham
 import { TrangChiTietSanPham } from '@/giao-dien/pages/khach-hang/TrangChiTietSanPham'
 import { TrangDanhSachMuaHang } from '@/giao-dien/pages/khach-hang/TrangDanhSachMuaHang'
 import { TrangLichSuMuaHang } from '@/giao-dien/pages/khach-hang/TrangLichSuMuaHang'
+import { TrangNhaCungCap } from '@/giao-dien/pages/TrangNhaCungCap'
 
 const UngDungDinhTuyen = () => {
   const { isAuthenticated, user } = useAuthStore()
@@ -178,6 +179,17 @@ const UngDungDinhTuyen = () => {
           <TuyenBaoVe requiredRoles={['admin', 'staff']} requiredPermission="view_purchases">
             <BoCucChinh>
               <TrangTaoNhapHang />
+            </BoCucChinh>
+          </TuyenBaoVe>
+        }
+      />
+
+            <Route
+        path="/nha-cung-cap"
+        element={
+          <TuyenBaoVe requiredRoles={['admin', 'staff']}>
+            <BoCucChinh>
+              <TrangNhaCungCap />
             </BoCucChinh>
           </TuyenBaoVe>
         }

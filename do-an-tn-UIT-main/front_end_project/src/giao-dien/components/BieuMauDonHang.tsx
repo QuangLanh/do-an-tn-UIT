@@ -1,7 +1,10 @@
 /**
  * Order Form Component
  * Component form tạo và chỉnh sửa đơn hàng
- * ĐÃ NÂNG CẤP: Gợi ý khách hàng thân thiết & Tự điền SĐT
+ * FIX: 
+ * 1. Ẩn mũi tên input number
+ * 2. Cố định Thuế = 0
+ * 3. FIX LỖI TRÙNG TÊN KHÁCH HÀNG (Hiển thị đủ 2 người trùng tên khác SĐT)
  */
 
 import { useState, useEffect, useMemo, useRef } from 'react'
@@ -50,7 +53,6 @@ export const BieuMauDonHang = ({
   const [customerPhone, setCustomerPhone] = useState(existingOrder?.customerPhone || '')
   const [notes, setNotes] = useState(existingOrder?.notes || '')
   const [discount, setDiscount] = useState(existingOrder?.discount || 0)
-  const [tax, setTax] = useState(existingOrder?.tax || 0)
   const [isDebt, setIsDebt] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
@@ -66,46 +68,36 @@ export const BieuMauDonHang = ({
   const lastProcessedBarcodeRef = useRef<string | null>(null)
   const isProcessingBarcodeRef = useRef(false)
 
-  // --- LOGIC MỚI: QUẢN LÝ KHÁCH HÀNG THÂN THIẾT ---
+  // --- LOGIC MỚI: QUẢN LÝ KHÁCH HÀNG THÂN THIẾT (SỬA LỖI TRÙNG TÊN) ---
   const [knownCustomers, setKnownCustomers] = useState<KnownCustomer[]>([])
 
-  // 1. Tải lịch sử khách hàng khi mở form
   useEffect(() => {
     const loadCustomerHistory = async () => {
       try {
-        // Lấy tất cả đơn hàng cũ để lọc ra danh sách khách
-        // (Lưu ý: Về lâu dài nên có API riêng /api/customers để tối ưu tốc độ)
         const allOrders = await orderApi.getAllOrders.execute()
         
-        const uniqueMap = new Map<string, string>();
+        // Sử dụng Set để lưu các cặp "Tên|SĐT" duy nhất
+        const uniqueSet = new Set<string>();
+        const customers: KnownCustomer[] = [];
         
         allOrders.forEach(order => {
-          // Chỉ lấy khách có tên, có sđt và không phải khách lẻ
           if (order.customerName && order.customerPhone && order.customerName.toLowerCase() !== 'khách lẻ') {
-            // Lưu vào Map để loại bỏ trùng lặp (Key là tên, Value là SĐT mới nhất)
-            uniqueMap.set(order.customerName.toLowerCase(), order.customerPhone);
-            // Lưu cả tên gốc để hiển thị cho đẹp
-            uniqueMap.set(order.customerName, order.customerPhone);
+            const name = order.customerName.trim();
+            const phone = order.customerPhone.trim();
+            
+            // Tạo khóa duy nhất bằng cách ghép Tên và SĐT (viết thường để so sánh)
+            const key = `${name.toLowerCase()}|${phone}`;
+            
+            if (!uniqueSet.has(key)) {
+              uniqueSet.add(key);
+              customers.push({ name, phone });
+            }
           }
         });
 
-        const customers: KnownCustomer[] = [];
-        uniqueMap.forEach((phone, name) => {
-           // Chỉ lấy những key không phải lowercase để hiển thị
-           if (name.charAt(0) === name.charAt(0).toUpperCase() || /[A-Z]/.test(name)) {
-              customers.push({ name, phone });
-           } else if (!uniqueMap.has(name.replace(/\b\w/g, l => l.toUpperCase()))) {
-              // Fallback cho tên viết thường toàn bộ
-              customers.push({ name: name, phone });
-           }
-        });
-
-        // Lọc trùng lặp lần cuối cho chắc chắn
-        const uniqueCustomers = Array.from(new Set(customers.map(c => JSON.stringify(c))))
-            .map(s => JSON.parse(s) as KnownCustomer)
-            .sort((a, b) => a.name.localeCompare(b.name));
-
-        setKnownCustomers(uniqueCustomers);
+        // Sắp xếp theo tên a-z
+        customers.sort((a, b) => a.name.localeCompare(b.name));
+        setKnownCustomers(customers);
       } catch (error) {
         console.error('Lỗi tải lịch sử khách hàng', error);
       }
@@ -113,20 +105,38 @@ export const BieuMauDonHang = ({
     loadCustomerHistory();
   }, []);
 
-  // 2. Hàm xử lý khi nhập tên -> Tự động điền SĐT
+  // --- HÀM XỬ LÝ CHỌN KHÁCH HÀNG THÔNG MINH ---
   const handleCustomerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    setCustomerName(val);
 
-    // Tìm chính xác tên trong danh sách (không phân biệt hoa thường)
+    // Kiểm tra xem người dùng có chọn từ gợi ý "Tên - SĐT" không
+    if (val.includes(' - ')) {
+        // Tách chuỗi "Nguyễn Văn A - 0912345678" thành Tên và SĐT
+        const parts = val.split(' - ');
+        if (parts.length >= 2) {
+            // Phần cuối cùng là SĐT, phần đầu là Tên
+            const phone = parts.pop()?.trim() || '';
+            const name = parts.join(' - ').trim(); // Join lại đề phòng tên có dấu gạch ngang
+            
+            setCustomerName(name);
+            setCustomerPhone(phone);
+            return;
+        }
+    }
+
+    // Nếu nhập tay bình thường
+    setCustomerName(val);
+    
+    // Tìm kiếm chính xác (fallback)
     const match = knownCustomers.find(c => c.name.toLowerCase() === val.toLowerCase());
+    // Chỉ tự điền SĐT nếu tìm thấy duy nhất 1 người, 
+    // nhưng ở đây ta để người dùng tự chọn từ list gợi ý sẽ chính xác hơn.
     if (match) {
-      setCustomerPhone(match.phone);
-      // Optional: Toast báo đã tìm thấy
-      // toast.success(`Đã tìm thấy khách: ${match.name}`);
+        // Có thể mở dòng này nếu muốn tự điền ngay khi gõ đúng tên
+        // setCustomerPhone(match.phone); 
     }
   };
-  // --------------------------------------------------
+  // --------------------------------------------------------------------
 
   useEffect(() => {
     if (searchQuery) {
@@ -259,16 +269,14 @@ export const BieuMauDonHang = ({
     }
   }, [barcode])
 
+  // --- HÀM CẬP NHẬT SỐ LƯỢNG (NÚT BẤM) ---
   const handleUpdateQuantity = (itemId: string, newQuantity: number) => {
+    if (newQuantity <= 0) return; 
+
     const updatedItems = items.map(item => {
       if (item.id === itemId) {
         if (newQuantity > item.product.stock) {
           toast.error(`Chỉ còn ${item.product.stock} ${item.product.unit} trong kho`)
-          return item
-        }
-        
-        if (newQuantity <= 0) {
-          toast.error('Số lượng phải lớn hơn 0')
           return item
         }
         
@@ -284,6 +292,59 @@ export const BieuMauDonHang = ({
     setItems(updatedItems)
   }
 
+  // --- HÀM MỚI: Xử lý nhập từ bàn phím ---
+  const handleInputQuantity = (itemId: string, valueStr: string) => {
+    if (valueStr === '') {
+        const updatedItems = items.map(item => 
+            item.id === itemId ? { ...item, quantity: 0, subtotal: 0 } : item
+        );
+        setItems(updatedItems);
+        return;
+    }
+
+    let newQty = parseInt(valueStr);
+    if (isNaN(newQty)) return; 
+
+    if (newQty < 0) newQty = 1;
+
+    const currentItem = items.find(i => i.id === itemId);
+    if (currentItem) {
+        if (newQty > currentItem.product.stock) {
+            if (currentItem.quantity !== currentItem.product.stock) {
+                toast.error(`Quá tồn kho (Max: ${currentItem.product.stock})`);
+            }
+            newQty = currentItem.product.stock;
+        }
+    }
+
+    const updatedItems = items.map(item => {
+        if (item.id === itemId) {
+            return {
+                ...item,
+                quantity: newQty,
+                subtotal: newQty * item.unitPrice
+            }
+        }
+        return item;
+    });
+    setItems(updatedItems);
+  };
+
+  // --- HÀM MỚI: Xử lý khi rời ô input (Blur) ---
+  const handleBlurQuantity = (itemId: string) => {
+      const updatedItems = items.map(item => {
+          if (item.id === itemId && (item.quantity === 0 || isNaN(item.quantity))) {
+              return {
+                  ...item,
+                  quantity: 1,
+                  subtotal: 1 * item.unitPrice
+              }
+          }
+          return item;
+      });
+      setItems(updatedItems);
+  }
+
   const handleRemoveItem = (itemId: string) => {
     setItems(items.filter(item => item.id !== itemId))
   }
@@ -294,6 +355,12 @@ export const BieuMauDonHang = ({
     if (items.length === 0) {
       toast.error('Đơn hàng phải có ít nhất một sản phẩm')
       return
+    }
+
+    const invalidItems = items.filter(i => i.quantity <= 0);
+    if (invalidItems.length > 0) {
+        toast.error('Vui lòng kiểm tra lại số lượng sản phẩm');
+        return;
     }
     
     if (customerType === 'vip') {
@@ -311,7 +378,7 @@ export const BieuMauDonHang = ({
     
     try {
       const finalDiscount = customerType === 'retail' ? 0 : discount
-      const finalTax = customerType === 'retail' ? 0 : tax
+      const finalTax = 0;
       
       const { subtotal, tax: calculatedTax, finalAmount } = orderApi.service.calculateOrderTotals(
         items, 
@@ -342,9 +409,9 @@ export const BieuMauDonHang = ({
   }
 
   const finalDiscount = customerType === 'retail' ? 0 : discount
-  const finalTax = customerType === 'retail' ? 0 : tax
+  const finalTax = 0;
   
-  const { subtotal, tax: calculatedTax, finalAmount } = orderApi.service.calculateOrderTotals(
+  const { subtotal, tax: finalAmount } = orderApi.service.calculateOrderTotals(
     items,
     finalDiscount,
     finalTax
@@ -384,14 +451,12 @@ export const BieuMauDonHang = ({
       {customerType === 'vip' && (
         <TheThongTin title="Thông tin khách hàng">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            {/* --- Ô NHẬP TÊN CÓ GỢI Ý (DATALIST) --- */}
             <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Tên khách hàng *
                 </label>
                 <input
-                    list="customer-suggestions" // Link tới datalist bên dưới
+                    list="customer-suggestions"
                     type="text"
                     value={customerName}
                     onChange={handleCustomerNameChange}
@@ -399,18 +464,19 @@ export const BieuMauDonHang = ({
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                     required
                 />
-                {/* Danh sách gợi ý từ lịch sử */}
+                
+                {/* --- FIX LỖI Ở ĐÂY: Dùng value để hiển thị cả Tên và SĐT --- */}
                 <datalist id="customer-suggestions">
                     {knownCustomers.map((c, index) => (
-                        <option key={index} value={c.name}>
-                             {/* Hiển thị thêm SĐT trong gợi ý để dễ chọn */}
-                             {c.name} - {c.phone} 
+                        <option key={index} value={`${c.name} - ${c.phone}`}>
+                             {/* Text hiển thị phụ (một số trình duyệt sẽ hiện cái này) */}
+                             Khách cũ
                         </option>
                     ))}
                 </datalist>
+                {/* --------------------------------------------------------- */}
+                
             </div>
-            {/* -------------------------------------- */}
-
             <NhapLieu
               label="Số điện thoại *"
               value={customerPhone}
@@ -425,7 +491,7 @@ export const BieuMauDonHang = ({
         </TheThongTin>
       )}
 
-      {/* ... Phần Barcode và Bảng sản phẩm giữ nguyên như cũ ... */}
+      {/* Barcode */}
       <TheThongTin title="Quét / nhập barcode">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
           <NhapLieu
@@ -453,14 +519,10 @@ export const BieuMauDonHang = ({
                   e.preventDefault()
                   xuLyBarcode()
                 }
-                if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
-                  e.preventDefault()
-                }
               }}
             />
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Gợi ý: máy quét thường nhập rất nhanh như bàn phím; hệ thống sẽ tự xử lý sau khi dừng nhập một chút.
-              Bạn cũng có thể nhấn Enter để xử lý ngay.
+              Gợi ý: Nhấn Enter để xử lý ngay.
             </p>
           </div>
         </div>
@@ -494,7 +556,17 @@ export const BieuMauDonHang = ({
                     >
                       <Minus size={16} />
                     </button>
-                    <span className="w-10 text-center">{item.quantity}</span>
+                    
+                    {/* INPUT ẨN MŨI TÊN */}
+                    <input 
+                        type="number"
+                        value={item.quantity === 0 ? '' : item.quantity}
+                        onChange={(e) => handleInputQuantity(item.id, e.target.value)}
+                        onBlur={() => handleBlurQuantity(item.id)}
+                        onFocus={(e) => e.target.select()}
+                        className="w-16 text-center border border-gray-300 dark:border-gray-600 rounded py-1 px-1 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+
                     <button
                       type="button"
                       onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
@@ -549,17 +621,12 @@ export const BieuMauDonHang = ({
               
               <div className="flex justify-between items-center py-2">
                 <div className="flex items-center">
-                  <span className="text-gray-600 dark:text-gray-400 mr-2">Thuế (%):</span>
-                  <NhapLieu
-                    type="number"
-                    value={tax}
-                    onChange={(e) => setTax(Number(e.target.value))}
-                    className="w-32 py-1"
-                    min={0}
-                    max={100}
-                  />
+                  <span className="text-gray-600 dark:text-gray-400 mr-2">Thuế (VAT):</span>
+                  <span className="text-xs text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded border border-blue-100 dark:border-blue-800">
+                    Đã bao gồm
+                  </span>
                 </div>
-                <span className="font-medium">{formatCurrency(calculatedTax)}</span>
+                <span className="font-medium text-gray-900 dark:text-white">0 ₫</span>
               </div>
             </>
           )}

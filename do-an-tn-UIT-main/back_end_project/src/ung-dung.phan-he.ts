@@ -14,6 +14,7 @@ import { PhanHeGiaoDich } from './phan-he/giao-dich/giao-dich.phan-he';
 import { PhanHeBaoCao } from './phan-he/bao-cao/bao-cao.phan-he';
 import { PhanHeBangDieuKhien } from './phan-he/bang-dieu-khien/bang-dieu-khien.phan-he';
 import { PhanHeDanhSachMuaHang } from './phan-he/danh-sach-mua-hang/danh-sach-mua-hang.phan-he';
+import { PhanHeNhaCungCap } from './phan-he/nha-cung-cap/nha-cung-cap.phan-he';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { PhanHeDanhSachMuaHang } from './phan-he/danh-sach-mua-hang/danh-sach-mu
     PhanHeBaoCao,
     PhanHeBangDieuKhien,
     PhanHeDanhSachMuaHang,
+    PhanHeNhaCungCap,
   ],
   controllers: [UngDungDieuKhien],
   providers: [UngDungDichVu],

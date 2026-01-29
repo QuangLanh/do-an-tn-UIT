@@ -1,6 +1,6 @@
 /**
- * Purchase Form Component
- * Component form tạo và chỉnh sửa phiếu nhập hàng
+ * Component: BieuMauNhapHang.tsx
+ * CHUẨN GIAO DIỆN CŨ + FIX Ô NHẬP SỐ LƯỢNG
  */
 
 import { useState, useEffect, useMemo } from 'react'
@@ -9,7 +9,6 @@ import { NhapLieu } from './NhapLieu'
 import { TheThongTin } from './TheThongTin'
 import { BangDuLieu } from './BangDuLieu'
 import { PhanTrang } from './PhanTrang'
-import { DropdownTimKiem } from './DropdownTimKiem'
 import { Product } from '@/linh-vuc/products/entities/Product'
 import { PurchaseItem, Purchase } from '@/linh-vuc/purchases/entities/Purchase'
 import { purchaseApi } from '@/ha-tang/api/purchaseApi'
@@ -31,7 +30,6 @@ export const BieuMauNhapHang = ({
   onCancel,
 }: BieuMauNhapHangProps) => {
   const [items, setItems] = useState<PurchaseItem[]>(existingPurchase?.items || [])
-  const [supplierName, setSupplierName] = useState(existingPurchase?.supplierName || '')
   const [notes, setNotes] = useState(existingPurchase?.notes || '')
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredProducts, setFilteredProducts] = useState<Product[]>(products)
@@ -50,7 +48,6 @@ export const BieuMauNhapHang = ({
     } else {
       setFilteredProducts(products)
     }
-    // Reset về trang 1 khi tìm kiếm
     setCurrentPage(1)
   }, [searchQuery, products])
 
@@ -61,18 +58,10 @@ export const BieuMauNhapHang = ({
     return filteredProducts.slice(startIndex, endIndex)
   }, [filteredProducts, currentPage, itemsPerPage])
 
-  // Lấy danh sách nhà cung cấp unique từ products
-  const suppliers = useMemo(() => {
-    const uniqueSuppliers = Array.from(new Set(products.map((p) => p.supplier).filter(Boolean)))
-    return uniqueSuppliers.sort()
-  }, [products])
-
   const handleAddItem = (product: Product) => {
-    // Kiểm tra nếu sản phẩm đã có trong phiếu nhập
     const existingItemIndex = items.findIndex(item => item.productId === product.id)
     
     if (existingItemIndex >= 0) {
-      // Tăng số lượng nếu sản phẩm đã có
       const updatedItems = [...items]
       const item = updatedItems[existingItemIndex]
       
@@ -83,17 +72,60 @@ export const BieuMauNhapHang = ({
       }
       setItems(updatedItems)
     } else {
-      // Thêm sản phẩm mới vào phiếu nhập
       const newItem = purchaseApi.service.createPurchaseItem(product, 1, product.importPrice)
       setItems([...items, newItem])
     }
+    toast.success(`Đã thêm ${product.name}`)
   }
 
-  const handleUpdateQuantity = (itemId: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      toast.error('Số lượng phải lớn hơn 0')
-      return
+  // --- 1. XỬ LÝ NHẬP TỪ BÀN PHÍM (CHO PHÉP XÓA TRẮNG) ---
+  const handleInputQuantity = (itemId: string, valueStr: string) => {
+    if (valueStr === '') {
+        const updatedItems = items.map(item => 
+            item.id === itemId ? { ...item, quantity: 0, subtotal: 0 } : item
+        );
+        setItems(updatedItems);
+        return;
     }
+
+    let newQty = parseInt(valueStr);
+    if (isNaN(newQty)) return; 
+    
+    // Nếu nhập số âm thì chặn
+    if (newQty < 0) newQty = 1;
+
+    const updatedItems = items.map(item => {
+        if (item.id === itemId) {
+            return {
+                ...item,
+                quantity: newQty,
+                subtotal: newQty * item.unitPrice
+            }
+        }
+        return item;
+    });
+    setItems(updatedItems);
+  };
+
+  // --- 2. XỬ LÝ KHI CLICK RA NGOÀI (BLUR) ---
+  const handleBlurQuantity = (itemId: string) => {
+      const updatedItems = items.map(item => {
+          // Nếu đang rỗng hoặc = 0 thì tự động về 1
+          if (item.id === itemId && (item.quantity === 0 || isNaN(item.quantity))) {
+              return {
+                  ...item,
+                  quantity: 1,
+                  subtotal: 1 * item.unitPrice
+              }
+          }
+          return item;
+      });
+      setItems(updatedItems);
+  }
+
+  // --- 3. XỬ LÝ NÚT BẤM (GIỮ NGUYÊN) ---
+  const handleUpdateQuantity = (itemId: string, newQuantity: number) => {
+    if (newQuantity <= 0) return;
     
     const updatedItems = items.map(item => {
       if (item.id === itemId) {
@@ -105,7 +137,6 @@ export const BieuMauNhapHang = ({
       }
       return item
     })
-    
     setItems(updatedItems)
   }
 
@@ -125,7 +156,6 @@ export const BieuMauNhapHang = ({
       }
       return item
     })
-    
     setItems(updatedItems)
   }
 
@@ -140,22 +170,23 @@ export const BieuMauNhapHang = ({
       toast.error('Phiếu nhập phải có ít nhất một sản phẩm')
       return
     }
-    
-    if (!supplierName) {
-      toast.error('Vui lòng nhập tên nhà cung cấp')
-      return
+
+    // Kiểm tra số lượng hợp lệ
+    const invalidItems = items.filter(i => i.quantity <= 0);
+    if (invalidItems.length > 0) {
+        toast.error('Vui lòng kiểm tra lại số lượng sản phẩm');
+        return;
     }
     
     setIsSubmitting(true)
     
     try {
-      // Tính tổng tiền
       const totalAmount = purchaseApi.service.calculatePurchaseTotals(items)
       
       const purchaseData = {
         id: existingPurchase?.id,
         items,
-        supplierName,
+        // supplierName: supplierName, // Đã bỏ trường này vì trang cha lo liệu
         notes,
         totalAmount,
         status: existingPurchase?.status || 'completed',
@@ -169,23 +200,12 @@ export const BieuMauNhapHang = ({
     }
   }
 
-  // Tính tổng tiền phiếu nhập
   const totalAmount = purchaseApi.service.calculatePurchaseTotals(items)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Thông tin nhà cung cấp */}
-      <TheThongTin title="Thông tin nhà cung cấp">
-        <DropdownTimKiem
-          label="Tên nhà cung cấp"
-          value={supplierName}
-          onChange={setSupplierName}
-          options={suppliers}
-          placeholder="Chọn hoặc tìm kiếm nhà cung cấp"
-          required
-          allowCustom={true}
-        />
-      </TheThongTin>
+      
+      {/* 🟢 ĐÃ XÓA PHẦN "THÔNG TIN NHÀ CUNG CẤP" Ở ĐÂY (VÌ ĐÃ CÓ Ở TRANG CHA) */}
 
       {/* Danh sách sản phẩm trong phiếu nhập */}
       <TheThongTin title="Sản phẩm nhập hàng">
@@ -217,18 +237,31 @@ export const BieuMauNhapHang = ({
                 header: 'Số lượng',
                 accessor: (item: PurchaseItem) => (
                   <div className="flex items-center space-x-2">
+                    {/* NÚT TRỪ (Hình tròn) */}
                     <button
                       type="button"
                       onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                      className="p-1 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                      className="p-1 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex-shrink-0"
                     >
                       <Minus size={16} />
                     </button>
-                    <span className="w-10 text-center">{item.quantity}</span>
+                    
+                    {/* 👇 Ô NHẬP LIỆU (Ẩn mũi tên, cho phép xóa) */}
+                    <input 
+                        type="number"
+                        className="w-14 text-center border border-gray-300 dark:border-gray-600 rounded py-1 px-1 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500 
+                                   [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={item.quantity === 0 ? '' : item.quantity} // 0 thì hiển thị rỗng
+                        onChange={(e) => handleInputQuantity(item.id, e.target.value)}
+                        onBlur={() => handleBlurQuantity(item.id)}
+                        onFocus={(e) => e.target.select()}
+                    />
+
+                    {/* NÚT CỘNG (Hình tròn) */}
                     <button
                       type="button"
                       onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                      className="p-1 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                      className="p-1 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex-shrink-0"
                     >
                       <Plus size={16} />
                     </button>
@@ -264,7 +297,7 @@ export const BieuMauNhapHang = ({
         </div>
       </TheThongTin>
 
-      {/* Tìm kiếm sản phẩm để thêm vào phiếu nhập */}
+      {/* Tìm kiếm sản phẩm (Giao diện cũ: Nút "Thêm" to) */}
       <TheThongTin title="Thêm sản phẩm vào phiếu nhập">
         <div className="mb-4 relative">
           <Search
@@ -286,7 +319,6 @@ export const BieuMauNhapHang = ({
               key={product.id}
               className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
             >
-              {/* Ảnh sản phẩm */}
               <div className="w-full h-32 bg-gray-100 dark:bg-gray-700 overflow-hidden">
                 {product.imageUrl ? (
                   <img
@@ -301,7 +333,6 @@ export const BieuMauNhapHang = ({
                 )}
               </div>
 
-              {/* Thông tin */}
               <div className="p-4">
                 <h4 className="font-medium text-gray-900 dark:text-white mb-2">{product.name}</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -310,6 +341,7 @@ export const BieuMauNhapHang = ({
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                   Tồn kho: {product.stock} {product.unit}
                 </p>
+                {/* NÚT THÊM - TO RỘNG (Giữ nguyên) */}
                 <NutBam
                   type="button"
                   onClick={() => handleAddItem(product)}
@@ -323,16 +355,17 @@ export const BieuMauNhapHang = ({
           ))}
         </div>
 
-        {/* Pagination */}
         {filteredProducts.length > 0 && (
-          <PhanTrang
-            currentPage={currentPage}
-            totalItems={filteredProducts.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-            onItemsPerPageChange={setItemsPerPage}
-            itemsPerPageOptions={[12, 24, 48, 96]}
-          />
+          <div className="mt-4">
+            <PhanTrang
+              currentPage={currentPage}
+              totalItems={filteredProducts.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              onItemsPerPageChange={setItemsPerPage}
+              itemsPerPageOptions={[12, 24, 48, 96]}
+            />
+          </div>
         )}
       </TheThongTin>
 
