@@ -73,10 +73,13 @@ function mapBackendToFrontend(backendOrder: any): Order {
     relatedOrderCode: backendOrder.relatedOrderCode, // Map relatedOrderCode từ backend
     customerName: backendOrder.customerName,
     customerPhone: backendOrder.customerPhone,
+    customerAddress: backendOrder.customerAddress,
+    customerEmail: backendOrder.customerEmail,
     notes: backendOrder.notes,
     createdAt: new Date(backendOrder.createdAt || Date.now()),
     updatedAt: new Date(backendOrder.updatedAt || Date.now()),
     completedAt: backendOrder.completedAt ? new Date(backendOrder.completedAt) : undefined,
+    isOnline: backendOrder.isOnline || false, // Map isOnline từ backend
   }
 }
 
@@ -100,9 +103,9 @@ function mapFrontendToBackend(orderDto: CreateOrderDto | UpdateOrderDto): any {
 }
 
 export class RealOrderRepository implements IOrderRepository {
-  async findAll(): Promise<Order[]> {
+  async findAll(params?: { isOnline?: boolean }): Promise<Order[]> {
     try {
-      const response = await apiService.orders.list()
+      const response = await apiService.orders.list(params)
       const orders = Array.isArray(response) ? response : (response as any).data || response
       return Array.isArray(orders)
         ? orders.map(mapBackendToFrontend)
@@ -189,6 +192,34 @@ export class RealOrderRepository implements IOrderRepository {
       }
     } catch (error) {
       console.error('Error fetching order summary:', error)
+      throw error
+    }
+  }
+
+  async updateStatus(id: string, status: string): Promise<Order> {
+    try {
+      await apiService.orders.updateStatus(id, { status })
+      const updatedOrder = await this.findById(id)
+      if (!updatedOrder) {
+        throw new Error('Order not found after update')
+      }
+      return updatedOrder
+    } catch (error) {
+      console.error('Error updating order status:', error)
+      throw error
+    }
+  }
+
+  async updatePaymentStatus(id: string, paymentStatus: string): Promise<Order> {
+    try {
+      await apiService.orders.updatePaymentStatus(id, { paymentStatus })
+      const updatedOrder = await this.findById(id)
+      if (!updatedOrder) {
+        throw new Error('Order not found after update')
+      }
+      return updatedOrder
+    } catch (error) {
+      console.error('Error updating payment status:', error)
       throw error
     }
   }

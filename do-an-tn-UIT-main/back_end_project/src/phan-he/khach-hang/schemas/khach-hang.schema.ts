@@ -12,12 +12,21 @@ export class KhachHang {
   @Prop()
   ten?: string;
 
+  @Prop()
+  email?: string;
+
+  @Prop()
+  diaChi?: string;
+
   @Prop({
     type: String,
     enum: VaiTroNguoiDung,
     default: VaiTroNguoiDung.CUSTOMER,
   })
   role: VaiTroNguoiDung;
+
+  @Prop({ default: true })
+  isActive: boolean;
 }
 
 export const KhachHangSchema = SchemaFactory.createForClass(KhachHang);

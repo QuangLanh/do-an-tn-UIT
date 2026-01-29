@@ -60,8 +60,16 @@ export class DichVuNguoiDung {
   }
 
   async update(id: string, updateUserDto: CapNhatNguoiDungDto): Promise<User> {
+    const updateData: any = { ...updateUserDto };
+
+    if (updateUserDto.password && updateUserDto.password.trim()) {
+      updateData.password = await bcrypt.hash(updateUserDto.password, 10);
+    } else {
+      delete updateData.password;
+    }
+
     const user = await this.userModel
-      .findByIdAndUpdate(id, updateUserDto, { new: true })
+      .findByIdAndUpdate(id, updateData, { new: true })
       .select('-password')
       .exec();
 

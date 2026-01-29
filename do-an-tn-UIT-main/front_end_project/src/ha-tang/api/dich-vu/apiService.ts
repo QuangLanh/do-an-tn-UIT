@@ -39,6 +39,19 @@ export class ApiService extends BaseApiService {
     delete: (id: string) => this.delete(API_ENDPOINTS.users.delete(id)),
   }
 
+  // ==================== CUSTOMERS ====================
+  customers = {
+    list: () => this.get(API_ENDPOINTS.customers.list()),
+
+    detail: (id: string) => this.get(API_ENDPOINTS.customers.detail(id)),
+
+    create: (customerData: any) =>
+      this.post(API_ENDPOINTS.customers.create(), customerData),
+
+    update: (id: string, customerData: any) =>
+      this.patch(API_ENDPOINTS.customers.update(id), customerData),
+  }
+
   // ==================== PRODUCTS ====================
   products = {
     list: (params?: { category?: string; search?: string; lowStock?: boolean }) =>
@@ -66,7 +79,7 @@ export class ApiService extends BaseApiService {
 
   // ==================== ORDERS ====================
   orders = {
-    list: (params?: { status?: string; from?: string; to?: string }) =>
+    list: (params?: { status?: string; from?: string; to?: string; isOnline?: boolean }) =>
       this.get(API_ENDPOINTS.orders.list(params)),
 
     detail: (id: string) => this.get(API_ENDPOINTS.orders.detail(id)),
@@ -76,6 +89,9 @@ export class ApiService extends BaseApiService {
 
     updateStatus: (id: string, statusData: { status: string }) =>
       this.patch(API_ENDPOINTS.orders.updateStatus(id), statusData),
+
+    updatePaymentStatus: (id: string, paymentStatusData: { paymentStatus: string }) =>
+      this.patch(API_ENDPOINTS.orders.updatePaymentStatus(id), paymentStatusData),
 
     delete: (id: string) => this.delete(API_ENDPOINTS.orders.delete(id)),
 

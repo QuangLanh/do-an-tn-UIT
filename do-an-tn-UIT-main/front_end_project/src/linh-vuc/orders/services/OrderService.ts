@@ -10,8 +10,8 @@ import { Product } from '../../products/entities/Product'
 export class OrderService {
   constructor(private readonly repository: IOrderRepository) {}
 
-  async getAllOrders(): Promise<Order[]> {
-    return this.repository.findAll()
+  async getAllOrders(params?: { isOnline?: boolean }): Promise<Order[]> {
+    return this.repository.findAll(params)
   }
 
   async getOrderById(id: string): Promise<Order | null> {
@@ -44,6 +44,14 @@ export class OrderService {
 
   async deleteOrder(id: string): Promise<void> {
     return this.repository.delete(id)
+  }
+
+  async updateOrderStatus(id: string, status: string): Promise<Order> {
+    return this.repository.updateStatus(id, status)
+  }
+
+  async updatePaymentStatus(id: string, paymentStatus: string): Promise<Order> {
+    return this.repository.updatePaymentStatus(id, paymentStatus)
   }
 
   async getOrdersByDateRange(startDate: Date, endDate: Date): Promise<Order[]> {

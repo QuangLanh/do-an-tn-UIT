@@ -23,6 +23,7 @@ import { CapNhatTonKhoDto } from './dto/cap-nhat-ton-kho.dto';
 import { BaoVeJwt } from '../../dung-chung/bao-ve/bao-ve-jwt';
 import { BaoVeVaiTro } from '../../dung-chung/bao-ve/bao-ve-vai-tro';
 import { VaiTro } from '../../dung-chung/trang-tri/vai-tro.trang-tri';
+import { CongKhai } from '../../dung-chung/trang-tri/cong-khai.trang-tri';
 import { VaiTroNguoiDung } from '../../dung-chung/liet-ke/vai-tro-nguoi-dung.enum';
 
 @ApiTags('san-pham')
@@ -41,7 +42,8 @@ export class DieuKhienSanPham {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all products (All roles)' })
+  @CongKhai()
+  @ApiOperation({ summary: 'Get all products (Public - No auth required)' })
   @ApiResponse({ status: 200, description: 'Return all products' })
   @ApiQuery({ name: 'category', required: false })
   @ApiQuery({ name: 'search', required: false })
@@ -51,7 +53,8 @@ export class DieuKhienSanPham {
   }
 
   @Get('categories')
-  @ApiOperation({ summary: 'Get all product categories' })
+  @CongKhai()
+  @ApiOperation({ summary: 'Get all product categories (Public - No auth required)' })
   @ApiResponse({ status: 200, description: 'Return all categories' })
   getCategories() {
     return this.dichVuSanPham.getCategories();
@@ -73,7 +76,8 @@ export class DieuKhienSanPham {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get product by ID' })
+  @CongKhai()
+  @ApiOperation({ summary: 'Get product by ID (Public - No auth required)' })
   @ApiResponse({ status: 200, description: 'Return product' })
   findOne(@Param('id') id: string) {
     return this.dichVuSanPham.findOne(id);

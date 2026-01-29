@@ -238,12 +238,12 @@ const loadData = async () => {
               <XAxis 
                 dataKey="date" 
                 stroke="#6B7280"
-                tick={{ fill: '#6B7280' }}
-                // Thêm dòng này:
-                tickFormatter={(value) => {
-                  const [y, m, d] = value.split('-');
-                  return `${d}/${m}`;
-                }}
+              tick={{ fill: '#6B7280' }}
+              // Thêm dòng này:
+              tickFormatter={(value) => {
+                const [_y, m, d] = value.split('-');
+                return `${d}/${m}`;
+              }}
               />
               <YAxis 
                 stroke="#6B7280"

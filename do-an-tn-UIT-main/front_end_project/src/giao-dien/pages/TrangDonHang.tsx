@@ -27,10 +27,10 @@ export const TrangDonHang = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
-  
+
   // State cho trả hàng
   const [returningOrder, setReturningOrder] = useState<Order | null>(null)
-  
+
   const navigate = useNavigate()
   const { hasPermission } = useAuthStore()
 
@@ -63,7 +63,33 @@ export const TrangDonHang = () => {
     try {
       setIsLoading(true)
       const data = await orderApi.getAllOrders.execute()
-      const sortedData = [...data].sort((a, b) => 
+      
+      // Fix dữ liệu ngay trong frontend: nếu status = completed thì payment status phải là PAID
+      const fixedData = data.map(order => {
+        if (order.status === 'completed' && order.paymentStatus !== 'PAID' && order.paymentStatus !== 'REFUNDED') {
+          // Fix ngay trong frontend để UI hiển thị đúng
+          return {
+            ...order,
+            paymentStatus: 'PAID' as const,
+            paidAt: order.paidAt || new Date(),
+          }
+        }
+        return order
+      })
+      
+      // Tự động sync payment status ở backend (chạy background)
+      const syncPromises = data
+        .filter(order => order.status === 'completed' && order.paymentStatus !== 'PAID' && order.paymentStatus !== 'REFUNDED')
+        .map(order => 
+          orderApi.service.updatePaymentStatus(order.id, 'PAID').catch(err => {
+            console.error(`Failed to sync payment status for order ${order.orderNumber}:`, err)
+          })
+        )
+      
+      // Chạy sync ở background
+      Promise.all(syncPromises).catch(() => {})
+      
+      const sortedData = [...fixedData].sort((a, b) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
       setOrders(sortedData)
@@ -112,16 +138,16 @@ export const TrangDonHang = () => {
     // ---------------------------------------
 
     try {
-        const token = localStorage.getItem('token'); 
+        const token = localStorage.getItem('token');
         const response = await fetch(`${import.meta.env.VITE_API_URL}/orders/return`, {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` 
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(payload)
         });
-        
+
         if(!response.ok) {
             const err = await response.json();
             // --- DEBUG LOG LỖI (Gửi cái này cho tôi) ---
@@ -131,7 +157,7 @@ export const TrangDonHang = () => {
             const message = Array.isArray(err.message) ? err.message[0] : err.message;
             throw new Error(message || 'Lỗi khi trả hàng');
         }
-        
+
         toast.success('Đã tạo đơn trả hàng thành công');
         setReturningOrder(null);
         loadOrders();
@@ -144,15 +170,37 @@ export const TrangDonHang = () => {
     navigate(`/orders/${order.id}`)
   }
 
+  const getStatusHuyHieu = (status: string) => {
+    switch (status) {
+      case 'pending':
+      case 'confirmed':
+        return <HuyHieu variant="warning">Chờ xác nhận</HuyHieu>
+      case 'shipping':
+        return <HuyHieu variant="info">Đang vận chuyển</HuyHieu>
+      case 'completed':
+        return <HuyHieu variant="success">Hoàn thành</HuyHieu>
+      case 'cancelled':
+        return <HuyHieu variant="danger">Đã hủy</HuyHieu>
+      default:
+        return <HuyHieu variant="default">{status}</HuyHieu>
+    }
+  }
+
   const getPaymentStatusHuyHieu = (order: Order) => {
-    if (order.paymentStatus === 'DEBT') {
+    // Đảm bảo: nếu status = completed thì payment status phải là PAID
+    let paymentStatus = order.paymentStatus
+    if (order.status === 'completed' && paymentStatus !== 'PAID' && paymentStatus !== 'REFUNDED') {
+      paymentStatus = 'PAID'
+    }
+    
+    if (paymentStatus === 'DEBT') {
       return <HuyHieu variant="danger">Chưa thanh toán</HuyHieu>
     }
     // Trạng thái đã hoàn tiền
-    if (order.paymentStatus === 'REFUNDED') {
+    if (paymentStatus === 'REFUNDED') {
         return <HuyHieu variant="info">Đã hoàn tiền</HuyHieu>
     }
-    if (order.paymentStatus === 'PAID' && order.wasDebt === true) {
+    if (paymentStatus === 'PAID' && order.wasDebt === true) {
       return <HuyHieu variant="orange">Đã thanh toán (từ ghi nợ)</HuyHieu>
     }
     return <HuyHieu variant="success">Đã thanh toán</HuyHieu>
@@ -168,7 +216,7 @@ export const TrangDonHang = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center px-6 py-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Quản lý đơn hàng</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
@@ -181,7 +229,7 @@ export const TrangDonHang = () => {
         </NutBam>
       </div>
 
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-4 px-6">
         <div className="flex-1 relative">
           <Search
             size={20}
@@ -197,9 +245,9 @@ export const TrangDonHang = () => {
         </div>
       </div>
 
-      <TheThongTin>
+      <TheThongTin className="no-padding">
         {filteredOrders.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400 px-6">
             Không tìm thấy đơn hàng nào
           </div>
         ) : (
@@ -210,31 +258,43 @@ export const TrangDonHang = () => {
                 {
                   header: 'Mã đơn hàng',
                   accessor: 'orderNumber' as keyof Order,
+                  className: 'whitespace-nowrap',
                 },
                 {
-                  header: 'Loại',
+                  header: 'Khách hàng',
                   accessor: (order: Order) => (
-                      <span>
-                          {order.orderType === 'RETURN' && <span className="text-red-500 font-bold mr-1">[TRẢ]</span>}
-                          {order.customerName || 'Khách lẻ'}
-                      </span>
+                    <span>
+                      {order.orderType === 'RETURN' && <span className="text-red-500 font-bold mr-1">[TRẢ]</span>}
+                      {order.customerName || 'Khách lẻ'}
+                    </span>
                   ),
                 },
                 {
                   header: 'Tổng tiền',
                   accessor: (order: Order) => (
-                      <span className={order.finalAmount < 0 ? 'text-red-600 font-bold' : ''}>
-                        {formatCurrency(order.finalAmount)}
-                      </span>
+                    <span className={order.finalAmount < 0 ? 'text-red-600 font-bold' : ''}>
+                      {formatCurrency(order.finalAmount)}
+                    </span>
                   ),
+                  className: 'whitespace-nowrap',
                 },
                 {
-                  header: 'Trạng thái TT',
+                  header: 'Số sản phẩm',
+                  accessor: (order: Order) => order.items.length,
+                  className: 'whitespace-nowrap text-center',
+                },
+                {
+                  header: 'Trạng thái đơn hàng',
+                  accessor: (order: Order) => getStatusHuyHieu(order.status),
+                },
+                {
+                  header: 'Thanh toán',
                   accessor: (order: Order) => getPaymentStatusHuyHieu(order),
                 },
                 {
                   header: 'Ngày tạo',
                   accessor: (order: Order) => formatDateTime(new Date(order.createdAt)),
+                  className: 'whitespace-nowrap',
                 },
                 {
                   header: 'Thao tác',
@@ -251,14 +311,14 @@ export const TrangDonHang = () => {
                       {/* NÚT TRẢ HÀNG MỚI THÊM VÀO */}
                       {order.orderType === 'SALE' && (
                         <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setReturningOrder(order);
-                            }}
-                            className="p-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900 rounded"
-                            title="Trả hàng / Hoàn tiền"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setReturningOrder(order)
+                          }}
+                          className="p-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900 rounded"
+                          title="Trả hàng / Hoàn tiền"
                         >
-                            <RefreshCcw size={16} />
+                          <RefreshCcw size={16} />
                         </button>
                       )}
 
@@ -273,23 +333,28 @@ export const TrangDonHang = () => {
                       )}
                     </div>
                   ),
+                  className: 'whitespace-nowrap',
                 },
               ]}
               onRowClick={handleViewOrder}
             />
-            {filteredOrders.length > 0 && (
-              <PhanTrang
-                currentPage={currentPage}
-                totalItems={filteredOrders.length}
-                itemsPerPage={itemsPerPage}
-                onPageChange={setCurrentPage}
-                onItemsPerPageChange={setItemsPerPage}
-                itemsPerPageOptions={[10, 20, 50, 100]}
-              />
-            )}
           </>
         )}
       </TheThongTin>
+
+      {/* Pagination - Separate section below table */}
+      {filteredOrders.length > 0 && (
+        <div className="px-6">
+          <PhanTrang
+            currentPage={currentPage}
+            totalItems={filteredOrders.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+            itemsPerPageOptions={[10, 20, 50, 100]}
+          />
+        </div>
+      )}
 
       {/* RENDER MODAL TRẢ HÀNG */}
       <HopThoaiTraHang

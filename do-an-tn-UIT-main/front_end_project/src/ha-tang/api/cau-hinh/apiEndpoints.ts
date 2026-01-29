@@ -23,6 +23,14 @@ export const API_ENDPOINTS = {
     delete: (id: string) => `/users/${id}`,
   },
 
+  // ==================== CUSTOMERS ====================
+  customers: {
+    list: () => '/customers',
+    detail: (id: string) => `/customers/${id}`,
+    create: () => '/customers',
+    update: (id: string) => `/customers/${id}`,
+  },
+
   // ==================== PRODUCTS ====================
   products: {
     list: (params?: { category?: string; search?: string; lowStock?: boolean }) => {
@@ -45,9 +53,10 @@ export const API_ENDPOINTS = {
 
   // ==================== ORDERS ====================
   orders: {
-    list: (params?: { status?: string; from?: string; to?: string }) => {
+    list: (params?: { status?: string; from?: string; to?: string; isOnline?: boolean }) => {
       const query = new URLSearchParams()
       if (params?.status) query.append('status', params.status)
+      if (params?.isOnline !== undefined) query.append('isOnline', String(params.isOnline))
       if (params?.from) query.append('from', params.from)
       if (params?.to) query.append('to', params.to)
       const queryString = query.toString()
@@ -56,6 +65,7 @@ export const API_ENDPOINTS = {
     detail: (id: string) => `/orders/${id}`,
     create: () => '/orders',
     updateStatus: (id: string) => `/orders/${id}/status`,
+    updatePaymentStatus: (id: string) => `/orders/${id}/payment-status`,
     delete: (id: string) => `/orders/${id}`,
     invoice: (id: string) => `/orders/${id}/invoice`,
     statistics: (params?: { from?: string; to?: string }) => {

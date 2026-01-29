@@ -8,11 +8,13 @@ import { ProductRepository } from '../../products/repositories/ProductRepository
 import { Product } from '../../products/entities/Product'
 
 export interface IOrderRepository {
-  findAll(): Promise<Order[]>
+  findAll(params?: { isOnline?: boolean }): Promise<Order[]>
   findById(id: string): Promise<Order | null>
   create(order: CreateOrderDto): Promise<Order>
   update(id: string, order: UpdateOrderDto): Promise<Order>
   delete(id: string): Promise<void>
+  updateStatus(id: string, status: string): Promise<Order>
+  updatePaymentStatus(id: string, paymentStatus: string): Promise<Order>
   getOrdersByDateRange(startDate: Date, endDate: Date): Promise<Order[]>
   getOrderSummary(startDate: Date, endDate: Date): Promise<OrderSummary>
 }
@@ -65,9 +67,17 @@ export class OrderRepository implements IOrderRepository {
     return `HD${year}${month}${day}-${random}`
   }
 
-  async findAll(): Promise<Order[]> {
+  async findAll(params?: { isOnline?: boolean }): Promise<Order[]> {
     return new Promise((resolve) => {
-      setTimeout(() => resolve(this.getOrders()), 100)
+      let orders = this.getOrders()
+      if (params?.isOnline !== undefined) {
+        orders = orders.filter(order => {
+          // Mock repository: giả sử đơn hàng có customerAddress là online
+          const isOnline = !!(order as any).isOnline || !!(order.customerAddress && order.customerAddress.length > 0)
+          return params.isOnline ? isOnline : !isOnline
+        })
+      }
+      setTimeout(() => resolve(orders), 100)
     })
   }
 
@@ -143,6 +153,54 @@ export class OrderRepository implements IOrderRepository {
         const filteredOrders = orders.filter((o) => o.id !== id)
         this.saveOrders(filteredOrders)
         resolve()
+      }, 100)
+    })
+  }
+
+  async updateStatus(id: string, status: string): Promise<Order> {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        const orders = this.getOrders()
+        const index = orders.findIndex((o) => o.id === id)
+        if (index === -1) {
+          reject(new Error('Order not found'))
+          return
+        }
+        
+        const updatedOrder: Order = {
+          ...orders[index],
+          status: status as Order['status'],
+          updatedAt: new Date(),
+          completedAt: status === 'completed' ? new Date() : orders[index].completedAt,
+        }
+        
+        orders[index] = updatedOrder
+        this.saveOrders(orders)
+        resolve(updatedOrder)
+      }, 100)
+    })
+  }
+
+  async updatePaymentStatus(id: string, paymentStatus: string): Promise<Order> {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        const orders = this.getOrders()
+        const index = orders.findIndex((o) => o.id === id)
+        if (index === -1) {
+          reject(new Error('Order not found'))
+          return
+        }
+        
+        const updatedOrder: Order = {
+          ...orders[index],
+          paymentStatus: paymentStatus as Order['paymentStatus'],
+          updatedAt: new Date(),
+          paidAt: paymentStatus === 'PAID' && !orders[index].paidAt ? new Date() : orders[index].paidAt,
+        }
+        
+        orders[index] = updatedOrder
+        this.saveOrders(orders)
+        resolve(updatedOrder)
       }, 100)
     })
   }

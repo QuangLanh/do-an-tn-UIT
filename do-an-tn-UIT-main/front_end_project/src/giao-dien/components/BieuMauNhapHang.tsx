@@ -81,7 +81,7 @@ export const BieuMauNhapHang = ({
   // --- 1. XỬ LÝ NHẬP TỪ BÀN PHÍM (CHO PHÉP XÓA TRẮNG) ---
   const handleInputQuantity = (itemId: string, valueStr: string) => {
     if (valueStr === '') {
-        const updatedItems = items.map(item => 
+        const updatedItems = items.map(item =>
             item.id === itemId ? { ...item, quantity: 0, subtotal: 0 } : item
         );
         setItems(updatedItems);
@@ -89,8 +89,8 @@ export const BieuMauNhapHang = ({
     }
 
     let newQty = parseInt(valueStr);
-    if (isNaN(newQty)) return; 
-    
+    if (isNaN(newQty)) return;
+
     // Nếu nhập số âm thì chặn
     if (newQty < 0) newQty = 1;
 
@@ -204,7 +204,7 @@ export const BieuMauNhapHang = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      
+
       {/* 🟢 ĐÃ XÓA PHẦN "THÔNG TIN NHÀ CUNG CẤP" Ở ĐÂY (VÌ ĐÃ CÓ Ở TRANG CHA) */}
 
       {/* Danh sách sản phẩm trong phiếu nhập */}
@@ -245,11 +245,11 @@ export const BieuMauNhapHang = ({
                     >
                       <Minus size={16} />
                     </button>
-                    
+
                     {/* 👇 Ô NHẬP LIỆU (Ẩn mũi tên, cho phép xóa) */}
-                    <input 
+                    <input
                         type="number"
-                        className="w-14 text-center border border-gray-300 dark:border-gray-600 rounded py-1 px-1 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500 
+                        className="w-14 text-center border border-gray-300 dark:border-gray-600 rounded py-1 px-1 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500
                                    [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         value={item.quantity === 0 ? '' : item.quantity} // 0 thì hiển thị rỗng
                         onChange={(e) => handleInputQuantity(item.id, e.target.value)}
@@ -354,6 +354,7 @@ export const BieuMauNhapHang = ({
             </div>
           ))}
         </div>
+      </TheThongTin>
 
         {filteredProducts.length > 0 && (
           <div className="mt-4">
@@ -367,7 +368,6 @@ export const BieuMauNhapHang = ({
             />
           </div>
         )}
-      </TheThongTin>
 
       {/* Ghi chú */}
       <TheThongTin title="Ghi chú">

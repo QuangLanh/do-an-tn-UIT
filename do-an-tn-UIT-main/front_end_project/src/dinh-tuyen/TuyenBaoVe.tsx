@@ -22,16 +22,12 @@ export const TuyenBaoVe = ({ children, requiredPermission, requiredRoles }: Tuye
     ? (Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles])
     : undefined
 
-  const isCustomerArea = location.pathname.startsWith('/khach-hang')
-  const requiresCustomer = roles?.includes('customer') ?? false
-  const loginPath = isCustomerArea || requiresCustomer ? '/khach-hang/dang-nhap' : '/login'
-
   if (!isAuthenticated) {
-    return <Navigate to={loginPath} replace state={{ from: location }} />
+    return <Navigate to="/login" replace state={{ from: location }} />
   }
 
   if (requiredRoles) {
-    if (!user || !roles.includes(user.role)) {
+    if (!user || !roles?.includes(user.role)) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
           <div className="text-center">

@@ -25,7 +25,7 @@ export const TheThongTin = ({ children, className = '', title, action }: CardPro
           {action && <div>{action}</div>}
         </div>
       )}
-      <div className="p-6">{children}</div>
+      <div className={className.includes('no-padding') ? '' : 'p-6'}>{children}</div>
     </div>
   )
 }

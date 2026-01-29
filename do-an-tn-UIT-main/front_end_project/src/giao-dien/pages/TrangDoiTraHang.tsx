@@ -1169,19 +1169,23 @@ export const TrangDoiTraHang = () => {
                   columns={columns}
                   onRowClick={handleViewOrder}
                 />
-                {filteredData.length > 0 && (
-                  <PhanTrang
-                    currentPage={currentPage}
-                    totalItems={filteredData.length}
-                    itemsPerPage={itemsPerPage}
-                    onPageChange={setCurrentPage}
-                    onItemsPerPageChange={setItemsPerPage}
-                    itemsPerPageOptions={[10, 20, 50, 100]}
-                  />
-                )}
               </>
             )}
           </TheThongTin>
+
+          {/* Pagination - Separate section below table */}
+          {filteredData.length > 0 && (
+            <div className="px-6">
+              <PhanTrang
+                currentPage={currentPage}
+                totalItems={filteredData.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                onItemsPerPageChange={setItemsPerPage}
+                itemsPerPageOptions={[10, 20, 50, 100]}
+              />
+            </div>
+          )}
         </>
       )}
 

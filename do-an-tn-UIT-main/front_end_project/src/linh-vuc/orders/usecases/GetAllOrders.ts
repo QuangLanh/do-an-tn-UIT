@@ -9,7 +9,7 @@ import { OrderService } from '../services/OrderService'
 export class GetAllOrdersUseCase {
   constructor(private readonly orderService: OrderService) {}
 
-  async execute(): Promise<Order[]> {
-    return this.orderService.getAllOrders()
+  async execute(params?: { isOnline?: boolean }): Promise<Order[]> {
+    return this.orderService.getAllOrders(params)
   }
 }

@@ -16,6 +16,16 @@ export interface OrderItem {
 
 export type OrderStatus = 'pending' | 'completed' | 'cancelled'
 export type PaymentStatus = 'PAID' | 'DEBT' | 'REFUNDED';
+export type OrderStatus =
+  | 'pending'       // Chờ xử lý
+  | 'confirmed'     // Đã xác nhận
+  | 'processing'    // Đang xử lý
+  | 'shipping'      // Đang vận chuyển
+  | 'delivered'     // Đã giao hàng
+  | 'completed'     // Hoàn thành
+  | 'cancelled'     // Đã hủy
+
+export type PaymentStatus = 'PAID' | 'DEBT'
 export type OrderType = 'SALE' | 'EXCHANGE' | 'RETURN'
 
 export interface Order {
@@ -34,7 +44,10 @@ export interface Order {
   relatedOrderCode?: string
   customerName?: string
   customerPhone?: string
+  customerAddress?: string
+  customerEmail?: string
   notes?: string
+  isOnline?: boolean // Đánh dấu đơn hàng được đặt online
   createdAt: Date
   updatedAt: Date
   completedAt?: Date

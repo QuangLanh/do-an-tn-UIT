@@ -21,19 +21,19 @@ export const ThanhDieuHuong = () => {
   }
 
   return (
-    <nav className="bg-white dark:bg-gray-800 shadow-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+    <nav className="bg-gradient-to-r from-primary-600 to-primary-700 dark:from-primary-700 dark:to-primary-800 shadow-lg sticky top-0 z-40">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Left side */}
           <div className="flex items-center">
             <button
               onClick={toggle}
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="p-2 rounded-lg text-white hover:bg-white/20 transition-colors"
             >
               <Menu size={24} />
             </button>
-            <h1 className="ml-4 text-xl font-bold text-gray-900 dark:text-white">
-              Quản Lý Tạp Hóa
+            <h1 className="ml-4 text-xl font-bold text-white">
+              🏪 Quản Lý Tạp Hóa
             </h1>
           </div>
 
@@ -42,7 +42,7 @@ export const ThanhDieuHuong = () => {
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="p-2 rounded-lg text-white hover:bg-white/20 transition-colors"
               title="Toggle theme"
             >
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
@@ -52,10 +52,10 @@ export const ThanhDieuHuong = () => {
             {user && (
               <div className="flex items-center space-x-3">
                 <div className="hidden sm:block text-right">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  <p className="text-sm font-medium text-white">
                     {user.fullName}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                  <p className="text-xs text-primary-100 capitalize">
                     {user?.role === 'admin'
                       ? 'Quản trị viên'
                       : user?.role === 'staff'
@@ -63,7 +63,7 @@ export const ThanhDieuHuong = () => {
                         : 'Khách hàng'}
                   </p>
                 </div>
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-300">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white/20 text-white">
                   <User size={20} />
                 </div>
               </div>
@@ -72,7 +72,7 @@ export const ThanhDieuHuong = () => {
             {/* Logout */}
             <button
               onClick={handleLogout}
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="p-2 rounded-lg text-white hover:bg-white/20 transition-colors"
               title="Đăng xuất"
             >
               <LogOut size={20} />

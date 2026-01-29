@@ -3,7 +3,7 @@
  * Sử dụng API thực từ backend thay vì mock users
  */
 
-import { DangNhapKhachHangDuLieu, User, LoginCredentials, UserRole } from '../entities/User'
+import { User, LoginCredentials, UserRole } from '../entities/User'
 import { apiService } from '@/ha-tang/api'
 
 /**
@@ -158,51 +158,6 @@ export class RealAuthService {
 
   canManageUsers(userRole: UserRole): boolean {
     return userRole === 'admin'
-  }
-
-  /**
-   * Đăng nhập khách hàng bằng số điện thoại
-   * Backend: POST /auth/customer/login
-   */
-  async dangNhapKhachHang(
-    duLieu: DangNhapKhachHangDuLieu,
-  ): Promise<{ user: User; token: string }> {
-    const response = await apiService.auth.customerLogin({
-      soDienThoai: duLieu.soDienThoai,
-      ten: duLieu.ten,
-    })
-
-    const token = (response as any).access_token || (response as any).token
-    const customer = (response as any).customer
-
-    if (!token || !customer) {
-      throw new Error('Không nhận được dữ liệu đăng nhập khách hàng từ server')
-    }
-
-    const user: User = {
-      id: String(customer.id || customer._id || ''),
-      soDienThoai: customer.soDienThoai,
-      fullName: customer.ten,
-      role: 'customer',
-      createdAt: customer.createdAt ? new Date(customer.createdAt) : new Date(),
-    }
-
-    return { user, token }
-  }
-
-  async layKhachHangHienTai(): Promise<User | null> {
-    try {
-      const me = await apiService.auth.customerMe()
-      return {
-        id: String((me as any).id || (me as any)._id || ''),
-        soDienThoai: (me as any).soDienThoai,
-        fullName: (me as any).ten,
-        role: 'customer',
-      }
-    } catch (error) {
-      console.error('Error fetching customer profile:', error)
-      return null
-    }
   }
 }
 

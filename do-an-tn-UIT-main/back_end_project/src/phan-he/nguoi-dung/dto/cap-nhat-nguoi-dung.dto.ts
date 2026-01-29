@@ -27,5 +27,10 @@ export class CapNhatNguoiDungDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @ApiProperty({ example: 'newPassword123', required: false, description: 'New password (optional)' })
+  @IsString()
+  @IsOptional()
+  password?: string;
 }
 

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Put, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -9,6 +9,9 @@ import { DichVuXacThuc } from './xac-thuc.dich-vu';
 import { DangKyDto } from './dto/dang-ky.dto';
 import { DangNhapDto } from './dto/dang-nhap.dto';
 import { DangNhapKhachHangDto } from './dto/dang-nhap-khach-hang.dto';
+import { RequestOtpDto } from './dto/request-otp.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { CapNhatProfileDto } from './dto/cap-nhat-profile.dto';
 import { BaoVeJwt } from '../../dung-chung/bao-ve/bao-ve-jwt';
 import { BaoVeVaiTro } from '../../dung-chung/bao-ve/bao-ve-vai-tro';
 import { VaiTro } from '../../dung-chung/trang-tri/vai-tro.trang-tri';
@@ -38,10 +41,24 @@ export class DieuKhienXacThuc {
   }
 
   @Post('customer/login')
-  @ApiOperation({ summary: 'Đăng nhập khách hàng bằng số điện thoại' })
+  @ApiOperation({ summary: 'Đăng nhập khách hàng bằng số điện thoại (deprecated - use OTP)' })
   @ApiResponse({ status: 200, description: 'Customer logged in successfully' })
   dangNhapKhachHang(@Body() dto: DangNhapKhachHangDto) {
     return this.dichVuXacThuc.dangNhapKhachHang(dto);
+  }
+
+  @Post('customer/request-otp')
+  @ApiOperation({ summary: 'Yêu cầu mã OTP để đăng nhập' })
+  @ApiResponse({ status: 200, description: 'OTP sent successfully' })
+  requestOtp(@Body() dto: RequestOtpDto) {
+    return this.dichVuXacThuc.requestOtp(dto);
+  }
+
+  @Post('customer/verify-otp')
+  @ApiOperation({ summary: 'Xác thực OTP và đăng nhập khách hàng' })
+  @ApiResponse({ status: 200, description: 'OTP verified and customer logged in successfully' })
+  verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.dichVuXacThuc.verifyOtp(dto);
   }
 
   @Get('customer/me')
@@ -51,7 +68,17 @@ export class DieuKhienXacThuc {
   @ApiOperation({ summary: 'Lấy thông tin khách hàng hiện tại' })
   @ApiResponse({ status: 200, description: 'Return current customer profile' })
   thongTinKhachHang(@NguoiDungHienTai() user: any) {
-    return user;
+    return this.dichVuXacThuc.layThongTinKhachHang(user.id);
+  }
+
+  @Put('customer/profile')
+  @UseGuards(BaoVeJwt, BaoVeVaiTro)
+  @VaiTro(VaiTroNguoiDung.CUSTOMER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cập nhật thông tin khách hàng' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
+  capNhatProfile(@NguoiDungHienTai() user: any, @Body() dto: CapNhatProfileDto) {
+    return this.dichVuXacThuc.capNhatProfile(user.id, dto);
   }
 
   @Get('profile')

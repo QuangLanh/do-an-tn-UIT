@@ -3,9 +3,9 @@
  * Menu bên trái
  */
 
+import { useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
-// 👇 1. THÊM 'Users' VÀO IMPORT
-import { Home, Package, AlertTriangle, FileText, ShoppingCart, Truck, X, ClipboardList, CreditCard, RefreshCw, Users } from 'lucide-react'
+import { Home, Package, AlertTriangle, FileText, ShoppingCart, Truck, X, ClipboardList, CreditCard, RefreshCw, ListOrdered, Users } from 'lucide-react'
 import { useSidebarStore } from '@/kho-trang-thai/khoThanhBen'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
 
@@ -16,8 +16,10 @@ interface NavItem {
   permission?: string
 }
 
+const PENDING_ORDERS_POLL_INTERVAL_MS = 60 * 1000 // 1 phút
+
 export const ThanhBen = () => {
-  const { isOpen, close } = useSidebarStore()
+  const { isOpen, close, pendingOrdersCount, refreshPendingOrdersCount } = useSidebarStore()
   const { hasPermission } = useAuthStore()
 
   const navItems: NavItem[] = [
@@ -27,9 +29,20 @@ export const ThanhBen = () => {
       icon: <Home size={20} />,
     },
     {
+      path: '/accounts',
+      label: 'Danh sách tài khoản',
+      icon: <Users size={20} />,
+      permission: 'manage_users',
+    },
+    {
       path: '/sales',
       label: 'Bán hàng',
       icon: <ShoppingCart size={20} />,
+    },
+    {
+      path: '/orders/list',
+      label: 'Danh sách đơn đặt hàng',
+      icon: <ListOrdered size={20} />,
     },
     {
       path: '/orders',
@@ -37,14 +50,14 @@ export const ThanhBen = () => {
       icon: <ClipboardList size={20} />,
     },
     {
-      path: '/orders/debts',
-      label: 'Đơn hàng ghi nợ',
-      icon: <CreditCard size={20} />,
-    },
-    {
       path: '/returns-exchanges',
       label: 'Đổi / Trả hàng',
       icon: <RefreshCw size={20} />,
+    },
+    {
+      path: '/orders/debts',
+      label: 'Đơn hàng ghi nợ',
+      icon: <CreditCard size={20} />,
     },
     {
       path: '/purchases',
@@ -74,11 +87,19 @@ export const ThanhBen = () => {
       icon: <FileText size={20} />,
       permission: 'view_reports',
     },
+  
   ]
 
   const filteredNavItems = navItems.filter(
     (item) => !item.permission || hasPermission(item.permission)
   )
+
+  // Số đơn hàng online chờ xử lý – lấy từ store, refresh khi mount và định kỳ (sau khi xác nhận hoàn thành đơn thì TrangDanhSachDonDatHang gọi refreshPendingOrdersCount nên badge tự giảm)
+  useEffect(() => {
+    refreshPendingOrdersCount()
+    const interval = setInterval(refreshPendingOrdersCount, PENDING_ORDERS_POLL_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [hasPermission, refreshPendingOrdersCount])
 
   return (
     <>
@@ -116,7 +137,7 @@ export const ThanhBen = () => {
                 to={item.path}
                 end={item.path === '/orders'} // Chỉ match exact path cho /orders, không match /orders/debts
                 className={({ isActive }) =>
-                  `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                  `flex items-center justify-between space-x-3 px-4 py-3 rounded-lg transition-colors ${
                     isActive
                       ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -129,8 +150,18 @@ export const ThanhBen = () => {
                   }
                 }}
               >
-                {item.icon}
-                <span className="font-medium">{item.label}</span>
+                <div className="flex items-center space-x-3 min-w-0">
+                  {item.icon}
+                  <span className="font-medium">{item.label}</span>
+                </div>
+                {item.path === '/orders/list' && pendingOrdersCount > 0 && (
+                  <span
+                    className="flex-shrink-0 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-semibold"
+                    title={`${pendingOrdersCount} đơn hàng chờ xử lý`}
+                  >
+                    {pendingOrdersCount > 99 ? '99+' : pendingOrdersCount}
+                  </span>
+                )}
               </NavLink>
             ))}
           </nav>

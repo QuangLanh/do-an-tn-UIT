@@ -51,7 +51,7 @@ export const PhanTrang = ({
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
       {/* Items per page selector */}
       <div className="flex items-center gap-2">
         <label className="text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
@@ -100,7 +100,7 @@ export const PhanTrang = ({
             <ChevronLeft size={20} />
           </button>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {Array.from({ length: totalPages }, (_, i) => i + 1)
               .filter((page) => {
                 // Hiển thị trang đầu, trang cuối, trang hiện tại và các trang xung quanh
@@ -112,7 +112,7 @@ export const PhanTrang = ({
                 // Thêm ellipsis nếu có khoảng trống
                 const showEllipsisBefore = index > 0 && page - array[index - 1] > 1
                 return (
-                  <div key={page} className="flex items-center gap-1">
+                  <div key={page} className="flex items-center gap-2">
                     {showEllipsisBefore && (
                       <span className="px-2 text-gray-500 dark:text-gray-400">...</span>
                     )}

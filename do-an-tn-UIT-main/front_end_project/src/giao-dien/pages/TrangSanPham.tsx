@@ -29,18 +29,18 @@ export const TrangSanPham = () => {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
-  
+
   // State cho Modal Thêm/Sửa
   const [isHopThoaiOpen, setIsHopThoaiOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  
+
   // State cho Modal Xem Chi Tiết
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
 
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
-  
+
   const { user } = useAuthStore();
 
   // ========================================================================
@@ -49,7 +49,7 @@ export const TrangSanPham = () => {
   const isAdmin = useMemo(() => {
     // 1. Lấy role ra, chuyển về chuỗi, xóa khoảng trắng, chuyển thành chữ HOA
     const role = String((user as any)?.role || '').trim().toUpperCase();
-    
+
     // 2. In ra Console để debug (Bạn nhớ F12 xem tab Console nhé)
     console.log("👉 DEBUG ROLE:", role);
 
@@ -179,7 +179,7 @@ export const TrangSanPham = () => {
     {
       header: 'Giá nhập',
       // Chỉ Admin mới thấy giá nhập, nhân viên thấy ***
-      accessor: (product: Product) => isAdmin ? formatCurrency(product.importPrice) : '***', 
+      accessor: (product: Product) => isAdmin ? formatCurrency(product.importPrice) : '***',
     },
     {
       header: 'Giá bán',
@@ -282,22 +282,24 @@ export const TrangSanPham = () => {
       </div>
 
       {/* BangDuLieu */}
-      <BangDuLieu 
-        data={paginatedProducts} 
-        columns={columns} 
+      <BangDuLieu
+        data={paginatedProducts}
+        columns={columns}
         onRowClick={(product) => handleViewDetail(product)} // Bấm vào dòng là xem
       />
 
-      {/* Pagination */}
+      {/* Pagination - Separate section below table */}
       {filteredProducts.length > 0 && (
-        <PhanTrang
-          currentPage={currentPage}
-          totalItems={filteredProducts.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
-          onItemsPerPageChange={setItemsPerPage}
-          itemsPerPageOptions={[10, 20, 50, 100]}
-        />
+        <div className="px-6">
+          <PhanTrang
+            currentPage={currentPage}
+            totalItems={filteredProducts.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+            itemsPerPageOptions={[10, 20, 50, 100]}
+          />
+        </div>
       )}
 
       {/* HopThoai (Create/Edit) */}
@@ -416,6 +418,8 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
       } else {
         setFormData((prev) => ({ ...prev, barcode: code }))
         toast('Chưa tìm thấy sản phẩm với barcode này. Vui lòng điền thông tin sản phẩm.')
+        toast('Chưa tìm thấy sản phẩm với barcode này. Vui lòng điền thông tin sản phẩm.')
+        // Focus vào trường tên sản phẩm
         setTimeout(() => {
           const nameInput = document.querySelector<HTMLInputElement>('input[name="name"]')
           nameInput?.focus()
@@ -678,7 +682,7 @@ const ProductDetailModal = ({ isOpen, onClose, product, onEdit, canEdit }: Produ
                     </div>
                 </div>
               )}
-              
+
               <div>
                 <label className="text-sm text-gray-500">Tồn kho</label>
                 <div className={`text-lg font-bold ${product.stock < 10 ? 'text-red-600' : 'text-green-600'}`}>
@@ -694,7 +698,7 @@ const ProductDetailModal = ({ isOpen, onClose, product, onEdit, canEdit }: Produ
             {/* Mô tả HTML */}
             <div>
               <label className="text-sm font-semibold text-gray-900 dark:text-white mb-2 block">Mô tả</label>
-              <div 
+              <div
                 className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg max-h-48 overflow-y-auto"
                 dangerouslySetInnerHTML={{ __html: product.description || '<p>Không có mô tả</p>' }}
               />

@@ -283,20 +283,23 @@ export const TrangDonHangGhiNo = () => {
             ]}
               onRowClick={handleViewOrder}
             />
-            {/* Pagination */}
-            {filteredOrders.length > 0 && (
-              <PhanTrang
-                currentPage={currentPage}
-                totalItems={filteredOrders.length}
-                itemsPerPage={itemsPerPage}
-                onPageChange={setCurrentPage}
-                onItemsPerPageChange={setItemsPerPage}
-                itemsPerPageOptions={[10, 20, 50, 100]}
-              />
-            )}
           </>
         )}
       </TheThongTin>
+
+      {/* Pagination - Separate section below table */}
+      {filteredOrders.length > 0 && (
+        <div className="px-6">
+          <PhanTrang
+            currentPage={currentPage}
+            totalItems={filteredOrders.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+            itemsPerPageOptions={[10, 20, 50, 100]}
+          />
+        </div>
+      )}
 
       {/* Modal xác nhận thanh toán nợ */}
       <HopThoai

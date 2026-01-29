@@ -4,7 +4,6 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { BieuMauDonHang } from '@/giao-dien/components/BieuMauDonHang'
 import { Product } from '@/linh-vuc/products/entities/Product'
 import { productApi } from '@/ha-tang/api/productApi'
@@ -14,7 +13,6 @@ import toast from 'react-hot-toast'
 export const TrangBanHang = () => {
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const navigate = useNavigate()
 
   useEffect(() => {
     loadProducts()

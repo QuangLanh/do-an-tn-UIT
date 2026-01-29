@@ -4,6 +4,7 @@
  */
 
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
+import { useLoadingStore } from '@/kho-trang-thai/khoTai';
 
 // API Base URL - có thể lấy từ env hoặc config
 const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
@@ -17,9 +18,13 @@ const apiClient: AxiosInstance = axios.create({
   },
 })
 
-// Request interceptor - Thêm JWT token vào header
+// Request interceptor - Thêm JWT token vào header và bắt đầu loading
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Bắt đầu loading
+    const { startLoading } = useLoadingStore.getState()
+    startLoading()
+
     const persistedState = localStorage.getItem('auth-storage')
     
     if (persistedState) {
@@ -40,16 +45,26 @@ apiClient.interceptors.request.use(
     return config
   },
   (error: AxiosError) => {
+    // Dừng loading khi có lỗi trong request
+    const { stopLoading } = useLoadingStore.getState()
+    stopLoading()
     return Promise.reject(error)
   }
 )
 
-// Response interceptor - Xử lý errors
+// Response interceptor - Xử lý errors và dừng loading
 apiClient.interceptors.response.use(
   (response: any) => {
+    // Dừng loading khi request thành công
+    const { stopLoading } = useLoadingStore.getState()
+    stopLoading()
     return response
   },
   (error: AxiosError) => {
+    // Dừng loading khi có lỗi
+    const { stopLoading } = useLoadingStore.getState()
+    stopLoading()
+
     if (error.response) {
       // Server trả về error
       const { status, data } = error.response
@@ -57,8 +72,7 @@ apiClient.interceptors.response.use(
       if (status === 401) {
         // Unauthorized - xóa token và redirect to login
         localStorage.removeItem('auth-storage')
-        const isCustomerArea = window.location.pathname.startsWith('/khach-hang')
-        window.location.href = isCustomerArea ? '/khach-hang/dang-nhap' : '/login'
+        window.location.href = '/login'
       }
       
       // Throw error với message từ server

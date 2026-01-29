@@ -218,30 +218,38 @@ export const TrangKiemKe = () => {
 
       {/* Alert Section */}
       {alerts.length > 0 && (
-        <TheThongTin title="⚠️ Cảnh báo tồn kho">
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Các sản phẩm sau cần được nhập thêm hàng:
-            </p>
-            <BangDuLieu data={paginatedAlerts} columns={alertColumns} />
-            {alerts.length > 0 && (
-              <PhanTrang
-                currentPage={alertsCurrentPage}
-                totalItems={alerts.length}
-                itemsPerPage={alertsItemsPerPage}
-                onPageChange={setAlertsCurrentPage}
-                onItemsPerPageChange={setAlertsItemsPerPage}
-                itemsPerPageOptions={[10, 20, 50, 100]}
-              />
-            )}
+        <>
+          <TheThongTin title="⚠️ Cảnh báo tồn kho">
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Các sản phẩm sau cần được nhập thêm hàng:
+              </p>
+              <BangDuLieu data={paginatedAlerts} columns={alertColumns} />
+            </div>
+          </TheThongTin>
+
+          {/* Pagination - Separate section below alerts table */}
+          <div className="px-6">
+            <PhanTrang
+              currentPage={alertsCurrentPage}
+              totalItems={alerts.length}
+              itemsPerPage={alertsItemsPerPage}
+              onPageChange={setAlertsCurrentPage}
+              onItemsPerPageChange={setAlertsItemsPerPage}
+              itemsPerPageOptions={[10, 20, 50, 100]}
+            />
           </div>
-        </TheThongTin>
+        </>
       )}
 
       {/* All Products Inventory */}
       <TheThongTin title="Tồn kho tất cả sản phẩm">
         <BangDuLieu data={paginatedProducts} columns={allProductsColumns} />
-        {products.length > 0 && (
+      </TheThongTin>
+
+      {/* Pagination - Separate section below products table */}
+      {products.length > 0 && (
+        <div className="px-6">
           <PhanTrang
             currentPage={productsCurrentPage}
             totalItems={products.length}
@@ -250,8 +258,8 @@ export const TrangKiemKe = () => {
             onItemsPerPageChange={setProductsItemsPerPage}
             itemsPerPageOptions={[10, 20, 50, 100]}
           />
-        )}
-      </TheThongTin>
+        </div>
+      )}
 
       {/* Recommendations */}
       <TheThongTin title="💡 Gợi ý quản lý tồn kho">

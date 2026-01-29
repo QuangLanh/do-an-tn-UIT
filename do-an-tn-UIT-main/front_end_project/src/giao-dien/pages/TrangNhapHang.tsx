@@ -27,7 +27,7 @@ export const TrangNhapHang = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
-  
+
   const navigate = useNavigate()
   const { hasPermission } = useAuthStore()
 
@@ -46,14 +46,14 @@ export const TrangNhapHang = () => {
       ])
 
       // Sắp xếp mới nhất lên đầu
-      const sortedData = [...purchasesData].sort((a: any, b: any) => 
+      const sortedData = [...purchasesData].sort((a: any, b: any) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
-      
+
       setPurchases(sortedData)
       setFilteredPurchases(sortedData)
       setSuppliers(suppliersData) // Lưu NCC để tra cứu
-      
+
     } catch (error) {
       toast.error('Không thể tải dữ liệu')
       console.error(error)
@@ -71,7 +71,7 @@ export const TrangNhapHang = () => {
       // Nếu backend trả về ID -> Tìm trong list suppliers
       const sId = typeof supplierInfo === 'object' ? (supplierInfo._id || supplierInfo.id) : supplierInfo;
       const found = suppliers.find(s => s.id === sId || (s as any)._id === sId);
-      
+
       return found ? found.name : "---";
   }
 
@@ -85,7 +85,7 @@ export const TrangNhapHang = () => {
           // Tìm theo tên NCC (dùng hàm getSupplierName để tìm chính xác)
           const supName = getSupplierName(p.supplier).toLowerCase();
           const supplierMatch = supName.includes(lowerQuery);
-          
+
           return codeMatch || supplierMatch;
       })
       setFilteredPurchases(filtered)

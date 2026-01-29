@@ -18,7 +18,9 @@ import {
 } from '@nestjs/swagger';
 import { DichVuDonHang } from './don-hang.dich-vu';
 import { TaoDonHangDto } from './dto/tao-don-hang.dto';
+import { TaoDonHangKhachDto } from './dto/tao-don-hang-khach.dto';
 import { CapNhatTrangThaiDonHangDto } from './dto/cap-nhat-trang-thai-don-hang.dto';
+import { CapNhatTrangThaiThanhToanDto } from './dto/cap-nhat-trang-thai-thanh-toan.dto';
 import { DoiHangDto } from './dto/doi-hang.dto';
 import { TraHangDto } from './dto/tra-hang.dto';
 import { BaoVeJwt } from '../../dung-chung/bao-ve/bao-ve-jwt';
@@ -26,6 +28,7 @@ import { BaoVeVaiTro } from '../../dung-chung/bao-ve/bao-ve-vai-tro';
 import { VaiTro } from '../../dung-chung/trang-tri/vai-tro.trang-tri';
 import { NguoiDungHienTai } from '../../dung-chung/trang-tri/nguoi-dung-hien-tai.trang-tri';
 import { VaiTroNguoiDung } from '../../dung-chung/liet-ke/vai-tro-nguoi-dung.enum';
+import { CongKhai } from '../../dung-chung/trang-tri/cong-khai.trang-tri';
 
 @ApiTags('don-hang')
 @ApiBearerAuth()
@@ -53,6 +56,7 @@ export class DieuKhienDonHang {
   @ApiOperation({ summary: 'Get all orders (Admin, Staff)' })
   @ApiResponse({ status: 200, description: 'Return all orders' })
   @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'isOnline', required: false, type: Boolean, description: 'Filter by online orders (true/false)' })
   @ApiQuery({ name: 'from', required: false })
   @ApiQuery({ name: 'to', required: false })
   findAll(@Query() query: any) {
@@ -73,6 +77,57 @@ export class DieuKhienDonHang {
   @ApiResponse({ status: 200, description: 'Return order history for current customer' })
   layLichSuMuaHang(@NguoiDungHienTai('soDienThoai') soDienThoai: string) {
     return this.dichVuDonHang.layLichSuMuaHangTheoSoDienThoai(soDienThoai);
+  }
+
+  // ==================== CUSTOMER ORDER ENDPOINTS ====================
+
+  @Post('customer')
+  @CongKhai()
+  @ApiOperation({ summary: 'Tạo đơn hàng từ khách (Không cần đăng nhập)' })
+  @ApiResponse({ status: 201, description: 'Order created successfully' })
+  async taoDonHangKhach(@Body() dto: TaoDonHangKhachDto) {
+    return this.dichVuDonHang.taoDonHangKhach(dto);
+  }
+
+  @Get('customer/my-orders')
+  @UseGuards(BaoVeJwt, BaoVeVaiTro)
+  @VaiTro(VaiTroNguoiDung.CUSTOMER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy danh sách đơn hàng của khách đã đăng nhập' })
+  @ApiResponse({ status: 200, description: 'Return customer orders' })
+  layDonHangCuaToi(@NguoiDungHienTai('soDienThoai') phone: string) {
+    return this.dichVuDonHang.layDonHangTheoSoDienThoai(phone);
+  }
+
+  @Get('customer/by-phone')
+  @CongKhai()
+  @ApiOperation({ summary: 'Tra cứu đơn hàng theo số điện thoại (Không cần đăng nhập)' })
+  @ApiResponse({ status: 200, description: 'Return orders' })
+  @ApiQuery({ name: 'phone', required: true })
+  layDonHangTheoSDT(@Query('phone') phone: string) {
+    if (!phone) {
+      throw new Error('Số điện thoại không được để trống');
+    }
+    return this.dichVuDonHang.layDonHangTheoSoDienThoai(phone);
+  }
+
+  @Get('customer/:id')
+  @CongKhai()
+  @ApiOperation({ summary: 'Xem chi tiết đơn hàng (Không cần đăng nhập)' })
+  @ApiResponse({ status: 200, description: 'Return order details' })
+  layChiTietDonHangKhach(@Param('id') id: string) {
+    return this.dichVuDonHang.findOne(id);
+  }
+
+  @Post('customer/:id/cancel')
+  @CongKhai()
+  @ApiOperation({ summary: 'Hủy đơn hàng (Khách hàng)' })
+  @ApiResponse({ status: 200, description: 'Order cancelled successfully' })
+  huyDonHangKhach(
+    @Param('id') id: string,
+    @Body('reason') reason?: string,
+  ) {
+    return this.dichVuDonHang.huyDonHangKhach(id, reason);
   }
 
   @Get('statistics')
@@ -175,6 +230,17 @@ export class DieuKhienDonHang {
   @ApiResponse({ status: 200, description: 'Debt paid successfully' })
   payDebt(@Param('id') id: string) {
     return this.dichVuDonHang.payDebt(id);
+  }
+
+  @Patch(':id/payment-status')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiOperation({ summary: 'Update payment status (Admin, Staff)' })
+  @ApiResponse({ status: 200, description: 'Payment status updated successfully' })
+  updatePaymentStatus(
+    @Param('id') id: string,
+    @Body() updatePaymentStatusDto: CapNhatTrangThaiThanhToanDto,
+  ) {
+    return this.dichVuDonHang.updatePaymentStatus(id, updatePaymentStatusDto.paymentStatus);
   }
 
   @Delete(':id')

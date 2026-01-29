@@ -61,6 +61,12 @@ export class Order {
   customerPhone?: string;
 
   @Prop()
+  customerAddress?: string;
+
+  @Prop()
+  customerEmail?: string;
+
+  @Prop()
   notes?: string;
 
   @Prop()
@@ -95,6 +101,9 @@ export class Order {
 
   @Prop({ type: Types.ObjectId, ref: 'User' })
   createdBy: Types.ObjectId;
+
+  @Prop({ default: false })
+  isOnline: boolean; // Đánh dấu đơn hàng được đặt online (từ customer app)
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
@@ -106,3 +115,4 @@ OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ orderType: 1 });
 OrderSchema.index({ relatedOrderCode: 1 });
 OrderSchema.index({ customerPhone: 1 });
+OrderSchema.index({ isOnline: 1 });

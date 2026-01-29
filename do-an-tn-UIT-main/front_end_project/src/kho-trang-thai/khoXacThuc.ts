@@ -5,7 +5,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { DangNhapKhachHangDuLieu, User, LoginCredentials } from '@/linh-vuc/users/entities/User'
+import { User, LoginCredentials } from '@/linh-vuc/users/entities/User'
 import { RealAuthService } from '@/linh-vuc/users/services/RealAuthService'
 
 interface AuthState {
@@ -14,7 +14,6 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   login: (credentials: LoginCredentials) => Promise<void>
-  dangNhapKhachHang: (duLieu: DangNhapKhachHangDuLieu) => Promise<void>
   logout: () => void
   hasPermission: (permission: string) => boolean
 }
@@ -33,17 +32,6 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true })
         try {
           const { user, token } = await authService.login(credentials)
-          set({ user, token, isAuthenticated: true, isLoading: false })
-        } catch (error) {
-          set({ isLoading: false })
-          throw error
-        }
-      },
-
-      dangNhapKhachHang: async (duLieu: DangNhapKhachHangDuLieu) => {
-        set({ isLoading: true })
-        try {
-          const { user, token } = await authService.dangNhapKhachHang(duLieu)
           set({ user, token, isAuthenticated: true, isLoading: false })
         } catch (error) {
           set({ isLoading: false })
