@@ -35,19 +35,22 @@ export const formatDateOnly = (date: string | Date): string => {
 }
 
 /**
- * Lấy tên hiển thị cho trạng thái đơn hàng
+ * Trạng thái đơn hàng đặt online (thống nhất với BE và FE quản trị)
+ * Chỉ 4 trạng thái: pending, shipping, completed, cancelled
  */
 export const getOrderStatusText = (status: string): string => {
   const statusMap: Record<string, string> = {
     pending: 'Chờ xử lý',
-    confirmed: 'Đã xác nhận',
-    processing: 'Đang xử lý',
     shipping: 'Đang vận chuyển',
-    delivered: 'Đã giao hàng',
     completed: 'Hoàn thành',
     cancelled: 'Đã hủy',
+    // legacy / API
+    cho_xac_nhan: 'Chờ xử lý',
+    dang_van_chuyen: 'Đang vận chuyển',
+    hoan_thanh: 'Hoàn thành',
+    da_huy: 'Đã hủy',
   }
-  return statusMap[status] || status
+  return statusMap[status] ?? status
 }
 
 /**
@@ -56,12 +59,13 @@ export const getOrderStatusText = (status: string): string => {
 export const getOrderStatusVariant = (status: string): 'default' | 'success' | 'warning' | 'danger' | 'info' => {
   const variantMap: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'info'> = {
     pending: 'warning',
-    confirmed: 'info',
-    processing: 'info',
     shipping: 'info',
-    delivered: 'success',
     completed: 'success',
     cancelled: 'danger',
+    cho_xac_nhan: 'warning',
+    dang_van_chuyen: 'info',
+    hoan_thanh: 'success',
+    da_huy: 'danger',
   }
-  return variantMap[status] || 'default'
+  return variantMap[status] ?? 'default'
 }

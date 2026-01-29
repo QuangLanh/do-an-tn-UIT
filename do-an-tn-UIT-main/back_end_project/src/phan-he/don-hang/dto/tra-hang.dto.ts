@@ -20,6 +20,7 @@ export class SanPhamTraDto {
   @ApiProperty({ example: 2 })
   @IsNumber()
   @Min(1)
+  @Type(() => Number)
   quantity: number;
 }
 

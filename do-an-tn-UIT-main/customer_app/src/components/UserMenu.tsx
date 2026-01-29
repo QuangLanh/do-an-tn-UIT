@@ -1,16 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
-import { User, LogOut, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { User, LogOut, X, Settings } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from './Button'
 import { Input } from './Input'
 import { Card } from './Card'
-import toast from 'react-hot-toast'
+import { Modal } from './Modal'
 
 export const UserMenu = () => {
+  const navigate = useNavigate()
   const { user, logout, updateProfile, isLoading } = useAuthStore()
   const [isOpen, setIsOpen] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const [formData, setFormData] = useState({
+    name: user?.name || '',
     email: user?.email || '',
     address: user?.address || '',
   })
@@ -19,6 +22,7 @@ export const UserMenu = () => {
   useEffect(() => {
     if (user) {
       setFormData({
+        name: user.name || '',
         email: user.email || '',
         address: user.address || '',
       })
@@ -29,35 +33,35 @@ export const UserMenu = () => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsOpen(false)
-        setIsEditing(false)
       }
     }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
+    if (isOpen) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isOpen])
 
-  const handleSave = async () => {
+  const openSettingsModal = () => {
+    setFormData({
+      name: user?.name || '',
+      email: user?.email || '',
+      address: user?.address || '',
+    })
+    setSettingsModalOpen(true)
+  }
+
+  const handleSaveProfile = async () => {
     try {
       await updateProfile(formData)
-      setIsEditing(false)
-      toast.success('Cập nhật thông tin thành công')
-    } catch (error) {
+      setSettingsModalOpen(false)
+      setIsOpen(false)
+    } catch {
       // Error handled in store
     }
   }
 
-  const handleCancel = () => {
-    setFormData({
-      email: user?.email || '',
-      address: user?.address || '',
-    })
-    setIsEditing(false)
+  const handleLogout = () => {
+    setIsOpen(false)
+    logout()
+    navigate('/')
   }
 
   if (!user) return null
@@ -77,7 +81,7 @@ export const UserMenu = () => {
       {isOpen && (
         <Card className="absolute right-0 mt-2 w-80 z-50 shadow-lg">
           <div className="space-y-4">
-            {/* Header */}
+            {/* Name + Số điện thoại */}
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-3">
               <div>
                 <h3 className="font-semibold text-gray-900 dark:text-white">
@@ -95,73 +99,96 @@ export const UserMenu = () => {
               </button>
             </div>
 
-            {/* Profile Form */}
-            {isEditing ? (
-              <div className="space-y-3">
-                <Input
-                  label="Email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="Nhập email"
-                />
-                <Input
-                  label="Địa chỉ"
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Nhập địa chỉ"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleSave}
-                    isLoading={isLoading}
-                    className="flex-1"
-                  >
-                    Lưu
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={handleCancel}
-                    className="flex-1"
-                  >
-                    Hủy
-                  </Button>
-                </div>
+            {/* Email, Địa chỉ (chỉ đọc) */}
+            <div className="space-y-2">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                  {user.email || 'Chưa có'}
+                </p>
               </div>
-            ) : (
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Email
-                  </label>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    {user.email || 'Chưa có'}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Địa chỉ
-                  </label>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    {user.address || 'Chưa có'}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => setIsEditing(true)}
-                  className="w-full"
-                >
-                  Chỉnh sửa thông tin
-                </Button>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Địa chỉ</label>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                  {user.address || 'Chưa có'}
+                </p>
               </div>
-            )}
+            </div>
+
+            {/* Chỉnh sửa thông tin → mở modal sửa tên, email, địa chỉ */}
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={openSettingsModal}
+              className="w-full flex items-center justify-center gap-2"
+            >
+              <Settings size={18} />
+              Chỉnh sửa thông tin
+            </Button>
+
+            {/* Đăng xuất */}
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
+              <LogOut size={18} />
+              Đăng xuất
+            </Button>
           </div>
         </Card>
       )}
+
+      {/* Modal thay đổi tên, email, địa chỉ */}
+      <Modal
+        isOpen={settingsModalOpen}
+        onClose={() => setSettingsModalOpen(false)}
+        title="Chỉnh sửa thông tin"
+        size="md"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Tên"
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="Nhập tên"
+          />
+          <Input
+            label="Email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            placeholder="Nhập email"
+          />
+          <Input
+            label="Địa chỉ"
+            type="text"
+            value={formData.address}
+            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            placeholder="Nhập địa chỉ"
+          />
+          <div className="flex gap-2 pt-2">
+            <Button
+              size="sm"
+              onClick={handleSaveProfile}
+              isLoading={isLoading}
+              className="flex-1"
+            >
+              Lưu
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setSettingsModalOpen(false)}
+              className="flex-1"
+            >
+              Hủy
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

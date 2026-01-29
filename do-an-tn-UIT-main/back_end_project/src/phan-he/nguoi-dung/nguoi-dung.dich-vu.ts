@@ -55,12 +55,20 @@ export class DichVuNguoiDung {
     return user;
   }
 
+  /** Lấy user kèm password (dùng nội bộ để xác thực đổi mật khẩu). */
+  async findOneWithPassword(id: string): Promise<UserDocument | null> {
+    return this.userModel.findById(id).exec();
+  }
+
   async findByEmail(email: string): Promise<UserDocument> {
     return this.userModel.findOne({ email }).exec();
   }
 
   async update(id: string, updateUserDto: CapNhatNguoiDungDto): Promise<User> {
     const updateData: any = { ...updateUserDto };
+
+    // Vai trò cố định – không cho phép đổi qua API (chỉ tạo mới mới set role)
+    delete updateData.role;
 
     if (updateUserDto.password && updateUserDto.password.trim()) {
       updateData.password = await bcrypt.hash(updateUserDto.password, 10);
@@ -95,6 +103,31 @@ export class DichVuNguoiDung {
     await this.userModel
       .findByIdAndUpdate(id, { lastLogin: new Date() })
       .exec();
+  }
+
+  /**
+   * Cập nhật thông tin cá nhân (fullName, phone, password) - dùng cho tự cập nhật profile.
+   * Không cho phép đổi role, isActive.
+   */
+  async updateProfile(
+    id: string,
+    data: { fullName?: string; phone?: string; password?: string },
+  ): Promise<User> {
+    const updateData: any = {};
+    if (data.fullName !== undefined) updateData.fullName = data.fullName.trim();
+    if (data.phone !== undefined) updateData.phone = data.phone.trim() || undefined;
+    if (data.password && data.password.trim()) {
+      updateData.password = await bcrypt.hash(data.password, 10);
+    }
+    const user = await this.userModel
+      .findByIdAndUpdate(id, updateData, { new: true })
+      .select('-password')
+      .exec();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    this.logger.log(`User profile updated: ${user.email}`);
+    return user;
   }
 }
 

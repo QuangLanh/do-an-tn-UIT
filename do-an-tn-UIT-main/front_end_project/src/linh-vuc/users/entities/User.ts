@@ -11,6 +11,7 @@ export interface User {
   fullName?: string
   email?: string
   soDienThoai?: string
+  diaChi?: string
   role: UserRole
   avatar?: string
   createdAt?: Date

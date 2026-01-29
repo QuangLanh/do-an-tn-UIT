@@ -37,3 +37,14 @@ export const truncateText = (text: string, maxLength: number): string => {
   return text.substring(0, maxLength) + '...'
 }
 
+/** Chỉ giữ chữ số, tối đa 10 ký tự (format SĐT Việt Nam). */
+export const normalizePhoneInput = (value: string): string => {
+  const digits = value.replace(/\D/g, '')
+  return digits.slice(0, 10)
+}
+
+/** Kiểm tra SĐT đúng format 10 số. */
+export const isValidPhone10 = (value: string): boolean => {
+  return /^0\d{9}$/.test(value.trim())
+}
+

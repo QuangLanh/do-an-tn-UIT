@@ -6,6 +6,7 @@ import { BangDuLieu } from '@/giao-dien/components/BangDuLieu'
 import { HopThoai } from '@/giao-dien/components/HopThoai'
 import { Supplier } from '@/linh-vuc/suppliers/entities/Supplier'
 import { supplierApi } from '@/ha-tang/api/supplierApi'
+import { normalizePhoneInput, isValidPhone10 } from '@/ha-tang/utils/formatters'
 import toast from 'react-hot-toast'
 
 export const TrangNhaCungCap = () => {
@@ -34,6 +35,10 @@ export const TrangNhaCungCap = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!isValidPhone10(formData.phone)) {
+      toast.error('Số điện thoại phải đúng 10 số (ví dụ: 0123456789).')
+      return
+    }
     try {
       // 1. Tự sinh mã code
       const randomCode = `NCC${Math.floor(1000 + Math.random() * 9000)}`;
@@ -103,7 +108,16 @@ export const TrangNhaCungCap = () => {
       <HopThoai isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Thêm Nhà Cung Cấp">
         <form onSubmit={handleSave} className="space-y-4">
           <NhapLieu label="Tên NCC *" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
-          <NhapLieu label="Số điện thoại *" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} required />
+          <NhapLieu
+            label="Số điện thoại *"
+            type="tel"
+            inputMode="numeric"
+            maxLength={10}
+            placeholder="0xxxxxxxxx (10 số)"
+            value={formData.phone}
+            onChange={e => setFormData({...formData, phone: normalizePhoneInput(e.target.value)})}
+            required
+          />
           <NhapLieu label="Người liên hệ" value={formData.contactPerson} onChange={e => setFormData({...formData, contactPerson: e.target.value})} />
           <NhapLieu label="Địa chỉ" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
           <div className="flex justify-end gap-3 pt-4">

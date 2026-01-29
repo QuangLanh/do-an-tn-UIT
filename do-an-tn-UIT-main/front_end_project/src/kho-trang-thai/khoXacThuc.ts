@@ -15,6 +15,7 @@ interface AuthState {
   isLoading: boolean
   login: (credentials: LoginCredentials) => Promise<void>
   logout: () => void
+  updateUser: (partial: Partial<User>) => void
   hasPermission: (permission: string) => boolean
 }
 
@@ -42,6 +43,11 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         authService.logout()
         set({ user: null, token: null, isAuthenticated: false })
+      },
+
+      updateUser: (partial) => {
+        const { user } = get()
+        if (user) set({ user: { ...user, ...partial } })
       },
 
       hasPermission: (permission: string) => {

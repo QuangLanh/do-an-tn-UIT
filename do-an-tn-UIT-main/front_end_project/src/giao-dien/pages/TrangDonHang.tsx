@@ -13,6 +13,7 @@ import { HuyHieu } from '@/giao-dien/components/HuyHieu'
 import { NhapLieu } from '@/giao-dien/components/NhapLieu'
 import { Order } from '@/linh-vuc/orders/entities/Order'
 import { orderApi } from '@/ha-tang/api/orderApi'
+import { apiService } from '@/ha-tang/api'
 import { formatCurrency, formatDateTime } from '@/ha-tang/utils/formatters'
 import { Plus, Search, FileText, Trash2, RefreshCcw } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -30,6 +31,8 @@ export const TrangDonHang = () => {
 
   // State cho trả hàng
   const [returningOrder, setReturningOrder] = useState<Order | null>(null)
+  // Mã đơn đã có đổi/trả (từ API exchanges + returns) để disable nút đổi/trả ngay cả khi hasAfterSale chưa sync
+  const [processedOrderNumbers, setProcessedOrderNumbers] = useState<Set<string>>(new Set())
 
   const navigate = useNavigate()
   const { hasPermission } = useAuthStore()
@@ -62,8 +65,18 @@ export const TrangDonHang = () => {
   const loadOrders = async () => {
     try {
       setIsLoading(true)
-      const data = await orderApi.getAllOrders.execute()
-      
+      const [data, exchangesRes, returnsRes] = await Promise.all([
+        orderApi.getAllOrders.execute(),
+        apiService.orders.exchanges().catch(() => []),
+        apiService.orders.returns().catch(() => []),
+      ])
+      const exchanges = Array.isArray(exchangesRes) ? exchangesRes : []
+      const returns = Array.isArray(returnsRes) ? returnsRes : []
+      const processed = new Set<string>()
+      exchanges.forEach((o: any) => { if (o.relatedOrderCode) processed.add(o.relatedOrderCode) })
+      returns.forEach((o: any) => { if (o.relatedOrderCode) processed.add(o.relatedOrderCode) })
+      setProcessedOrderNumbers(processed)
+
       // Fix dữ liệu ngay trong frontend: nếu status = completed thì payment status phải là PAID
       const fixedData = data.map(order => {
         if (order.status === 'completed' && order.paymentStatus !== 'PAID' && order.paymentStatus !== 'REFUNDED') {
@@ -118,51 +131,27 @@ export const TrangDonHang = () => {
     }
   }
 
-  // Hàm xử lý gửi yêu cầu trả hàng
+  // Hàm xử lý gửi yêu cầu trả hàng (dùng chung apiService như trang Đổi/Trả hàng)
   const handleReturnSubmit = async (data: any) => {
-    // 1. CHUẨN BỊ PAYLOAD
     const payload = {
-        originalOrderCode: data.originalOrderCode,
-        returnItems: data.returnItems.map((item: any) => ({
-            productId: item.productId,
-            quantity: Number(item.quantity)
-        })),
-        returnReason: data.returnReason,
-        isRestocked: Boolean(data.isRestocked),
-        notes: data.notes
-    };
-
-    // --- DEBUG LOG (Gửi cái này cho tôi) ---
-    console.log("=== FRONTEND SENDING DATA ===");
-    console.log(JSON.stringify(payload, null, 2));
-    // ---------------------------------------
+      originalOrderCode: data.originalOrderCode,
+      returnItems: data.returnItems.map((item: any) => ({
+        productId: String(item.productId),
+        quantity: Number(item.quantity),
+      })),
+      returnReason: data.returnReason || 'Khách yêu cầu trả hàng',
+      isRestocked: data.isRestocked !== false,
+      notes: data.notes,
+    }
 
     try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/orders/return`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if(!response.ok) {
-            const err = await response.json();
-            // --- DEBUG LOG LỖI (Gửi cái này cho tôi) ---
-            console.error("=== BACKEND ERROR RESPONSE ===");
-            console.error(err);
-            // ------------------------------------------
-            const message = Array.isArray(err.message) ? err.message[0] : err.message;
-            throw new Error(message || 'Lỗi khi trả hàng');
-        }
-
-        toast.success('Đã tạo đơn trả hàng thành công');
-        setReturningOrder(null);
-        loadOrders();
+      await apiService.orders.return(payload)
+      toast.success('Đã tạo đơn trả hàng thành công')
+      setReturningOrder(null)
+      loadOrders()
     } catch (error: any) {
-        toast.error(error.message || 'Có lỗi xảy ra');
+      const msg = error?.response?.data?.message ?? error?.message
+      toast.error(Array.isArray(msg) ? msg[0] : msg || 'Có lỗi xảy ra')
     }
   }
 
@@ -170,11 +159,40 @@ export const TrangDonHang = () => {
     navigate(`/orders/${order.id}`)
   }
 
+  const normalizeStatusForAfterSale = (status: string): Order['status'] => {
+    const s = (status || '').toLowerCase()
+    if (['cho_xac_nhan', 'confirmed', 'processing'].includes(s)) return 'pending'
+    if (['dang_van_chuyen'].includes(s)) return 'shipping'
+    if (['hoan_thanh', 'delivered'].includes(s)) return 'completed'
+    if (['da_huy'].includes(s)) return 'cancelled'
+    return s as Order['status']
+  }
+
+  const getAfterSaleEligibility = (order: Order): { eligible: boolean; reason?: string } => {
+    if (!order.orderNumber?.startsWith('ORD') || order.orderType !== 'SALE') {
+      return { eligible: false, reason: 'Chỉ áp dụng cho đơn bán gốc (mã ORD)' }
+    }
+    const currentStatus = normalizeStatusForAfterSale(order.status)
+    if (currentStatus !== 'completed') {
+      return { eligible: false, reason: 'Đơn chưa hoàn thành' }
+    }
+    if (order.paymentStatus !== 'PAID' || order.wasDebt === true) {
+      return { eligible: false, reason: 'Đơn chưa thanh toán đủ hoặc mua thiếu' }
+    }
+    if (order.hasAfterSale === true) {
+      return { eligible: false, reason: 'Đơn đã phát sinh đổi/trả trước đó' }
+    }
+    if (processedOrderNumbers.has(order.orderNumber)) {
+      return { eligible: false, reason: 'Đơn đã phát sinh đổi/trả trước đó' }
+    }
+    return { eligible: true }
+  }
+
   const getStatusHuyHieu = (status: string) => {
     switch (status) {
       case 'pending':
       case 'confirmed':
-        return <HuyHieu variant="warning">Chờ xác nhận</HuyHieu>
+        return <HuyHieu variant="warning">Chờ xử lý</HuyHieu>
       case 'shipping':
         return <HuyHieu variant="info">Đang vận chuyển</HuyHieu>
       case 'completed':
@@ -308,19 +326,31 @@ export const TrangDonHang = () => {
                         <FileText size={16} />
                       </button>
 
-                      {/* NÚT TRẢ HÀNG MỚI THÊM VÀO */}
-                      {order.orderType === 'SALE' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setReturningOrder(order)
-                          }}
-                          className="p-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900 rounded"
-                          title="Trả hàng / Hoàn tiền"
-                        >
-                          <RefreshCcw size={16} />
-                        </button>
-                      )}
+                      {/* NÚT TRẢ HÀNG */}
+                      {(() => {
+                        const { eligible, reason } = getAfterSaleEligibility(order)
+                        return (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (!eligible) {
+                                toast.error(reason || 'Đơn hàng không đủ điều kiện đổi/trả')
+                                return
+                              }
+                              setReturningOrder(order)
+                            }}
+                            className={`p-2 rounded ${
+                              eligible
+                                ? 'text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900'
+                                : 'text-gray-400 cursor-not-allowed'
+                            }`}
+                            title={eligible ? 'Trả hàng' : reason}
+                            disabled={!eligible}
+                          >
+                            <RefreshCcw size={16} />
+                          </button>
+                        )
+                      })()}
 
                       {hasPermission('delete_product') && (
                         <button

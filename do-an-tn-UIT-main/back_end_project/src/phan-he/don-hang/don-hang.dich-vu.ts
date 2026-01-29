@@ -10,6 +10,7 @@ import { Order, OrderDocument } from './schemas/order.schema';
 import { TaoDonHangDto } from './dto/tao-don-hang.dto';
 import { TaoDonHangKhachDto } from './dto/tao-don-hang-khach.dto';
 import { CapNhatTrangThaiDonHangDto } from './dto/cap-nhat-trang-thai-don-hang.dto';
+import { CapNhatThongTinKhachDto } from './dto/cap-nhat-thong-tin-khach.dto';
 import { DichVuSanPham } from '../san-pham/san-pham.dich-vu';
 import { DichVuKhachHang } from '../khach-hang/khach-hang.dich-vu';
 import { TrangThaiDonHang } from '../../dung-chung/liet-ke/trang-thai-don-hang.enum';
@@ -168,7 +169,14 @@ export class DichVuDonHang {
   // === ĐÂY LÀ HÀM QUAN TRỌNG NHẤT ĐƯỢC SỬA ===
   async findAll(query?: any): Promise<Order[]> {
     const filter: any = {};
-    if (query?.status) filter.status = query.status;
+    if (query?.status) {
+      // Badge "đơn chờ xử lý": coi cả trạng thái cũ trong DB (cho_xac_nhan, confirmed, processing) là pending
+      if (query.status === 'pending') {
+        filter.status = { $in: ['pending', 'cho_xac_nhan', 'confirmed', 'processing'] };
+      } else {
+        filter.status = query.status;
+      }
+    }
     if (query?.isOnline !== undefined) {
       const isOnlineFilter = query.isOnline === 'true' || query.isOnline === true;
       if (isOnlineFilter) {
@@ -252,23 +260,59 @@ export class DichVuDonHang {
     return enriched[0];
   }
 
-  // ... (Giữ nguyên các hàm updateStatus, payDebt, remove, v.v.)
+  /**
+   * Chuẩn hóa trạng thái từ DB (legacy) về 1 trong 4: pending | shipping | completed | cancelled
+   */
+  private normalizeStatusForRule(status: string): TrangThaiDonHang {
+    const s = (status || '').toLowerCase();
+    if (['cho_xac_nhan', 'confirmed', 'processing'].includes(s)) return TrangThaiDonHang.PENDING;
+    if (['dang_van_chuyen'].includes(s)) return TrangThaiDonHang.SHIPPING;
+    if (['hoan_thanh', 'delivered'].includes(s)) return TrangThaiDonHang.COMPLETED;
+    if (['da_huy'].includes(s)) return TrangThaiDonHang.CANCELLED;
+    return s as TrangThaiDonHang;
+  }
+
+  /**
+   * Chuyển trạng thái hợp lệ:
+   * - pending -> shipping, cancelled
+   * - shipping -> completed, cancelled
+   * - completed | cancelled -> không cho chuyển
+   */
   async updateStatus(id: string, dto: CapNhatTrangThaiDonHangDto): Promise<Order> {
+    const order = await this.orderModel.findById(id).exec();
+    if (!order) throw new NotFoundException('Order not found');
+
+    const current = this.normalizeStatusForRule(order.status);
+    const next = dto.status as TrangThaiDonHang;
+
+    // Trạng thái kết thúc: không cho cập nhật
+    if (current === TrangThaiDonHang.COMPLETED || current === TrangThaiDonHang.CANCELLED) {
+      throw new BadRequestException(
+        `Đơn hàng đã ${current === TrangThaiDonHang.COMPLETED ? 'hoàn thành' : 'hủy'}, không thể đổi trạng thái.`,
+      );
+    }
+
+    const allowed: Record<TrangThaiDonHang, TrangThaiDonHang[]> = {
+      [TrangThaiDonHang.PENDING]: [TrangThaiDonHang.SHIPPING, TrangThaiDonHang.CANCELLED],
+      [TrangThaiDonHang.SHIPPING]: [TrangThaiDonHang.COMPLETED, TrangThaiDonHang.CANCELLED],
+      [TrangThaiDonHang.COMPLETED]: [],
+      [TrangThaiDonHang.CANCELLED]: [],
+    };
+    const allowedNext = allowed[current] || [];
+    if (!allowedNext.includes(next)) {
+      throw new BadRequestException(
+        `Không được chuyển từ "${current}" sang "${next}". Chỉ được chuyển sang: ${allowedNext.join(', ')}.`,
+      );
+    }
+
     const updateData: any = { status: dto.status };
-    
-    // Nếu status là completed, tự động set payment status thành PAID
     if (dto.status === TrangThaiDonHang.COMPLETED) {
       updateData.paymentStatus = 'PAID';
       updateData.paidAt = new Date();
-    } else {
-      // Các trạng thái khác: set payment status thành DEBT (chưa thanh toán)
-      // Chỉ set nếu chưa phải REFUNDED (giữ nguyên REFUNDED)
-      const order = await this.orderModel.findById(id).exec();
-      if (order && order.paymentStatus !== 'REFUNDED') {
-        updateData.paymentStatus = 'DEBT';
-      }
+    } else if (order.paymentStatus !== 'REFUNDED') {
+      updateData.paymentStatus = 'DEBT';
     }
-    
+
     return this.orderModel.findByIdAndUpdate(id, updateData, { new: true }).exec();
   }
 
@@ -278,6 +322,16 @@ export class DichVuDonHang {
     order.paymentStatus = 'PAID';
     order.paidAt = new Date();
     return order.save();
+  }
+
+  async updateCustomerInfo(id: string, dto: CapNhatThongTinKhachDto): Promise<Order> {
+    const order = await this.orderModel.findById(id).exec();
+    if (!order) throw new NotFoundException('Order not found');
+    const updateData: any = {};
+    if (dto.customerName !== undefined) updateData.customerName = dto.customerName.trim();
+    if (dto.customerPhone !== undefined) updateData.customerPhone = dto.customerPhone.trim();
+    if (Object.keys(updateData).length === 0) return order;
+    return this.orderModel.findByIdAndUpdate(id, updateData, { new: true }).exec();
   }
 
   async updatePaymentStatus(id: string, paymentStatus: string): Promise<Order> {
@@ -375,6 +429,40 @@ export class DichVuDonHang {
     return `RET${year}${month}${day}${num}`;
   }
 
+  /**
+   * Kiểm tra điều kiện nghiệp vụ đổi/trả hàng
+   */
+  private async assertAfterSaleEligible(originalOrder: Order): Promise<void> {
+    // 1) Đơn gốc phải là đơn bán (SALE) và mã ORD
+    if (originalOrder.orderType !== 'SALE' || !originalOrder.orderNumber?.startsWith('ORD')) {
+      throw new BadRequestException('Chỉ cho phép đổi/trả đối với đơn bán gốc (mã ORD).');
+    }
+
+    // 2) Đơn phải hoàn thành và không bị hủy
+    const currentStatus = this.normalizeStatusForRule(originalOrder.status);
+    if (currentStatus !== TrangThaiDonHang.COMPLETED) {
+      throw new BadRequestException('Chỉ cho phép đổi/trả khi đơn hàng đã hoàn thành.');
+    }
+
+    // 3) Đơn đã thanh toán đầy đủ (không mua thiếu)
+    if (originalOrder.paymentStatus !== 'PAID' || originalOrder.wasDebt === true) {
+      throw new BadRequestException('Đơn hàng mua thiếu hoặc chưa thanh toán đầy đủ, không thể đổi/trả.');
+    }
+
+    // 4) Chưa từng phát sinh đổi/trả trước đó
+    if (originalOrder.hasAfterSale === true) {
+      throw new BadRequestException('Đơn hàng đã phát sinh đổi/trả trước đó.');
+    }
+
+    const existed = await this.orderModel.exists({
+      relatedOrderCode: originalOrder.orderNumber,
+      orderType: { $in: ['EXCHANGE', 'RETURN'] },
+    });
+    if (existed) {
+      throw new BadRequestException('Đơn hàng đã phát sinh đổi/trả trước đó.');
+    }
+  }
+
   async findByOrderNumber(orderNumber: string): Promise<Order> {
     const order = await this.orderModel.findOne({ orderNumber }).populate('items.product').exec();
     if (!order) throw new NotFoundException(`Không tìm thấy đơn hàng ${orderNumber}`);
@@ -385,6 +473,7 @@ export class DichVuDonHang {
 
   async createExchange(dto: any, uid: string): Promise<Order> {
     const originalOrder = await this.findByOrderNumber(dto.originalOrderCode);
+    await this.assertAfterSaleEligible(originalOrder);
     const orderItems: any[] = [];
     let total = 0;
 
@@ -454,20 +543,34 @@ export class DichVuDonHang {
       createdBy: new Types.ObjectId(uid),
       isOnline: false,
     });
-    return order.save();
+    const saved = await order.save();
+    // Đánh dấu đơn gốc đã phát sinh nghiệp vụ đổi/trả (dùng string _id để tránh lỗi)
+    const originalId = (originalOrder as any)?._id?.toString?.() ?? (originalOrder as any)?._id;
+    if (originalId) {
+      await this.orderModel.findByIdAndUpdate(originalId, { hasAfterSale: true }).exec();
+    }
+    return saved;
   }
 
   async createReturn(returnDto: any, userId: string): Promise<Order> {
     const originalOrder = await this.findByOrderNumber(returnDto.originalOrderCode);
+    await this.assertAfterSaleEligible(originalOrder);
+    if (!returnDto.returnItems?.length) {
+      throw new BadRequestException('Cần ít nhất 1 sản phẩm để trả.');
+    }
+    const uid = userId ? new Types.ObjectId(userId) : undefined;
     const returnItems = [];
     let subtotal = 0;
 
     for (const returnItem of returnDto.returnItems) {
+      const productIdStr = String(returnItem.productId).trim();
       const orderItem = originalOrder.items.find((item) => {
-        const pId = (item.product as any)._id ? (item.product as any)._id.toString() : item.product.toString();
-        return pId === returnItem.productId;
+        const pId = (item.product as any)?._id ? (item.product as any)._id.toString() : String(item.product);
+        return pId === productIdStr;
       });
-      if (!orderItem) throw new BadRequestException('Item not found');
+      if (!orderItem) {
+        throw new BadRequestException(`Sản phẩm không thuộc đơn này: ${productIdStr}`);
+      }
 
       const product = await this.dichVuSanPham.findOne(returnItem.productId);
       const itemSubtotal = orderItem.price * returnItem.quantity;
@@ -492,7 +595,7 @@ export class DichVuDonHang {
       }
     }
 
-    return new this.orderModel({
+    const saved = await new this.orderModel({
       orderNumber: await this.generateReturnNumber(),
       orderType: 'RETURN',
       relatedOrderCode: originalOrder.orderNumber,
@@ -501,12 +604,19 @@ export class DichVuDonHang {
       total: -subtotal,
       customerName: originalOrder.customerName,
       customerPhone: originalOrder.customerPhone,
-      returnReason: returnDto.returnReason,
-      isRestocked: returnDto.isRestocked,
+      returnReason: returnDto.returnReason ?? 'Khách yêu cầu trả hàng',
+      isRestocked: returnDto.isRestocked !== false,
       paymentStatus: 'REFUNDED',
       paidAt: new Date(),
       status: TrangThaiDonHang.COMPLETED,
+      createdBy: uid,
     }).save();
+    // Đánh dấu đơn gốc đã phát sinh nghiệp vụ đổi/trả (dùng string _id để tránh lỗi)
+    const originalId = (originalOrder as any)?._id?.toString?.() ?? (originalOrder as any)?._id;
+    if (originalId) {
+      await this.orderModel.findByIdAndUpdate(originalId, { hasAfterSale: true }).exec();
+    }
+    return saved;
   }
 
   async findExchanges(): Promise<Order[]> {
@@ -646,10 +756,10 @@ export class DichVuDonHang {
   async huyDonHangKhach(id: string, reason?: string): Promise<Order> {
     const order = await this.findOne(id);
 
-    // Only allow cancellation if order is in pending or confirmed status
-    if (![TrangThaiDonHang.PENDING, TrangThaiDonHang.CONFIRMED].includes(order.status)) {
+    // Chỉ cho phép hủy khi đơn ở trạng thái chờ xử lý
+    if (order.status !== TrangThaiDonHang.PENDING) {
       throw new BadRequestException(
-        'Chỉ có thể hủy đơn hàng ở trạng thái chờ xử lý hoặc đã xác nhận',
+        'Chỉ có thể hủy đơn hàng ở trạng thái chờ xử lý',
       );
     }
 

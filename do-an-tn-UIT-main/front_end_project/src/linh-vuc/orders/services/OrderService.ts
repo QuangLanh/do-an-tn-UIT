@@ -114,13 +114,13 @@ export class OrderService {
     }
   }
 
-  // Tạo OrderItem từ Product
+  // Tạo OrderItem từ Product (id duy nhất để tránh React key trùng)
   createOrderItem(product: Product, quantity: number): OrderItem {
     const unitPrice = product.salePrice
     const subtotal = unitPrice * quantity
     
     return {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       productId: product.id,
       product,
       quantity,

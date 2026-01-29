@@ -21,6 +21,8 @@ function mapBackendToFrontend(backendUser: any): User {
     username: backendUser.email || backendUser.username || '',
     fullName: backendUser.fullName || backendUser.name || '',
     email: backendUser.email || '',
+    soDienThoai: backendUser.soDienThoai ?? backendUser.phone,
+    diaChi: backendUser.diaChi ?? backendUser.address,
     role: mapBackendRoleToFrontend(backendUser.role),
     avatar: backendUser.avatar,
     createdAt: backendUser.createdAt ? new Date(backendUser.createdAt) : new Date(),
@@ -92,7 +94,13 @@ export class RealAuthService {
       return { user, token }
     } catch (error: any) {
       console.error('❌ Login error:', error)
-      const errorMessage = error.message || error.response?.data?.message || 'Tên đăng nhập hoặc mật khẩu không đúng'
+      const data = error.response?.data
+      let msg = data?.message
+      if (Array.isArray(msg)) msg = msg[0]
+      const errorMessage =
+        msg ||
+        error.message ||
+        'Sai tên đăng nhập hoặc mật khẩu. Vui lòng kiểm tra lại.'
       throw new Error(errorMessage)
     }
   }

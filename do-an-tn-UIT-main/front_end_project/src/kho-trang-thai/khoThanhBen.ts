@@ -20,7 +20,7 @@ interface SidebarState {
 
 export const useSidebarStore = create<SidebarState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       isOpen: true,
 
       toggle: () => set((state) => ({ isOpen: !state.isOpen })),
@@ -37,8 +37,10 @@ export const useSidebarStore = create<SidebarState>()(
             status: 'pending',
             isOnline: true,
           })
-          const list = Array.isArray(data) ? data : []
-          set({ pendingOrdersCount: list.length })
+          const raw = Array.isArray(data) ? data : (data as any)?.data
+          const list = Array.isArray(raw) ? raw : []
+          const count = list.length
+          set({ pendingOrdersCount: count })
         } catch {
           set({ pendingOrdersCount: 0 })
         }

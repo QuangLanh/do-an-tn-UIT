@@ -83,21 +83,22 @@ export const TrangTaoDonHang = () => {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          {isEditMode ? 'Chỉnh sửa đơn hàng' : 'Tạo đơn hàng mới'}
+          {isEditMode ? 'Chi tiết đơn hàng' : 'Tạo đơn hàng mới'}
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
           {isEditMode
-            ? `Chỉnh sửa đơn hàng ${existingOrder?.orderNumber}`
+            ? `Xem thông tin đơn hàng ${existingOrder?.orderNumber}`
             : 'Điền thông tin để tạo đơn hàng mới'}
         </p>
       </div>
 
-      {/* Order Form */}
+      {/* Order Form - chi tiết đơn: chỉ cho sửa tên + SĐT, nội dung đơn chỉ xem */}
       <BieuMauDonHang
         existingOrder={existingOrder}
         products={products}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
+        readOnly={isEditMode}
       />
     </div>
   )

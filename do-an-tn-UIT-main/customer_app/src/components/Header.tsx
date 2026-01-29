@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ShoppingCart, Bell, LogOut, Package, ChevronRight } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { ShoppingCart, Bell, Package, ChevronRight } from 'lucide-react'
 import { Button } from './Button'
 import { UserMenu } from './UserMenu'
 import { Card } from './Card'
@@ -16,8 +16,9 @@ const MAX_PENDING_IN_DROPDOWN = 5
 
 export const Header = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { getTotalItems } = useCartStore()
-  const { isAuthenticated, logout } = useAuthStore()
+  const { isAuthenticated } = useAuthStore()
   const [pendingCount, setPendingCount] = useState(0)
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [pendingOrders, setPendingOrders] = useState<Order[]>([])
@@ -43,6 +44,13 @@ export const Header = () => {
     return () => clearInterval(interval)
   }, [isAuthenticated])
 
+  // Refresh badge khi vào trang Đơn hàng (sau khi tạo đơn mới)
+  useEffect(() => {
+    if (isAuthenticated && location.pathname === '/orders') {
+      orderApi.getPendingOrdersCount().then(setPendingCount)
+    }
+  }, [isAuthenticated, location.pathname])
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (notificationRef.current && !notificationRef.current.contains(e.target as Node)) {
@@ -64,8 +72,10 @@ export const Header = () => {
       try {
         const list = await orderApi.getPendingOrders()
         setPendingOrders(list)
+        setPendingCount(list.length)
       } catch {
         setPendingOrders([])
+        setPendingCount(0)
       } finally {
         setLoadingPending(false)
       }
@@ -199,21 +209,7 @@ export const Header = () => {
             </Button>
 
             {isAuthenticated ? (
-              <>
-                <UserMenu />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    logout()
-                    navigate('/')
-                  }}
-                  title="Đăng xuất"
-                  className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-                >
-                  <LogOut size={20} />
-                </Button>
-              </>
+              <UserMenu />
             ) : (
               <Button
                 variant="secondary"

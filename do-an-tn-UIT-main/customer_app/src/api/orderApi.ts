@@ -8,7 +8,24 @@ interface CreateOrderData {
   paymentMethod?: 'cash' | 'transfer'
 }
 
-// Helper function to normalize order (convert _id to id, ensure items is array)
+/** Chuẩn hóa status từ BE về 4 trạng thái: pending | shipping | completed | cancelled */
+function normalizeStatus(status: unknown): Order['status'] {
+  const s = status != null ? String(status).toLowerCase().trim() : ''
+  const map: Record<string, Order['status']> = {
+    pending: 'pending',
+    cho_xac_nhan: 'pending',
+    shipping: 'shipping',
+    dang_van_chuyen: 'shipping',
+    completed: 'completed',
+    hoan_thanh: 'completed',
+    delivered: 'completed',
+    cancelled: 'cancelled',
+    da_huy: 'cancelled',
+  }
+  return map[s] ?? (s as Order['status']) ?? 'pending'
+}
+
+// Helper function to normalize order (convert _id to id, ensure items is array, status chuẩn hóa)
 const normalizeOrder = (order: any): Order => {
   if (!order) return order
   
@@ -17,6 +34,8 @@ const normalizeOrder = (order: any): Order => {
     ...order,
     id: order.id || order._id || '',
     items: Array.isArray(order.items) ? order.items : [],
+    // Chuẩn hóa status để tab "Chờ xử lý" và chuông thông báo hiển thị đúng
+    status: normalizeStatus(order.status),
     // Map customer fields from backend to customerInfo object
     customerInfo: order.customerInfo || {
       name: order.customerName || '',

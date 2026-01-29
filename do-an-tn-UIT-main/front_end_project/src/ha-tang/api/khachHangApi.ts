@@ -68,16 +68,22 @@ apiClient.interceptors.response.use(
     if (error.response) {
       // Server trả về error
       const { status, data } = error.response
-      
+      const requestUrl = (error.config?.url || '').toLowerCase()
+
       if (status === 401) {
-        // Unauthorized - xóa token và redirect to login
-        localStorage.removeItem('auth-storage')
-        window.location.href = '/login'
+        // Không redirect khi 401 từ chính request đăng nhập (tránh refresh trang khi sai mật khẩu / tài khoản khóa)
+        const isLoginRequest = requestUrl.includes('/auth/login') || requestUrl.includes('auth/login')
+        if (!isLoginRequest) {
+          localStorage.removeItem('auth-storage')
+          window.location.href = '/login'
+        }
       }
-      
-      // Throw error với message từ server
+
+      // Throw error với message từ server (để trang đăng nhập hiển thị dưới nút)
       const errorMessage = (data as any)?.message || 'Có lỗi xảy ra'
-      return Promise.reject(new Error(errorMessage))
+      const err = error as any
+      err.response = error.response
+      return Promise.reject(err)
     } else if (error.request) {
       // Request đã được gửi nhưng không có response
       return Promise.reject(new Error('Không thể kết nối đến server'))

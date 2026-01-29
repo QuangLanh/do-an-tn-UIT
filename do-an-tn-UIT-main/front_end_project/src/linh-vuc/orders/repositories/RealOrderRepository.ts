@@ -14,11 +14,29 @@ import {
 import { Product } from '../../products/entities/Product'
 import { apiService } from '@/ha-tang/api'
 
+const normalizeStatus = (status: unknown): Order['status'] => {
+  const raw = status != null ? String(status).toLowerCase().trim() : ''
+  const map: Record<string, Order['status']> = {
+    pending: 'pending',
+    cho_xac_nhan: 'pending',
+    confirmed: 'pending',
+    processing: 'pending',
+    shipping: 'shipping',
+    dang_van_chuyen: 'shipping',
+    completed: 'completed',
+    hoan_thanh: 'completed',
+    delivered: 'completed',
+    cancelled: 'cancelled',
+    da_huy: 'cancelled',
+  }
+  return map[raw] ?? 'pending'
+}
+
 /**
  * Map backend order response to frontend Order entity
  */
 function mapBackendToFrontend(backendOrder: any): Order {
-  const items: OrderItem[] = (backendOrder.items || []).map((item: any) => {
+  const items: OrderItem[] = (backendOrder.items || []).map((item: any, index: number) => {
     // Backend returns product as ObjectId or populated object
     const product: Product = item.product && typeof item.product === 'object'
       ? {
@@ -47,9 +65,10 @@ function mapBackendToFrontend(backendOrder: any): Order {
           updatedAt: new Date(),
         }
 
+    const productId = typeof item.product === 'string' ? item.product : (item.product?._id || item.product?.id || '')
     return {
-      id: item._id || item.id || '',
-      productId: typeof item.product === 'string' ? item.product : (item.product?._id || item.product?.id || ''),
+      id: item._id || item.id || `item-${index}`,
+      productId,
       product,
       quantity: item.quantity,
       unitPrice: item.price || item.unitPrice || 0,
@@ -65,12 +84,13 @@ function mapBackendToFrontend(backendOrder: any): Order {
     discount: backendOrder.discount || 0,
     tax: backendOrder.tax || 0,
     finalAmount: backendOrder.total || backendOrder.finalAmount || 0,
-    status: backendOrder.status || 'pending',
+    status: normalizeStatus(backendOrder.status),
     paymentStatus: backendOrder.paymentStatus, // Map paymentStatus từ backend
     paidAt: backendOrder.paidAt ? new Date(backendOrder.paidAt) : undefined, // Map paidAt từ backend
     wasDebt: backendOrder.wasDebt || false, // Map wasDebt từ backend
     orderType: backendOrder.orderType || 'SALE', // Map orderType từ backend
     relatedOrderCode: backendOrder.relatedOrderCode, // Map relatedOrderCode từ backend
+    hasAfterSale: backendOrder.hasAfterSale || false,
     customerName: backendOrder.customerName,
     customerPhone: backendOrder.customerPhone,
     customerAddress: backendOrder.customerAddress,
@@ -139,12 +159,20 @@ export class RealOrderRepository implements IOrderRepository {
 
   async update(id: string, orderDto: UpdateOrderDto): Promise<Order> {
     try {
-      // Backend chỉ hỗ trợ update status
+      // Cập nhật thông tin khách hàng (tên, SĐT) - dùng cho trang chi tiết đơn
+      if (orderDto.customerName !== undefined || orderDto.customerPhone !== undefined) {
+        await apiService.orders.updateCustomerInfo(id, {
+          customerName: orderDto.customerName,
+          customerPhone: orderDto.customerPhone,
+        })
+        return this.findById(id) as Promise<Order>
+      }
+      // Backend hỗ trợ update status
       if (orderDto.status) {
         await apiService.orders.updateStatus(id, { status: orderDto.status })
         return this.findById(id) as Promise<Order>
       }
-      throw new Error('Only status update is supported')
+      throw new Error('Chỉ hỗ trợ cập nhật trạng thái hoặc thông tin khách hàng (tên, SĐT)')
     } catch (error) {
       console.error('Error updating order:', error)
       throw error

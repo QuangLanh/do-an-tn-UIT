@@ -94,6 +94,12 @@ export class Order {
   orderType: 'SALE' | 'EXCHANGE' | 'RETURN';
 
   @Prop()
+  relatedOrderCode?: string; // Mã đơn hàng gốc (cho EXCHANGE/RETURN)
+
+  @Prop({ default: false })
+  hasAfterSale?: boolean; // Đã phát sinh đổi/trả cho đơn gốc chưa
+
+  @Prop()
   returnReason?: string; // Lý do trả hàng (cho RETURN)
 
   @Prop({ default: true })

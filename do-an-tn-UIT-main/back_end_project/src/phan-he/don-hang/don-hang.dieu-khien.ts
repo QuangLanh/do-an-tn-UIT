@@ -21,6 +21,7 @@ import { TaoDonHangDto } from './dto/tao-don-hang.dto';
 import { TaoDonHangKhachDto } from './dto/tao-don-hang-khach.dto';
 import { CapNhatTrangThaiDonHangDto } from './dto/cap-nhat-trang-thai-don-hang.dto';
 import { CapNhatTrangThaiThanhToanDto } from './dto/cap-nhat-trang-thai-thanh-toan.dto';
+import { CapNhatThongTinKhachDto } from './dto/cap-nhat-thong-tin-khach.dto';
 import { DoiHangDto } from './dto/doi-hang.dto';
 import { TraHangDto } from './dto/tra-hang.dto';
 import { BaoVeJwt } from '../../dung-chung/bao-ve/bao-ve-jwt';
@@ -241,6 +242,17 @@ export class DieuKhienDonHang {
     @Body() updatePaymentStatusDto: CapNhatTrangThaiThanhToanDto,
   ) {
     return this.dichVuDonHang.updatePaymentStatus(id, updatePaymentStatusDto.paymentStatus);
+  }
+
+  @Patch(':id/customer-info')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiOperation({ summary: 'Update order customer name and phone only (Admin, Staff)' })
+  @ApiResponse({ status: 200, description: 'Customer info updated successfully' })
+  updateCustomerInfo(
+    @Param('id') id: string,
+    @Body() dto: CapNhatThongTinKhachDto,
+  ) {
+    return this.dichVuDonHang.updateCustomerInfo(id, dto);
   }
 
   @Delete(':id')

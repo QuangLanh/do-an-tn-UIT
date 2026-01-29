@@ -18,7 +18,7 @@ import { Product } from '@/linh-vuc/products/entities/Product'
 import { OrderItem, Order } from '@/linh-vuc/orders/entities/Order'
 import { orderApi } from '@/ha-tang/api/orderApi'
 import { productApi } from '@/ha-tang/api/productApi'
-import { formatCurrency } from '@/ha-tang/utils/formatters'
+import { formatCurrency, normalizePhoneInput, isValidPhone10 } from '@/ha-tang/utils/formatters'
 import { Plus, Minus, Trash2, Search, User, UserCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -30,6 +30,8 @@ interface BieuMauDonHangProps {
   onSubmit: (order: any) => void
   onCancel: () => void
   defaultCustomerType?: CustomerType
+  /** Chi tiết đơn hàng: chỉ cho sửa tên + SĐT, nội dung đơn chỉ xem */
+  readOnly?: boolean
 }
 
 // Interface lưu thông tin khách quen
@@ -44,7 +46,9 @@ export const BieuMauDonHang = ({
   onSubmit,
   onCancel,
   defaultCustomerType = 'retail',
+  readOnly: readOnlyProp,
 }: BieuMauDonHangProps) => {
+  const readOnly = readOnlyProp ?? !!existingOrder
   const [items, setItems] = useState<OrderItem[]>(existingOrder?.items || [])
   const [customerType, setCustomerType] = useState<CustomerType>(
     existingOrder?.customerName ? 'vip' : defaultCustomerType
@@ -53,7 +57,10 @@ export const BieuMauDonHang = ({
   const [customerPhone, setCustomerPhone] = useState(existingOrder?.customerPhone || '')
   const [notes, setNotes] = useState(existingOrder?.notes || '')
   const [discount, setDiscount] = useState(existingOrder?.discount || 0)
-  const [isDebt, setIsDebt] = useState(false)
+  const [isDebt, setIsDebt] = useState(
+    () => existingOrder?.paymentStatus === 'DEBT' || (existingOrder as any)?.wasDebt === true || false
+  )
+  const isEditMode = !!existingOrder
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -70,6 +77,13 @@ export const BieuMauDonHang = ({
 
   // --- LOGIC MỚI: QUẢN LÝ KHÁCH HÀNG THÂN THIẾT (SỬA LỖI TRÙNG TÊN) ---
   const [knownCustomers, setKnownCustomers] = useState<KnownCustomer[]>([])
+
+  useEffect(() => {
+    if (existingOrder) {
+      const debt = existingOrder.paymentStatus === 'DEBT' || (existingOrder as any).wasDebt === true
+      setIsDebt(debt)
+    }
+  }, [existingOrder?.id])
 
   useEffect(() => {
     const loadCustomerHistory = async () => {
@@ -351,7 +365,47 @@ export const BieuMauDonHang = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
+    // Chi tiết đơn: chỉ cập nhật tên + SĐT, không đổi nội dung đơn
+    if (readOnly && existingOrder) {
+      if (customerType === 'vip') {
+        if (!customerName?.trim()) {
+          toast.error('Vui lòng nhập tên khách hàng')
+          return
+        }
+        if (!customerPhone?.trim()) {
+          toast.error('Vui lòng nhập số điện thoại khách hàng')
+          return
+        }
+        if (!isValidPhone10(customerPhone)) {
+          toast.error('Số điện thoại phải đúng 10 số (ví dụ: 0123456789).')
+          return
+        }
+      }
+      setIsSubmitting(true)
+      try {
+        const orderData = {
+          ...existingOrder,
+          items: existingOrder.items,
+          customerName: (customerName ?? '').trim(),
+          customerPhone: (customerPhone ?? '').trim(),
+          notes: existingOrder.notes,
+          discount: existingOrder.discount ?? 0,
+          totalAmount: existingOrder.totalAmount,
+          finalAmount: existingOrder.finalAmount,
+          status: existingOrder.status,
+          isDebt: existingOrder.paymentStatus === 'DEBT' || (existingOrder as any)?.wasDebt === true,
+        }
+        onSubmit(orderData)
+      } catch (err) {
+        console.error('Error updating customer info', err)
+        toast.error('Có lỗi xảy ra khi cập nhật thông tin khách hàng')
+      } finally {
+        setIsSubmitting(false)
+      }
+      return
+    }
+
     if (items.length === 0) {
       toast.error('Đơn hàng phải có ít nhất một sản phẩm')
       return
@@ -370,6 +424,10 @@ export const BieuMauDonHang = ({
       }
       if (!customerPhone || customerPhone.trim() === '') {
         toast.error('Vui lòng nhập số điện thoại khách hàng')
+        return
+      }
+      if (!isValidPhone10(customerPhone)) {
+        toast.error('Số điện thoại phải đúng 10 số (ví dụ: 0123456789).')
         return
       }
     }
@@ -397,7 +455,9 @@ export const BieuMauDonHang = ({
         totalAmount: subtotal,
         finalAmount,
         status: existingOrder?.status || 'completed',
-        isDebt: customerType === 'vip' ? isDebt : false,
+        isDebt: isEditMode
+          ? (existingOrder?.paymentStatus === 'DEBT' || (existingOrder as any)?.wasDebt === true)
+          : (customerType === 'vip' ? isDebt : false),
       }
       
       onSubmit(orderData)
@@ -419,41 +479,56 @@ export const BieuMauDonHang = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex justify-end">
-        <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-          <button
-            type="button"
-            onClick={() => setCustomerType('retail')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
-              customerType === 'retail'
-                ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-            }`}
-          >
-            <User size={18} />
-            <span>Khách hàng lẻ</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setCustomerType('vip')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
-              customerType === 'vip'
-                ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-            }`}
-          >
-            <UserCheck size={18} />
-            <span>Khách hàng thân thiết</span>
-          </button>
+      {!readOnly && (
+        <div className="flex justify-end">
+          <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <button
+              type="button"
+              onClick={() => setCustomerType('retail')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
+                customerType === 'retail'
+                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              <User size={18} />
+              <span>Khách hàng lẻ</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCustomerType('vip')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
+                customerType === 'vip'
+                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              <UserCheck size={18} />
+              <span>Khách hàng thân thiết</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {customerType === 'vip' && (
+      {existingOrder && (existingOrder.orderType === 'EXCHANGE' || existingOrder.orderType === 'RETURN') && existingOrder.relatedOrderCode && (
+        <TheThongTin title={existingOrder.orderType === 'EXCHANGE' ? 'Đổi từ đơn hàng' : 'Trả từ đơn hàng'}>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {existingOrder.orderType === 'EXCHANGE' ? 'Đơn đổi hàng từ:' : 'Đơn trả hàng từ:'}
+            </span>
+            <span className="font-semibold text-primary-600 dark:text-primary-400">
+              {existingOrder.relatedOrderCode}
+            </span>
+          </div>
+        </TheThongTin>
+      )}
+
+      {(customerType === 'vip' || readOnly) && (
         <TheThongTin title="Thông tin khách hàng">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Tên khách hàng *
+                    Tên khách hàng {!readOnly && '*'}
                 </label>
                 <input
                     list="customer-suggestions"
@@ -461,37 +536,47 @@ export const BieuMauDonHang = ({
                     value={customerName}
                     onChange={handleCustomerNameChange}
                     placeholder="Nhập tên khách hàng..."
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    required
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
+                    required={!readOnly}
+                    disabled={false}
+                    readOnly={false}
                 />
-                
-                {/* --- FIX LỖI Ở ĐÂY: Dùng value để hiển thị cả Tên và SĐT --- */}
                 <datalist id="customer-suggestions">
                     {knownCustomers.map((c, index) => (
                         <option key={index} value={`${c.name} - ${c.phone}`}>
-                             {/* Text hiển thị phụ (một số trình duyệt sẽ hiện cái này) */}
                              Khách cũ
                         </option>
                     ))}
                 </datalist>
-                {/* --------------------------------------------------------- */}
-                
             </div>
             <NhapLieu
-              label="Số điện thoại *"
+              label={`Số điện thoại ${!readOnly ? '*' : ''}`}
+              type="tel"
+              inputMode="numeric"
+              maxLength={10}
+              placeholder="0xxxxxxxxx (10 số)"
               value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-              placeholder="Nhập số điện thoại"
-              required
+              onChange={(e) => setCustomerPhone(normalizePhoneInput(e.target.value))}
+              required={!readOnly}
+              disabled={false}
+              readOnly={false}
             />
           </div>
+          {!readOnly && (
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             * Bắt buộc nhập khi chọn khách hàng thân thiết
           </p>
+          )}
+          {readOnly && (
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Có thể sửa tên và số điện thoại; nội dung đơn hàng không thay đổi.
+          </p>
+          )}
         </TheThongTin>
       )}
 
-      {/* Barcode */}
+      {/* Barcode - ẩn khi chỉ xem chi tiết */}
+      {!readOnly && (
       <TheThongTin title="Quét / nhập barcode">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
           <NhapLieu
@@ -527,6 +612,7 @@ export const BieuMauDonHang = ({
           </div>
         </div>
       </TheThongTin>
+      )}
 
       <TheThongTin title="Sản phẩm trong đơn hàng">
           {items.length === 0 ? (
@@ -547,7 +633,10 @@ export const BieuMauDonHang = ({
               },
               {
                 header: 'Số lượng',
-                accessor: (item: OrderItem) => (
+                accessor: (item: OrderItem) =>
+                  readOnly ? (
+                    <span className="font-medium">{item.quantity}</span>
+                  ) : (
                   <div className="flex items-center space-x-2">
                     <button
                       type="button"
@@ -556,8 +645,6 @@ export const BieuMauDonHang = ({
                     >
                       <Minus size={16} />
                     </button>
-                    
-                    {/* INPUT ẨN MŨI TÊN */}
                     <input 
                         type="number"
                         value={item.quantity === 0 ? '' : item.quantity}
@@ -566,7 +653,6 @@ export const BieuMauDonHang = ({
                         onFocus={(e) => e.target.select()}
                         className="w-16 text-center border border-gray-300 dark:border-gray-600 rounded py-1 px-1 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
-
                     <button
                       type="button"
                       onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
@@ -575,24 +661,28 @@ export const BieuMauDonHang = ({
                       <Plus size={16} />
                     </button>
                   </div>
-                ),
+                  ),
               },
               {
                 header: 'Thành tiền',
                 accessor: (item: OrderItem) => formatCurrency(item.subtotal),
               },
-              {
-                header: 'Thao tác',
-                accessor: (item: OrderItem) => (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveItem(item.id)}
-                    className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                ),
-              },
+              ...(readOnly
+                ? []
+                : [
+                    {
+                      header: 'Thao tác',
+                      accessor: (item: OrderItem) => (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      ),
+                    },
+                  ]),
             ]}
           />
         )}
@@ -614,6 +704,8 @@ export const BieuMauDonHang = ({
                     onChange={(e) => setDiscount(Number(e.target.value))}
                     className="w-32 py-1"
                     min={0}
+                    disabled={readOnly}
+                    readOnly={readOnly}
                   />
                 </div>
                 <span className="font-medium">{formatCurrency(discount)}</span>
@@ -638,24 +730,45 @@ export const BieuMauDonHang = ({
 
           {customerType === 'vip' && (
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <label className="flex items-center space-x-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isDebt}
-                  onChange={(e) => setIsDebt(e.target.checked)}
-                  className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 dark:border-gray-600 dark:focus:ring-primary-400"
-                />
-                <div>
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    Mua thiếu (ghi nợ)
-                  </span>
-                  {isDebt && (
-                    <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
-                      ⚠️ Đơn hàng này chưa được tính vào doanh thu thực tế
+              {isEditMode ? (
+                <div className="flex items-start space-x-3">
+                  <input
+                    type="checkbox"
+                    checked={isDebt}
+                    disabled
+                    className="w-5 h-5 mt-0.5 text-primary-600 border-gray-300 rounded bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
+                  />
+                  <div>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                      Mua thiếu (ghi nợ)
+                    </span>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {isDebt
+                        ? 'Đơn ghi nợ xử lý tại tab Đơn hàng ghi nợ, không sửa trong chi tiết đơn hàng.'
+                        : 'Không thể thay đổi trạng thái ghi nợ tại đây.'}
                     </p>
-                  )}
+                  </div>
                 </div>
-              </label>
+              ) : (
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isDebt}
+                    onChange={(e) => setIsDebt(e.target.checked)}
+                    className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 dark:border-gray-600 dark:focus:ring-primary-400"
+                  />
+                  <div>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      Mua thiếu (ghi nợ)
+                    </span>
+                    {isDebt && (
+                      <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+                        ⚠️ Đơn hàng này chưa được tính vào doanh thu thực tế
+                      </p>
+                    )}
+                  </div>
+                </label>
+              )}
             </div>
           )}
         </div>
@@ -665,20 +778,29 @@ export const BieuMauDonHang = ({
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="input-field min-h-[100px]"
+          className="input-field min-h-[100px] disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
           placeholder="Nhập ghi chú cho đơn hàng (nếu có)..."
+          disabled={readOnly}
+          readOnly={readOnly}
         />
       </TheThongTin>
 
       <div className="flex justify-end space-x-4">
         <NutBam type="button" variant="secondary" onClick={onCancel}>
-          Hủy
+          {readOnly ? 'Quay lại' : 'Hủy'}
         </NutBam>
-        <NutBam type="submit" isLoading={isSubmitting}>
-          {existingOrder ? 'Cập nhật đơn hàng' : 'Tạo đơn hàng'}
-        </NutBam>
+        {readOnly ? (
+          <NutBam type="submit" isLoading={isSubmitting}>
+            Cập nhật thông tin khách hàng
+          </NutBam>
+        ) : (
+          <NutBam type="submit" isLoading={isSubmitting}>
+            {existingOrder ? 'Cập nhật đơn hàng' : 'Tạo đơn hàng'}
+          </NutBam>
+        )}
       </div>
 
+      {!readOnly && (
       <TheThongTin title="Thêm sản phẩm vào đơn hàng">
         <div className="mb-4 relative">
           <Search
@@ -753,6 +875,7 @@ export const BieuMauDonHang = ({
           />
         )}
       </TheThongTin>
+      )}
     </form>
   )
 }

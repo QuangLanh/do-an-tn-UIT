@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -10,6 +10,7 @@ import { DangNhapKhachHangDto } from './dto/dang-nhap-khach-hang.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { CapNhatProfileDto } from './dto/cap-nhat-profile.dto';
+import { CapNhatProfileNhanVienDto } from './dto/cap-nhat-profile-nhan-vien.dto';
 import { JwtTaiDuLieu } from '../../dung-chung/giao-dien/jwt-payload.giao-dien';
 import { VaiTroNguoiDung } from '../../dung-chung/liet-ke/vai-tro-nguoi-dung.enum';
 import { UserDocument } from '../nguoi-dung/schemas/user.schema';
@@ -35,7 +36,7 @@ export class DichVuXacThuc {
     }
 
     if (!user.isActive) {
-      throw new UnauthorizedException('Account is inactive');
+      throw new UnauthorizedException('Tài khoản đã bị khóa');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -52,7 +53,7 @@ export class DichVuXacThuc {
     const user = await this.validateUser(loginDto.email, loginDto.password);
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Sai tên đăng nhập hoặc mật khẩu. Vui lòng kiểm tra lại.');
     }
 
     await this.dichVuNguoiDung.updateLastLogin(user._id.toString());
@@ -275,6 +276,46 @@ export class DichVuXacThuc {
       email: khachHang.email,
       diaChi: khachHang.diaChi,
       role: khachHang.role,
+    };
+  }
+
+  /**
+   * Cập nhật thông tin cá nhân cho Admin/Staff.
+   * - Tên, số điện thoại: cả Admin và Nhân viên đều được sửa.
+   * - Đổi mật khẩu: chỉ Quản trị viên (admin) mới được; bắt buộc gửi currentPassword đúng.
+   */
+  async capNhatProfileNhanVien(userId: string, dto: CapNhatProfileNhanVienDto) {
+    const userWithPass = await this.dichVuNguoiDung.findOneWithPassword(userId);
+    if (!userWithPass) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (dto.newPassword) {
+      if (userWithPass.role !== VaiTroNguoiDung.ADMIN) {
+        throw new ForbiddenException('Chỉ quản trị viên mới được đổi mật khẩu.');
+      }
+      if (!dto.currentPassword?.trim()) {
+        throw new BadRequestException('Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu.');
+      }
+      const match = await bcrypt.compare(dto.currentPassword, userWithPass.password);
+      if (!match) {
+        throw new BadRequestException('Mật khẩu hiện tại không đúng.');
+      }
+    }
+
+    const updateData: { fullName?: string; phone?: string; password?: string } = {};
+    if (dto.fullName !== undefined && dto.fullName.trim()) updateData.fullName = dto.fullName.trim();
+    if (dto.phone !== undefined) updateData.phone = dto.phone.trim() || undefined;
+    if (dto.newPassword?.trim()) updateData.password = dto.newPassword;
+
+    const user = await this.dichVuNguoiDung.updateProfile(userId, updateData);
+    const u = user as any;
+    return {
+      id: u._id ?? u.id,
+      email: u.email,
+      fullName: u.fullName,
+      phone: u.phone,
+      role: u.role,
     };
   }
 }

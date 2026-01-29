@@ -14,18 +14,14 @@ export interface OrderItem {
   subtotal: number
 }
 
-export type OrderStatus = 'pending' | 'completed' | 'cancelled'
-export type PaymentStatus = 'PAID' | 'DEBT' | 'REFUNDED';
+/** Trạng thái đơn hàng đặt online (thống nhất với BE và customer app) */
 export type OrderStatus =
-  | 'pending'       // Chờ xử lý
-  | 'confirmed'     // Đã xác nhận
-  | 'processing'    // Đang xử lý
-  | 'shipping'      // Đang vận chuyển
-  | 'delivered'     // Đã giao hàng
-  | 'completed'     // Hoàn thành
-  | 'cancelled'     // Đã hủy
+  | 'pending'   // Chờ xử lý
+  | 'shipping'  // Đang vận chuyển
+  | 'completed' // Hoàn thành
+  | 'cancelled' // Đã hủy
 
-export type PaymentStatus = 'PAID' | 'DEBT'
+export type PaymentStatus = 'PAID' | 'DEBT' | 'REFUNDED'
 export type OrderType = 'SALE' | 'EXCHANGE' | 'RETURN'
 
 export interface Order {
@@ -42,6 +38,7 @@ export interface Order {
   wasDebt?: boolean
   orderType?: OrderType
   relatedOrderCode?: string
+  hasAfterSale?: boolean
   customerName?: string
   customerPhone?: string
   customerAddress?: string

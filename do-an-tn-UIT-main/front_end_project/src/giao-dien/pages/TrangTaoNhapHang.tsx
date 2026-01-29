@@ -20,6 +20,7 @@ import { apiClient } from '@/ha-tang/api/index'
 import { productApi } from '@/ha-tang/api/productApi'
 import { purchaseApi } from '@/ha-tang/api/purchaseApi'
 import { supplierApi } from '@/ha-tang/api/supplierApi'
+import { normalizePhoneInput, isValidPhone10 } from '@/ha-tang/utils/formatters'
 
 // Types
 import { Product } from '@/linh-vuc/products/entities/Product'
@@ -137,6 +138,10 @@ export const TrangTaoNhapHang = () => {
   const handleQuickAddSupplier = async (e: React.FormEvent) => {
     e.preventDefault()
     if(!newSupplier.name || !newSupplier.phone) return toast.error("Thiếu tên hoặc SĐT")
+    if (!isValidPhone10(newSupplier.phone)) {
+      toast.error('Số điện thoại phải đúng 10 số (ví dụ: 0123456789).')
+      return
+    }
     try {
         const randomCode = `NCC${Math.floor(1000 + Math.random() * 9000)}`;
         const res = await apiClient.post('/suppliers', {
@@ -207,7 +212,16 @@ export const TrangTaoNhapHang = () => {
       <HopThoai isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Thêm Nhà Cung Cấp">
         <form onSubmit={handleQuickAddSupplier} className="space-y-4">
           <NhapLieu label="Tên NCC *" value={newSupplier.name} onChange={e => setNewSupplier({...newSupplier, name: e.target.value})} required />
-          <NhapLieu label="SĐT *" value={newSupplier.phone} onChange={e => setNewSupplier({...newSupplier, phone: e.target.value})} required />
+          <NhapLieu
+            label="SĐT *"
+            type="tel"
+            inputMode="numeric"
+            maxLength={10}
+            placeholder="0xxxxxxxxx (10 số)"
+            value={newSupplier.phone}
+            onChange={e => setNewSupplier({...newSupplier, phone: normalizePhoneInput(e.target.value)})}
+            required
+          />
           <NhapLieu label="Địa chỉ" value={newSupplier.address} onChange={e => setNewSupplier({...newSupplier, address: e.target.value})} />
           <div className="flex justify-end gap-3 pt-4">
             <NutBam type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Hủy</NutBam>

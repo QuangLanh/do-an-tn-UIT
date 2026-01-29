@@ -52,9 +52,9 @@ export function BangDuLieu<T extends { id: string | number }>({
               </td>
             </tr>
           ) : (
-            data.map((row) => (
+            data.map((row, index) => (
               <tr
-                key={row.id}
+                key={row.id ?? index}
                 onClick={() => onRowClick?.(row)}
                 className={onRowClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800' : ''}
               >

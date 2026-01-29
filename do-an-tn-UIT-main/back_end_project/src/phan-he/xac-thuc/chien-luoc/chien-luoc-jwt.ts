@@ -45,6 +45,7 @@ export class ChienLuocJwt extends PassportStrategy(Strategy) {
       id: payload.sub,
       email: payload.email,
       fullName: user.fullName,
+      phone: user.phone,
       role: payload.role,
     };
   }

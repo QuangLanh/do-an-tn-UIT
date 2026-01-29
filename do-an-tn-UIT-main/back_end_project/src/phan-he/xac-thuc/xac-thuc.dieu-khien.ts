@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Put, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Put, Patch, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -12,6 +12,7 @@ import { DangNhapKhachHangDto } from './dto/dang-nhap-khach-hang.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { CapNhatProfileDto } from './dto/cap-nhat-profile.dto';
+import { CapNhatProfileNhanVienDto } from './dto/cap-nhat-profile-nhan-vien.dto';
 import { BaoVeJwt } from '../../dung-chung/bao-ve/bao-ve-jwt';
 import { BaoVeVaiTro } from '../../dung-chung/bao-ve/bao-ve-vai-tro';
 import { VaiTro } from '../../dung-chung/trang-tri/vai-tro.trang-tri';
@@ -88,6 +89,32 @@ export class DieuKhienXacThuc {
   @ApiResponse({ status: 200, description: 'Return current user profile' })
   getProfile(@NguoiDungHienTai() user: any) {
     return user;
+  }
+
+  @Put('profile')
+  @UseGuards(BaoVeJwt, BaoVeVaiTro)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cập nhật thông tin cá nhân (Admin/Staff) - PUT' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
+  capNhatProfileNhanVienPut(
+    @NguoiDungHienTai() user: any,
+    @Body() dto: CapNhatProfileNhanVienDto,
+  ) {
+    return this.dichVuXacThuc.capNhatProfileNhanVien(user.id, dto);
+  }
+
+  @Patch('profile')
+  @UseGuards(BaoVeJwt, BaoVeVaiTro)
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cập nhật thông tin cá nhân (Admin/Staff) - PATCH' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
+  capNhatProfileNhanVienPatch(
+    @NguoiDungHienTai() user: any,
+    @Body() dto: CapNhatProfileNhanVienDto,
+  ) {
+    return this.dichVuXacThuc.capNhatProfileNhanVien(user.id, dto);
   }
 }
 

@@ -3,15 +3,17 @@
  * Trang danh sách tài khoản: Khách hàng + Nhân viên (Admin only)
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { TheThongTin } from '@/giao-dien/components/TheThongTin'
 import { BangDuLieu } from '@/giao-dien/components/BangDuLieu'
+import { PhanTrang } from '@/giao-dien/components/PhanTrang'
 import { HuyHieu } from '@/giao-dien/components/HuyHieu'
 import { HopThoai } from '@/giao-dien/components/HopThoai'
 import { NutBam } from '@/giao-dien/components/NutBam'
 import { NhapLieu } from '@/giao-dien/components/NhapLieu'
 import { apiService } from '@/ha-tang/api'
-import { Users, UserCircle, Plus } from 'lucide-react'
+import { normalizePhoneInput, isValidPhone10 } from '@/ha-tang/utils/formatters'
+import { Users, UserCircle, Plus, RefreshCw, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 type TabType = 'staff' | 'customer'
@@ -59,14 +61,22 @@ export const TrangDanhSachTaiKhoan = () => {
   const [formCreateStaff, setFormCreateStaff] = useState({ email: '', fullName: '', phone: '', role: 'staff', password: '', address: '' })
   const [formCreateCustomer, setFormCreateCustomer] = useState({ ten: '', soDienThoai: '', email: '', diaChi: '', isActive: true })
   const [saving, setSaving] = useState(false)
+  const [syncingCustomers, setSyncingCustomers] = useState(false)
+
+  const [staffCurrentPage, setStaffCurrentPage] = useState(1)
+  const [staffItemsPerPage, setStaffItemsPerPage] = useState(5)
+  const [customerCurrentPage, setCustomerCurrentPage] = useState(1)
+  const [customerItemsPerPage, setCustomerItemsPerPage] = useState(5)
+  const [customerSearchPhone, setCustomerSearchPhone] = useState('')
 
   const loadStaff = async () => {
     try {
       setIsLoadingStaff(true)
       const data = await apiService.users.list()
       const list = Array.isArray(data) ? data : []
-      setStaffList(
-        list.map((u: any) => ({
+      const staffOnly = list
+        .filter((u: any) => (u.role || '').toLowerCase() === 'staff')
+        .map((u: any) => ({
           id: u._id || u.id,
           _id: u._id,
           email: u.email,
@@ -76,7 +86,7 @@ export const TrangDanhSachTaiKhoan = () => {
           isActive: u.isActive !== false,
           address: u.address,
         }))
-      )
+      setStaffList(staffOnly)
     } catch (error) {
       toast.error('Không thể tải danh sách nhân viên')
       console.error(error)
@@ -127,11 +137,13 @@ export const TrangDanhSachTaiKhoan = () => {
   const openEditStaff = (row: StaffUser) => {
     setEditStaff(row)
     setFormStaff({
+      email: row.email || '',
       fullName: row.fullName || '',
       phone: row.phone || '',
       role: row.role || 'staff',
       isActive: row.isActive !== false,
       password: '',
+      address: row.address || '',
     })
   }
 
@@ -148,12 +160,15 @@ export const TrangDanhSachTaiKhoan = () => {
 
   const handleSaveStaff = async () => {
     if (!editStaff) return
+    if (formStaff.phone.trim() && !isValidPhone10(formStaff.phone)) {
+      toast.error('Số điện thoại phải đúng 10 số (ví dụ: 0123456789).')
+      return
+    }
     try {
       setSaving(true)
       const payload: any = {
         fullName: formStaff.fullName,
         phone: formStaff.phone,
-        role: formStaff.role,
         isActive: formStaff.isActive,
       }
       if (formStaff.password.trim()) {
@@ -173,6 +188,10 @@ export const TrangDanhSachTaiKhoan = () => {
 
   const handleSaveCustomer = async () => {
     if (!editCustomer) return
+    if (!isValidPhone10(formCustomer.soDienThoai)) {
+      toast.error('Số điện thoại phải đúng 10 số (ví dụ: 0123456789).')
+      return
+    }
     try {
       setSaving(true)
       await apiService.customers.update(editCustomer.id, {
@@ -198,6 +217,10 @@ export const TrangDanhSachTaiKhoan = () => {
       toast.error('Vui lòng điền đầy đủ thông tin bắt buộc')
       return
     }
+    if (formCreateStaff.phone.trim() && !isValidPhone10(formCreateStaff.phone)) {
+      toast.error('Số điện thoại phải đúng 10 số (ví dụ: 0123456789).')
+      return
+    }
     try {
       setSaving(true)
       await apiService.users.create({
@@ -205,7 +228,7 @@ export const TrangDanhSachTaiKhoan = () => {
         password: formCreateStaff.password,
         fullName: formCreateStaff.fullName,
         phone: formCreateStaff.phone || undefined,
-        role: formCreateStaff.role,
+        role: 'staff', // Tạo mới chỉ được vai trò Nhân viên, hệ thống chỉ có một Admin
         address: formCreateStaff.address || undefined,
       })
       toast.success('Đã tạo nhân viên mới')
@@ -223,6 +246,10 @@ export const TrangDanhSachTaiKhoan = () => {
   const handleCreateCustomer = async () => {
     if (!formCreateCustomer.soDienThoai) {
       toast.error('Vui lòng nhập số điện thoại')
+      return
+    }
+    if (!isValidPhone10(formCreateCustomer.soDienThoai)) {
+      toast.error('Số điện thoại phải đúng 10 số (ví dụ: 0123456789).')
       return
     }
     try {
@@ -246,25 +273,66 @@ export const TrangDanhSachTaiKhoan = () => {
     }
   }
 
+  const handleSyncCustomersFromOrders = async () => {
+    try {
+      setSyncingCustomers(true)
+      const res = await apiService.customers.syncFromOrders()
+      const msg = (res as any)?.message ?? `Đã đồng bộ ${(res as any)?.created ?? 0} khách hàng mới, ${(res as any)?.updated ?? 0} cập nhật.`
+      toast.success(msg)
+      loadCustomers()
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Không thể đồng bộ khách hàng từ đơn hàng')
+      console.error(error)
+    } finally {
+      setSyncingCustomers(false)
+    }
+  }
+
   const isLoading = activeTab === 'staff' ? isLoadingStaff : isLoadingCustomer
+
+  const paginatedStaffList = useMemo(() => {
+    const start = (staffCurrentPage - 1) * staffItemsPerPage
+    return staffList.slice(start, start + staffItemsPerPage)
+  }, [staffList, staffCurrentPage, staffItemsPerPage])
+
+  const filteredCustomerList = useMemo(() => {
+    const q = customerSearchPhone.trim().toLowerCase()
+    if (!q) return customerList
+    return customerList.filter((c) =>
+      (c.soDienThoai || '').toLowerCase().includes(q)
+    )
+  }, [customerList, customerSearchPhone])
+
+  const paginatedCustomerList = useMemo(() => {
+    const start = (customerCurrentPage - 1) * customerItemsPerPage
+    return filteredCustomerList.slice(start, start + customerItemsPerPage)
+  }, [filteredCustomerList, customerCurrentPage, customerItemsPerPage])
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center px-0">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Danh sách tài khoản</h1>
-        <NutBam
-          type="button"
-          onClick={() => {
-            if (activeTab === 'staff') {
-              setCreateStaff(true)
-            } else {
-              setCreateCustomer(true)
-            }
-          }}
-        >
-          <Plus size={20} className="mr-2" />
-          Tạo mới
-        </NutBam>
+        {/* Nhân viên: Tạo mới. Khách hàng: Đồng bộ từ đơn hàng (SĐT làm khóa chính, mỗi SĐT = 1 khách). */}
+        {activeTab === 'staff' && (
+          <NutBam
+            type="button"
+            onClick={() => setCreateStaff(true)}
+          >
+            <Plus size={20} className="mr-2" />
+            Tạo mới
+          </NutBam>
+        )}
+        {activeTab === 'customer' && (
+          <NutBam
+            type="button"
+            variant="secondary"
+            onClick={handleSyncCustomersFromOrders}
+            isLoading={syncingCustomers}
+          >
+            <RefreshCw size={20} className="mr-2" />
+            Đồng bộ từ đơn hàng
+          </NutBam>
+        )}
       </div>
 
       {/* Tabs */}
@@ -295,13 +363,33 @@ export const TrangDanhSachTaiKhoan = () => {
         </button>
       </div>
 
-      {/* Content */}
+      {/* Tìm kiếm theo SĐT (chỉ tab Khách hàng) */}
+      {activeTab === 'customer' && (
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 max-w-xs">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="tel"
+              inputMode="numeric"
+              placeholder="Tìm theo số điện thoại..."
+              value={customerSearchPhone}
+              onChange={(e) => {
+                setCustomerSearchPhone(normalizePhoneInput(e.target.value))
+                setCustomerCurrentPage(1)
+              }}
+              className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Bảng danh sách (không gồm pagination) */}
       <TheThongTin className="no-padding">
         {isLoading ? (
           <div className="flex justify-center py-12 text-gray-500 dark:text-gray-400">Đang tải...</div>
         ) : activeTab === 'staff' ? (
           <BangDuLieu
-            data={staffList}
+            data={paginatedStaffList}
             columns={[
               { header: 'Email', accessor: (r: StaffUser) => r.email, className: 'whitespace-nowrap' },
               { header: 'Họ tên', accessor: (r: StaffUser) => r.fullName },
@@ -336,7 +424,7 @@ export const TrangDanhSachTaiKhoan = () => {
           />
         ) : (
           <BangDuLieu
-            data={customerList}
+            data={paginatedCustomerList}
             columns={[
               { header: 'Số điện thoại', accessor: (r: CustomerUser) => r.soDienThoai, className: 'whitespace-nowrap' },
               { header: 'Tên', accessor: (r: CustomerUser) => r.ten || '—' },
@@ -372,6 +460,28 @@ export const TrangDanhSachTaiKhoan = () => {
         )}
       </TheThongTin>
 
+      {/* Phân trang đặt bên ngoài bảng */}
+      {!isLoading && activeTab === 'staff' && (
+        <PhanTrang
+          currentPage={staffCurrentPage}
+          totalItems={staffList.length}
+          itemsPerPage={staffItemsPerPage}
+          onPageChange={setStaffCurrentPage}
+          onItemsPerPageChange={setStaffItemsPerPage}
+          itemsPerPageOptions={[5, 10, 20, 50, 100]}
+        />
+      )}
+      {!isLoading && activeTab === 'customer' && (
+        <PhanTrang
+          currentPage={customerCurrentPage}
+          totalItems={filteredCustomerList.length}
+          itemsPerPage={customerItemsPerPage}
+          onPageChange={setCustomerCurrentPage}
+          onItemsPerPageChange={setCustomerItemsPerPage}
+          itemsPerPageOptions={[5, 10, 20, 50, 100]}
+        />
+      )}
+
       {/* Edit Staff Modal */}
       <HopThoai
         isOpen={!!editStaff}
@@ -389,19 +499,19 @@ export const TrangDanhSachTaiKhoan = () => {
             />
             <NhapLieu
               label="Số điện thoại"
+              type="tel"
+              inputMode="numeric"
+              maxLength={10}
+              placeholder="0xxxxxxxxx (10 số)"
               value={formStaff.phone}
-              onChange={(e) => setFormStaff((s) => ({ ...s, phone: e.target.value }))}
+              onChange={(e) => setFormStaff((s) => ({ ...s, phone: normalizePhoneInput(e.target.value) }))}
             />
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vai trò</label>
-              <select
-                value={formStaff.role}
-                onChange={(e) => setFormStaff((s) => ({ ...s, role: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
-              >
-                <option value="admin">Admin</option>
-                <option value="staff">Nhân viên</option>
-              </select>
+              <p className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm">
+                {ROLE_LABELS[formStaff.role] ?? formStaff.role}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Vai trò không thể thay đổi</p>
             </div>
             <NhapLieu
               label="Mật khẩu mới (để trống nếu không đổi)"
@@ -442,9 +552,10 @@ export const TrangDanhSachTaiKhoan = () => {
           <div className="space-y-4">
             <NhapLieu
               label="Số điện thoại"
+              type="tel"
               value={formCustomer.soDienThoai}
-              onChange={(e) => setFormCustomer((s) => ({ ...s, soDienThoai: e.target.value }))}
-              placeholder="0xxxxxxxxx"
+              disabled
+              className="bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
             />
             <NhapLieu
               label="Tên"
@@ -518,20 +629,22 @@ export const TrangDanhSachTaiKhoan = () => {
           />
           <NhapLieu
             label="Số điện thoại"
+            type="tel"
+            inputMode="numeric"
+            maxLength={10}
+            placeholder="0xxxxxxxxx (10 số)"
             value={formCreateStaff.phone}
-            onChange={(e) => setFormCreateStaff((s) => ({ ...s, phone: e.target.value }))}
-            placeholder="0xxxxxxxxx"
+            onChange={(e) => setFormCreateStaff((s) => ({ ...s, phone: normalizePhoneInput(e.target.value) }))}
           />
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vai trò *</label>
-            <select
-              value={formCreateStaff.role}
-              onChange={(e) => setFormCreateStaff((s) => ({ ...s, role: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
-            >
-              <option value="admin">Admin</option>
-              <option value="staff">Nhân viên</option>
-            </select>
+            <input
+              type="text"
+              readOnly
+              value="Nhân viên"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 cursor-not-allowed"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Tạo mới chỉ được vai trò Nhân viên. Hệ thống chỉ có một Admin.</p>
           </div>
           <NhapLieu
             label="Địa chỉ"
@@ -569,9 +682,12 @@ export const TrangDanhSachTaiKhoan = () => {
         <div className="space-y-4">
           <NhapLieu
             label="Số điện thoại *"
+            type="tel"
+            inputMode="numeric"
+            maxLength={10}
+            placeholder="0xxxxxxxxx (10 số)"
             value={formCreateCustomer.soDienThoai}
-            onChange={(e) => setFormCreateCustomer((s) => ({ ...s, soDienThoai: e.target.value }))}
-            placeholder="0xxxxxxxxx"
+            onChange={(e) => setFormCreateCustomer((s) => ({ ...s, soDienThoai: normalizePhoneInput(e.target.value) }))}
             required
           />
           <NhapLieu

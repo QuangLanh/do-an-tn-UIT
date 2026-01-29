@@ -44,14 +44,12 @@ export interface Order {
   updatedAt: string
 }
 
-export type OrderStatus = 
-  | 'pending'          // Chờ xử lý
-  | 'confirmed'        // Đã xác nhận
-  | 'processing'       // Đang xử lý
-  | 'shipping'         // Đang vận chuyển
-  | 'delivered'        // Đã giao hàng
-  | 'completed'        // Hoàn thành
-  | 'cancelled'        // Đã hủy
+/** Trạng thái đơn hàng đặt online (thống nhất với BE và FE quản trị) */
+export type OrderStatus =
+  | 'pending'   // Chờ xử lý
+  | 'shipping'  // Đang vận chuyển
+  | 'completed' // Hoàn thành
+  | 'cancelled' // Đã hủy
 
 export interface User {
   id: string

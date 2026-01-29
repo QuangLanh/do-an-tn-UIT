@@ -36,6 +36,8 @@ export const TrangDanhSachDonDatHang = () => {
 
   useEffect(() => {
     loadOrders()
+    // Cập nhật badge "đơn chờ xử lý" ngay khi vào trang
+    useSidebarStore.getState().refreshPendingOrdersCount()
   }, [])
 
   useEffect(() => {
@@ -59,9 +61,9 @@ export const TrangDanhSachDonDatHang = () => {
     return filteredOrders.slice(startIndex, endIndex)
   }, [filteredOrders, currentPage, itemsPerPage])
 
-  const loadOrders = async () => {
+  const loadOrders = async (silent = false) => {
     try {
-      setIsLoading(true)
+      if (!silent) setIsLoading(true)
       // Chỉ lấy đơn hàng online (isOnline = true)
       const data = await orderApi.getAllOrders.execute({ isOnline: true })
       
@@ -103,42 +105,9 @@ export const TrangDanhSachDonDatHang = () => {
     }
   }
 
-  const getStatusHuyHieu = (status: string) => {
-    switch (status) {
-      case 'pending':
-      case 'confirmed':
-        return <HuyHieu variant="warning">Chờ xác nhận</HuyHieu>
-      case 'shipping':
-        return <HuyHieu variant="info">Đang vận chuyển</HuyHieu>
-      case 'completed':
-        return <HuyHieu variant="success">Hoàn thành</HuyHieu>
-      case 'cancelled':
-        return <HuyHieu variant="danger">Đã hủy</HuyHieu>
-      default:
-        return <HuyHieu variant="default">{status}</HuyHieu>
-    }
-  }
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending':
-      case 'confirmed':
-        return 'Chờ xác nhận'
-      case 'shipping':
-        return 'Đang vận chuyển'
-      case 'completed':
-        return 'Hoàn thành'
-      case 'cancelled':
-        return 'Đã hủy'
-      default:
-        return status
-    }
-  }
-
   const getStatusColors = (status: string) => {
     switch (status) {
       case 'pending':
-      case 'confirmed':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700'
       case 'shipping':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 border-blue-300 dark:border-blue-700'
@@ -149,6 +118,37 @@ export const TrangDanhSachDonDatHang = () => {
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
     }
+  }
+
+  /** Chuẩn hóa trạng thái (legacy) về 1 trong 4 để áp dụng rule */
+  const normalizeStatusForRule = (status: string): Order['status'] => {
+    const s = (status || '').toLowerCase()
+    if (['cho_xac_nhan', 'confirmed', 'processing'].includes(s)) return 'pending'
+    if (['dang_van_chuyen'].includes(s)) return 'shipping'
+    if (['hoan_thanh', 'delivered'].includes(s)) return 'completed'
+    if (['da_huy'].includes(s)) return 'cancelled'
+    return s as Order['status']
+  }
+
+  /** Trạng thái được phép chuyển tiếp từ trạng thái hiện tại (nghiệp vụ bán hàng) */
+  const getValidNextStatuses = (current: Order['status']): Order['status'][] => {
+    const map: Record<Order['status'], Order['status'][]> = {
+      pending: ['shipping', 'cancelled'],
+      shipping: ['completed', 'cancelled'],
+      completed: [],
+      cancelled: [],
+    }
+    return map[current] ?? []
+  }
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: 'Chờ xử lý',
+      shipping: 'Đang vận chuyển',
+      completed: 'Hoàn thành',
+      cancelled: 'Đã hủy',
+    }
+    return labels[status] ?? status
   }
 
   const handleUpdateStatus = async (orderId: string, newStatus: string, orderNumber: string) => {
@@ -175,18 +175,31 @@ export const TrangDanhSachDonDatHang = () => {
 
   const handleStatusUpdateWithPayment = async (orderId: string, newStatus: string, newPaymentStatus: string) => {
     try {
-      // Update status trước
-      await orderApi.service.updateOrderStatus(orderId, newStatus)
-      
-      // Sau đó update payment status
+      // Update status trước – dùng kết quả trả về để cập nhật UI ngay (tránh UI vẫn hiển thị trạng thái cũ)
+      const updatedOrder = await orderApi.service.updateOrderStatus(orderId, newStatus)
       await orderApi.service.updatePaymentStatus(orderId, newPaymentStatus)
-      
+
+      // Cập nhật UI từ response để đảm bảo hiển thị đúng trạng thái mới (shipping, completed, v.v.)
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId
+            ? {
+                ...o,
+                status: (updatedOrder?.status ?? newStatus) as Order['status'],
+                paymentStatus: newPaymentStatus as Order['paymentStatus'],
+                ...(newPaymentStatus === 'PAID' ? { paidAt: o.paidAt || new Date() } : {}),
+              }
+            : o
+        )
+      )
+
       toast.success('Đã cập nhật trạng thái đơn hàng')
-      loadOrders()
-      // Cập nhật badge đơn chờ xử lý ngay (không cần reload trang)
+      // Refresh danh sách im lặng và badge đơn chờ xử lý
+      loadOrders(true)
       useSidebarStore.getState().refreshPendingOrdersCount()
-    } catch (error) {
-      toast.error('Không thể cập nhật trạng thái')
+    } catch (error: any) {
+      const msg = error?.response?.data?.message ?? error?.message ?? 'Không thể cập nhật trạng thái'
+      toast.error(Array.isArray(msg) ? msg[0] : msg)
       console.error(error)
     }
   }
@@ -285,22 +298,47 @@ export const TrangDanhSachDonDatHang = () => {
                 },
                 {
                   header: 'Trạng thái đơn hàng',
-                  accessor: (order: Order) => (
-                    <select
-                      value={order.status}
-                      onChange={(e) => {
-                        e.stopPropagation()
-                        handleUpdateStatus(order.id, e.target.value, order.orderNumber)
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      className={`text-xs border rounded-full px-3 py-1 font-medium ${getStatusColors(order.status)}`}
-                    >
-                      <option value="pending">Chờ xác nhận</option>
-                      <option value="shipping">Đang vận chuyển</option>
-                      <option value="completed">Hoàn thành</option>
-                      <option value="cancelled">Đã hủy</option>
-                    </select>
-                  ),
+                  accessor: (order: Order) => {
+                    const current = normalizeStatusForRule(order.status)
+                    const validNext = getValidNextStatuses(current)
+                    const isTerminal = current === 'completed' || current === 'cancelled'
+                    const statusOptions: { value: Order['status']; label: string }[] = [
+                      { value: 'pending', label: 'Chờ xử lý' },
+                      { value: 'shipping', label: 'Đang vận chuyển' },
+                      { value: 'completed', label: 'Hoàn thành' },
+                      { value: 'cancelled', label: 'Đã hủy' },
+                    ]
+                    if (isTerminal) {
+                      return (
+                        <span
+                          className={`inline-block text-xs border rounded-full px-3 py-1 font-medium ${getStatusColors(order.status)}`}
+                        >
+                          {getStatusLabel(order.status)}
+                        </span>
+                      )
+                    }
+                    return (
+                      <select
+                        value={order.status}
+                        onChange={(e) => {
+                          e.stopPropagation()
+                          handleUpdateStatus(order.id, e.target.value, order.orderNumber)
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className={`text-xs border rounded-full px-3 py-1 font-medium ${getStatusColors(order.status)}`}
+                      >
+                        {statusOptions.map((opt) => (
+                          <option
+                            key={opt.value}
+                            value={opt.value}
+                            disabled={!validNext.includes(opt.value)}
+                          >
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    )
+                  },
                 },
                 {
                   header: 'Thanh toán',

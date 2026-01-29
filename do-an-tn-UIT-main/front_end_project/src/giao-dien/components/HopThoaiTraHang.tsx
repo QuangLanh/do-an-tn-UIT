@@ -25,9 +25,9 @@ export const HopThoaiTraHang = ({ isOpen, onClose, order, onSubmit }: HopThoaiTr
     if (!order) return 0
     let total = 0
     order.items.forEach(item => {
-      // SỬA 1: Lấy ID an toàn (dù product là string hay object)
-      const productId = typeof item.product === 'string' ? item.product : item.product.id
-      const qty = returnQuantities[productId] || 0
+      const raw = typeof item.product === 'string' ? item.product : item.product?.id ?? item.product?._id ?? item.productId ?? ''
+      const productId = String(raw)
+      const qty = returnQuantities[productId] ?? 0
       
       // SỬA 2: Dùng unitPrice thay vì price để khớp với Interface của bạn
       // Nếu unitPrice không có thì fallback về 0
@@ -49,10 +49,10 @@ export const HopThoaiTraHang = ({ isOpen, onClose, order, onSubmit }: HopThoaiTr
 
   const handleSubmit = async () => {
     const returnItems = Object.entries(returnQuantities)
-      .filter(([_, qty]) => qty > 0)
+      .filter(([_, qty]) => Number(qty) > 0)
       .map(([productId, quantity]) => ({
-        productId,
-        quantity
+        productId: String(productId),
+        quantity: Number(quantity)
       }))
 
     if (returnItems.length === 0) {
@@ -100,13 +100,11 @@ export const HopThoaiTraHang = ({ isOpen, onClose, order, onSubmit }: HopThoaiTr
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
               {order.items.map((item) => {
-                // SỬA 3: Xử lý hiển thị tên và giá an toàn
-                const productId = typeof item.product === 'string' ? item.product : item.product.id
-                // Dùng optional chaining để tránh lỗi nếu product bị null
+                const raw = typeof item.product === 'string' ? item.product : item.product?.id ?? item.product?._id ?? item.productId ?? ''
+                const productId = String(raw)
                 const productName = typeof item.product === 'string' ? 'Sản phẩm' : item.product?.name || 'Sản phẩm'
                 const price = item.unitPrice || 0
-                
-                const returnQty = returnQuantities[productId] || 0
+                const returnQty = returnQuantities[productId] ?? 0
                 
                 return (
                   <tr key={productId} className={returnQty > 0 ? 'bg-red-50 dark:bg-red-900/20' : ''}>

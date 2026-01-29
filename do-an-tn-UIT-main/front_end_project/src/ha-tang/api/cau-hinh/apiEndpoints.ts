@@ -29,6 +29,7 @@ export const API_ENDPOINTS = {
     detail: (id: string) => `/customers/${id}`,
     create: () => '/customers',
     update: (id: string) => `/customers/${id}`,
+    syncFromOrders: () => '/customers/sync-from-orders',
   },
 
   // ==================== PRODUCTS ====================
@@ -66,6 +67,7 @@ export const API_ENDPOINTS = {
     create: () => '/orders',
     updateStatus: (id: string) => `/orders/${id}/status`,
     updatePaymentStatus: (id: string) => `/orders/${id}/payment-status`,
+    updateCustomerInfo: (id: string) => `/orders/${id}/customer-info`,
     delete: (id: string) => `/orders/${id}`,
     invoice: (id: string) => `/orders/${id}/invoice`,
     statistics: (params?: { from?: string; to?: string }) => {

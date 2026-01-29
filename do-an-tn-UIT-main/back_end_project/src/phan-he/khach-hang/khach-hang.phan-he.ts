@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { DichVuKhachHang } from './khach-hang.dich-vu';
+import { DieuKhienKhachHang } from './khach-hang.dieu-khien';
 import { KhachHang, KhachHangSchema } from './schemas/khach-hang.schema';
 import { Order, OrderSchema } from '../don-hang/schemas/order.schema';
 
@@ -11,6 +12,7 @@ import { Order, OrderSchema } from '../don-hang/schemas/order.schema';
       { name: Order.name, schema: OrderSchema },
     ]),
   ],
+  controllers: [DieuKhienKhachHang],
   providers: [DichVuKhachHang],
   exports: [DichVuKhachHang],
 })

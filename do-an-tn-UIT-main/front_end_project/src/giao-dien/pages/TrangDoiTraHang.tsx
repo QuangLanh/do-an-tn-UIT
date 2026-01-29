@@ -133,6 +133,32 @@ export const TrangDoiTraHang = () => {
 
   const navigate = useNavigate()
 
+  const normalizeStatusForAfterSale = (status: string): Order['status'] => {
+    const s = (status || '').toLowerCase()
+    if (['cho_xac_nhan', 'confirmed', 'processing'].includes(s)) return 'pending'
+    if (['dang_van_chuyen'].includes(s)) return 'shipping'
+    if (['hoan_thanh', 'delivered'].includes(s)) return 'completed'
+    if (['da_huy'].includes(s)) return 'cancelled'
+    return s as Order['status']
+  }
+
+  const getAfterSaleEligibility = (order: Order): { eligible: boolean; reason?: string } => {
+    if (!order.orderNumber?.startsWith('ORD') || order.orderType !== 'SALE') {
+      return { eligible: false, reason: 'Đơn không phải đơn bán gốc (mã ORD)' }
+    }
+    const currentStatus = normalizeStatusForAfterSale(order.status)
+    if (currentStatus !== 'completed') {
+      return { eligible: false, reason: 'Đơn chưa hoàn thành' }
+    }
+    if (order.paymentStatus !== 'PAID' || order.wasDebt === true) {
+      return { eligible: false, reason: 'Đơn chưa thanh toán đủ hoặc mua thiếu' }
+    }
+    if (order.hasAfterSale === true) {
+      return { eligible: false, reason: 'Đơn đã phát sinh đổi/trả trước đó' }
+    }
+    return { eligible: true }
+  }
+
   useEffect(() => {
     if (activeTab === 'list') {
       loadLists()
@@ -234,29 +260,33 @@ export const TrangDoiTraHang = () => {
         setFoundOrders([])
         setSelectedOrder(null)
       } else {
-        // Filter ra các đơn hàng chưa được đổi/trả
-        const availableOrders = orders.filter(order => {
-          const checkResult = isOrderAlreadyProcessed(order.orderNumber)
-          return !checkResult.processed
+        const evaluated = orders.map(order => {
+          const processedInfo = isOrderAlreadyProcessed(order.orderNumber)
+          const eligibility = getAfterSaleEligibility(order)
+          return { order, processed: processedInfo.processed, eligibility }
         })
 
-        if (availableOrders.length === 0) {
-          toast.error('Tất cả đơn hàng tìm được đã được đổi/trả rồi')
-          setFoundOrders([])
-          setSelectedOrder(null)
-        } else {
-          // Hiển thị cảnh báo nếu có đơn hàng đã được xử lý
-          const processedCount = orders.length - availableOrders.length
-          if (processedCount > 0) {
-            toast.error(`${processedCount} đơn hàng đã được đổi/trả và đã được ẩn khỏi danh sách`)
-          }
+        const eligibleOrders = evaluated.filter(e => !e.processed && e.eligibility.eligible).map(e => e.order)
+        const processedCount = evaluated.filter(e => e.processed).length
+        const ineligibleCount = evaluated.filter(e => !e.processed && !e.eligibility.eligible).length
 
-          setFoundOrders(availableOrders)
-          if (availableOrders.length === 1) {
-            handleSelectOrder(availableOrders[0])
-          } else {
-            toast.success(`Tìm thấy ${availableOrders.length} đơn hàng có thể đổi/trả`)
-          }
+        if (processedCount > 0) {
+          toast.error(`${processedCount} đơn hàng đã được đổi/trả`)
+        }
+        if (ineligibleCount > 0) {
+          toast.error(`${ineligibleCount} đơn hàng không đủ điều kiện đổi/trả`)
+        }
+
+        setFoundOrders(orders)
+        setSelectedOrder(null)
+
+        // Auto select chỉ khi có đúng 1 đơn và đủ điều kiện
+        if (orders.length === 1 && eligibleOrders.length === 1) {
+          handleSelectOrder(eligibleOrders[0])
+        } else if (eligibleOrders.length > 0) {
+          toast.success(`Tìm thấy ${eligibleOrders.length} đơn hàng đủ điều kiện đổi/trả`)
+        } else {
+          toast.error('Không có đơn hàng nào đủ điều kiện đổi/trả')
         }
       }
     } catch (error) {
@@ -289,6 +319,12 @@ export const TrangDoiTraHang = () => {
     if (checkResult.processed) {
       const typeText = checkResult.type === 'exchange' ? 'đổi hàng' : 'trả hàng'
       toast.error(`Đơn hàng ${order.orderNumber} đã được ${typeText} rồi. Không thể ${typeText} lại.`)
+      return
+    }
+
+    const eligibility = getAfterSaleEligibility(order)
+    if (!eligibility.eligible) {
+      toast.error(eligibility.reason || 'Đơn hàng không đủ điều kiện đổi/trả')
       return
     }
 
@@ -495,8 +531,6 @@ export const TrangDoiTraHang = () => {
           productId: item.productId,
           quantity: item.quantity,
         })),
-        returnReason: "Khách yêu cầu trả hàng", // <--- Bắt buộc phải có dòng này
-        isRestocked: true,
         exchangeItems: exchangeItems.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
@@ -510,7 +544,8 @@ export const TrangDoiTraHang = () => {
       // Reload danh sách
       loadLists()
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể đổi hàng')
+      const msg = error?.response?.data?.message ?? error?.message
+      toast.error(Array.isArray(msg) ? msg[0] : msg || 'Không thể đổi hàng')
       console.error(error)
     }
   }
@@ -755,13 +790,15 @@ export const TrangDoiTraHang = () => {
                 {foundOrders.map((order) => {
                   const checkResult = isOrderAlreadyProcessed(order.orderNumber)
                   const isProcessed = checkResult.processed
+                  const eligibility = getAfterSaleEligibility(order)
+                  const isEligible = !isProcessed && eligibility.eligible
                   
                   return (
                   <div
                     key={order.id}
-                    onClick={() => !isProcessed && handleSelectOrder(order)}
+                    onClick={() => isEligible && handleSelectOrder(order)}
                     className={`p-4 border rounded-lg ${
-                      isProcessed 
+                      !isEligible 
                         ? 'cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800' 
                         : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700'
                     } ${
@@ -777,6 +814,11 @@ export const TrangDoiTraHang = () => {
                         {isProcessed && (
                           <div className="text-sm text-orange-600 dark:text-orange-400 mt-1">
                             ⚠️ Đã được {checkResult.type === 'exchange' ? 'đổi hàng' : 'trả hàng'}
+                          </div>
+                        )}
+                        {!isProcessed && !eligibility.eligible && (
+                          <div className="text-sm text-red-600 dark:text-red-400 mt-1">
+                            ⚠️ {eligibility.reason || 'Đơn hàng không đủ điều kiện đổi/trả'}
                           </div>
                         )}
                       </div>

@@ -22,6 +22,13 @@ export class ApiService extends BaseApiService {
       this.post(API_ENDPOINTS.auth.register(), userData),
 
     getProfile: () => this.get(API_ENDPOINTS.auth.profile()),
+
+    updateProfile: (data: {
+      fullName?: string
+      phone?: string
+      currentPassword?: string
+      newPassword?: string
+    }) => this.patch(API_ENDPOINTS.auth.profile(), data),
   }
 
   // ==================== USERS ====================
@@ -50,6 +57,9 @@ export class ApiService extends BaseApiService {
 
     update: (id: string, customerData: any) =>
       this.patch(API_ENDPOINTS.customers.update(id), customerData),
+
+    syncFromOrders: () =>
+      this.post(API_ENDPOINTS.customers.syncFromOrders(), {}),
   }
 
   // ==================== PRODUCTS ====================
@@ -92,6 +102,9 @@ export class ApiService extends BaseApiService {
 
     updatePaymentStatus: (id: string, paymentStatusData: { paymentStatus: string }) =>
       this.patch(API_ENDPOINTS.orders.updatePaymentStatus(id), paymentStatusData),
+
+    updateCustomerInfo: (id: string, data: { customerName?: string; customerPhone?: string }) =>
+      this.patch(API_ENDPOINTS.orders.updateCustomerInfo(id), data),
 
     delete: (id: string) => this.delete(API_ENDPOINTS.orders.delete(id)),
 

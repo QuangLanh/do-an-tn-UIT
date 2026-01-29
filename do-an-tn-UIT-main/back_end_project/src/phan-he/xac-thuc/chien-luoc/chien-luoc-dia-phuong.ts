@@ -15,7 +15,7 @@ export class ChienLuocDiaPhuong extends PassportStrategy(Strategy) {
     const user = await this.dichVuXacThuc.validateUser(email, password);
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Sai tên đăng nhập hoặc mật khẩu. Vui lòng kiểm tra lại.');
     }
 
     return user;
