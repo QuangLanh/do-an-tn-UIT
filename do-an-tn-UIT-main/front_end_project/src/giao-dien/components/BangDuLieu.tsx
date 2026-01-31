@@ -54,7 +54,7 @@ export function BangDuLieu<T extends { id: string | number }>({
           ) : (
             data.map((row, index) => (
               <tr
-                key={row.id ?? index}
+                key={(row as any).id && String((row as any).id).trim() ? (row as any).id : `row-${index}`}
                 onClick={() => onRowClick?.(row)}
                 className={onRowClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800' : ''}
               >

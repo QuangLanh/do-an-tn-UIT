@@ -77,10 +77,13 @@ export const TrangDonHang = () => {
       returns.forEach((o: any) => { if (o.relatedOrderCode) processed.add(o.relatedOrderCode) })
       setProcessedOrderNumbers(processed)
 
-      // Fix dữ liệu ngay trong frontend: nếu status = completed thì payment status phải là PAID
+      // Fix dữ liệu: completed + paymentStatus lỗi/legacy → PAID (KHÔNG áp dụng cho đơn ghi nợ DEBT)
       const fixedData = data.map(order => {
-        if (order.status === 'completed' && order.paymentStatus !== 'PAID' && order.paymentStatus !== 'REFUNDED') {
-          // Fix ngay trong frontend để UI hiển thị đúng
+        const needsFix = order.status === 'completed' &&
+          order.paymentStatus !== 'PAID' &&
+          order.paymentStatus !== 'REFUNDED' &&
+          order.paymentStatus !== 'DEBT' // Đơn ghi nợ giữ nguyên, không ép sang PAID
+        if (needsFix) {
           return {
             ...order,
             paymentStatus: 'PAID' as const,
@@ -89,18 +92,6 @@ export const TrangDonHang = () => {
         }
         return order
       })
-      
-      // Tự động sync payment status ở backend (chạy background)
-      const syncPromises = data
-        .filter(order => order.status === 'completed' && order.paymentStatus !== 'PAID' && order.paymentStatus !== 'REFUNDED')
-        .map(order => 
-          orderApi.service.updatePaymentStatus(order.id, 'PAID').catch(err => {
-            console.error(`Failed to sync payment status for order ${order.orderNumber}:`, err)
-          })
-        )
-      
-      // Chạy sync ở background
-      Promise.all(syncPromises).catch(() => {})
       
       const sortedData = [...fixedData].sort((a, b) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -207,7 +198,8 @@ export const TrangDonHang = () => {
   const getPaymentStatusHuyHieu = (order: Order) => {
     // Đảm bảo: nếu status = completed thì payment status phải là PAID
     let paymentStatus = order.paymentStatus
-    if (order.status === 'completed' && paymentStatus !== 'PAID' && paymentStatus !== 'REFUNDED') {
+    // Chỉ ép PAID cho completed nếu không phải DEBT (đơn ghi nợ giữ nguyên)
+    if (order.status === 'completed' && paymentStatus !== 'PAID' && paymentStatus !== 'REFUNDED' && paymentStatus !== 'DEBT') {
       paymentStatus = 'PAID'
     }
     

@@ -39,7 +39,7 @@ export const TrangTaoDonHang = () => {
           setExistingOrder(order)
         } else {
           toast.error('Không tìm thấy đơn hàng')
-          navigate('/orders')
+          navigate('/orders/list')
         }
       }
     } catch (error) {
@@ -55,6 +55,7 @@ export const TrangTaoDonHang = () => {
       if (isEditMode && id) {
         await orderApi.updateOrder.execute(id, orderData)
         toast.success('Cập nhật đơn hàng thành công')
+        navigate('/orders/list')
       } else {
         await orderApi.createOrder.execute(orderData)
         toast.success('Tạo đơn hàng thành công')

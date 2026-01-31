@@ -92,8 +92,8 @@ export class PurchaseService {
     const subtotal = unitPrice * quantity
     
     return {
-      id: Date.now().toString(),
-      productId: product.id,
+      id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      productId: product.id || (product as any)._id,
       product,
       quantity,
       unitPrice,

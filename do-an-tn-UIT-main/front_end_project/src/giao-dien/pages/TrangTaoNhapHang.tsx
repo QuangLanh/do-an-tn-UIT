@@ -5,7 +5,7 @@
  */
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { UserPlus } from 'lucide-react'
+import { UserPlus, Truck } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 // Component
@@ -42,6 +42,7 @@ export const TrangTaoNhapHang = () => {
   const navigate = useNavigate()
   const { id } = useParams()
   const isEditMode = !!id
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -61,13 +62,15 @@ export const TrangTaoNhapHang = () => {
         const purchase = await purchaseApi.service.getPurchaseById(id)
         if (purchase) {
             setExistingPurchase(purchase)
-            
-            // 👇 FIX LỖI TYPESCRIPT Ở ĐÂY: Ép kiểu sang 'any' để lấy dữ liệu an toàn
-            const rawSup = (purchase as any).supplier;
-            const supId = typeof rawSup === 'object' ? (rawSup?._id || rawSup?.id) : rawSup;
-            
-            // Ưu tiên lấy từ supplier object, nếu không có thì lấy supplierId
-            setSelectedSupplierId(supId || purchase.supplierId || '') 
+            const rawSup = (purchase as any).supplier
+            let supId = typeof rawSup === 'object' ? (rawSup?._id || rawSup?.id) : (purchase.supplierId || rawSup)
+            if (!supId && purchase.supplierName && suppliersData?.length) {
+              const byName = (suppliersData as any[]).find(
+                (s) => (s.name || '').toLowerCase() === (purchase.supplierName || '').toLowerCase()
+              )
+              supId = byName?.id || byName?._id || ''
+            }
+            setSelectedSupplierId(supId || '')
         } else {
             navigate('/purchases')
         }
@@ -93,9 +96,17 @@ export const TrangTaoNhapHang = () => {
       const rawItems = purchaseDataFromChild.items || [];
       const cleanItems = rawItems.map((item: any, index: number) => {
           const prodObj = item.product || {};
-          const realId = item.productId || prodObj.id || prodObj._id;
+          let rawId = item.productId ?? prodObj.id ?? prodObj._id;
+          if (rawId == null || rawId === '') {
+            const prodName = prodObj.name || item.productName;
+            if (prodName && products?.length) {
+              const found = products.find((p: any) => (p.name || '').toLowerCase() === String(prodName).toLowerCase());
+              rawId = found?.id ?? found?._id;
+            }
+          }
+          const realId = rawId != null && rawId !== '' ? String(rawId).trim() : '';
           
-          if (!realId) throw new Error(`Sản phẩm dòng ${index + 1} lỗi ID.`);
+          if (!realId) throw new Error(`Sản phẩm dòng ${index + 1} (${(prodObj.name || item.productName) || '?'}) lỗi ID.`);
 
           return {
               productId: String(realId),
@@ -113,8 +124,6 @@ export const TrangTaoNhapHang = () => {
           notes: purchaseDataFromChild.notes || "",
       };
 
-      console.log("🚀 GỬI ĐI (CLEAN):", finalPayload);
-
       // 3. GỬI API TRỰC TIẾP
       if (isEditMode && id) {
         await apiClient.patch(`/purchases/${id}`, finalPayload);
@@ -131,6 +140,22 @@ export const TrangTaoNhapHang = () => {
       const msg = error.response?.data?.message || error.message;
       toast.error(Array.isArray(msg) ? msg.join(', ') : msg);
       throw error; 
+    }
+  }
+
+  const handleMarkCompleted = async () => {
+    if (!id || !existingPurchase) return
+    if (!confirm('Đánh dấu phiếu này đã nhận hàng? Hệ thống sẽ cập nhật tồn kho.')) return
+    try {
+      setIsUpdatingStatus(true)
+      await apiClient.patch(`/purchases/${id}`, { status: 'completed' })
+      toast.success('Đã đánh dấu hoàn thành')
+      setRefreshKey((k) => k + 1)
+      loadData()
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể cập nhật')
+    } finally {
+      setIsUpdatingStatus(false)
     }
   }
 
@@ -177,27 +202,51 @@ export const TrangTaoNhapHang = () => {
         </div>
       </div>
 
+      {isEditMode && existingPurchase?.status === 'requesting' && (
+        <TheThongTin title="Đang yêu cầu nhà cung cấp giao hàng">
+          <div className="flex items-center justify-between">
+            <p className="text-amber-800 dark:text-amber-200 text-sm">
+              Phiếu ở trạng thái <strong>Đang yêu cầu</strong>. Khi nhà cung cấp đã giao hàng, bấm nút bên dưới để đánh dấu hoàn thành → cập nhật tồn kho và báo cáo doanh thu, lợi nhuận.
+            </p>
+            <NutBam onClick={handleMarkCompleted} disabled={isUpdatingStatus} isLoading={isUpdatingStatus}>
+              <Truck size={18} className="mr-2" /> Đánh dấu đã nhận hàng
+            </NutBam>
+          </div>
+        </TheThongTin>
+      )}
+
       <TheThongTin title="Thông tin Nhà cung cấp">
-        <div className="flex gap-4 items-end">
+        <div className="space-y-3">
+          <div className="flex gap-4 items-end">
             <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nhà cung cấp *
-                </label>
-                <select 
-                    className="w-full p-2.5 bg-white border border-gray-300 text-gray-900 text-sm rounded-lg"
-                    value={selectedSupplierId} 
-                    onChange={e => setSelectedSupplierId(e.target.value)}
-                >
-                    <option value="">-- Chọn nhà cung cấp --</option>
-                    {suppliers.map(s => {
-                        const sId = s.id || (s as any)._id;
-                        return <option key={sId} value={sId}>{s.name} - {s.phone}</option>
-                    })}
-                </select>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nhà cung cấp *
+              </label>
+              <select 
+                className="w-full p-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg"
+                value={selectedSupplierId} 
+                onChange={e => setSelectedSupplierId(e.target.value)}
+              >
+                <option value="">-- Chọn nhà cung cấp --</option>
+                {suppliers.map(s => {
+                  const sId = s.id || (s as any)._id
+                  return <option key={sId} value={sId}>{s.name} - {s.phone}</option>
+                })}
+              </select>
             </div>
             <NutBam type="button" onClick={() => setIsModalOpen(true)} variant="secondary" className="h-[42px]">
-                <UserPlus size={18} className="mr-2"/> Thêm NCC
+              <UserPlus size={18} className="mr-2"/> Thêm NCC
             </NutBam>
+          </div>
+          {selectedSupplierId && (() => {
+            const sel = suppliers.find(s => (s.id || (s as any)._id) === selectedSupplierId)
+            return sel ? (
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Đã chọn: <span className="font-medium text-gray-900 dark:text-white">{sel.name}</span>
+                {sel.phone && <span className="ml-1">— {sel.phone}</span>}
+              </p>
+            ) : null
+          })()}
         </div>
       </TheThongTin>
 

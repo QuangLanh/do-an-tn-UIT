@@ -10,6 +10,7 @@ import { Purchase, PurchaseDocument } from './schemas/purchase.schema';
 import { TaoNhapHangDto } from './dto/tao-nhap-hang.dto';
 import { DichVuSanPham } from '../san-pham/san-pham.dich-vu';
 import { ThaoTacTonKho } from '../san-pham/dto/cap-nhat-ton-kho.dto';
+import { TrangThaiNhapHang } from '../../dung-chung/liet-ke/trang-thai-nhap-hang.enum';
 
 @Injectable()
 export class DichVuNhapHang {
@@ -55,6 +56,9 @@ export class DichVuNhapHang {
     // Generate purchase number
     const purchaseNumber = await this.generatePurchaseNumber();
 
+    // Tất cả phiếu nhập đều bắt đầu "đang yêu cầu" - chờ NCC giao hàng
+    const initialStatus = TrangThaiNhapHang.REQUESTING;
+
     // Create purchase
     const purchase = new this.purchaseModel({
       purchaseNumber,
@@ -63,26 +67,15 @@ export class DichVuNhapHang {
       supplierContact: createPurchaseDto.supplierContact,
       total,
       notes: createPurchaseDto.notes,
-      status: 'completed',
+      status: initialStatus,
       createdBy: new Types.ObjectId(userId),
     });
 
     const savedPurchase = await purchase.save();
 
-    // Update product stock and purchase price
-    for (const item of createPurchaseDto.items) {
-      await this.dichVuSanPham.updateStock(item.productId, {
-        operation: ThaoTacTonKho.ADD,
-        quantity: item.quantity,
-      });
+    // Không cập nhật tồn kho ở đây - chỉ cập nhật khi đổi trạng thái sang "hoàn thành" (trong update)
 
-      // Optionally update the purchase price in product
-      await this.dichVuSanPham.update(item.productId, {
-        purchasePrice: item.purchasePrice,
-      });
-    }
-
-    this.logger.log(`Purchase created: ${savedPurchase.purchaseNumber}`);
+    this.logger.log(`Purchase created: ${savedPurchase.purchaseNumber} (status: ${initialStatus})`);
     return savedPurchase;
   }
 
@@ -126,7 +119,7 @@ export class DichVuNhapHang {
 
   async getStatistics(from?: Date, to?: Date): Promise<any> {
     const matchStage: any = {
-      status: 'completed',
+      status: TrangThaiNhapHang.COMPLETED,
     };
 
     if (from || to) {
@@ -155,6 +148,33 @@ export class DichVuNhapHang {
   }
 
   async update(id: string, updateData: any): Promise<Purchase> {
+    const existingPurchase = await this.purchaseModel.findById(id).exec();
+    if (!existingPurchase) {
+      throw new NotFoundException('Purchase not found');
+    }
+
+    const newStatus = updateData.status;
+    const wasRequesting = existingPurchase.status === TrangThaiNhapHang.REQUESTING;
+    const isNowCompleted = newStatus === TrangThaiNhapHang.COMPLETED;
+
+    // Chuyển từ "đang yêu cầu" → "hoàn thành": cập nhật tồn kho + giá vốn
+    if (wasRequesting && isNowCompleted && existingPurchase.items?.length) {
+      for (const item of existingPurchase.items) {
+        const raw = (item as any).product;
+        const productId = typeof raw === 'string' ? raw : (raw?._id || raw)?.toString?.() || '';
+        if (productId) {
+          await this.dichVuSanPham.updateStock(productId, {
+            operation: ThaoTacTonKho.ADD,
+            quantity: item.quantity,
+          });
+          await this.dichVuSanPham.update(productId, {
+            purchasePrice: item.purchasePrice,
+          });
+        }
+      }
+      this.logger.log(`Purchase ${existingPurchase.purchaseNumber} completed: stock & cost updated`);
+    }
+
     const purchase = await this.purchaseModel
       .findByIdAndUpdate(id, updateData, { new: true })
       .exec();

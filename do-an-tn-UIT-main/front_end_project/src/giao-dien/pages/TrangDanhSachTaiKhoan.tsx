@@ -99,9 +99,7 @@ export const TrangDanhSachTaiKhoan = () => {
     try {
       setIsLoadingCustomer(true)
       const data = await apiService.customers.list()
-      console.log('Customers data received:', data)
       const list = Array.isArray(data) ? data : []
-      console.log('Customers list length:', list.length)
       setCustomerList(
         list.map((c: any) => ({
           id: c._id || c.id,

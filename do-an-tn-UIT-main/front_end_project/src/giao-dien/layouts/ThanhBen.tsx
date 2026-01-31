@@ -39,11 +39,11 @@ export const ThanhBen = () => {
       label: 'Bán hàng',
       icon: <ShoppingCart size={20} />,
     },
-    {
-      path: '/orders/list',
-      label: 'Danh sách đơn đặt hàng',
-      icon: <ListOrdered size={20} />,
-    },
+    // {
+    //   path: '/orders/list',
+    //   label: 'Danh sách đơn đặt hàng',
+    //   icon: <ListOrdered size={20} />,
+    // },
     {
       path: '/orders',
       label: 'Quản lý đơn hàng',
@@ -94,12 +94,13 @@ export const ThanhBen = () => {
     (item) => !item.permission || hasPermission(item.permission)
   )
 
-  // Số đơn hàng online chờ xử lý – lấy từ store, refresh khi mount và định kỳ (sau khi xác nhận hoàn thành đơn thì TrangDanhSachDonDatHang gọi refreshPendingOrdersCount nên badge tự giảm)
-  useEffect(() => {
-    refreshPendingOrdersCount()
-    const interval = setInterval(refreshPendingOrdersCount, PENDING_ORDERS_POLL_INTERVAL_MS)
-    return () => clearInterval(interval)
-  }, [hasPermission, refreshPendingOrdersCount])
+  // Số đơn hàng online chờ xử lý – refresh khi mount và định kỳ (empty deps tránh re-run gây re-render loop)
+  // useEffect(() => {
+  //   refreshPendingOrdersCount()
+  //   const interval = setInterval(refreshPendingOrdersCount, PENDING_ORDERS_POLL_INTERVAL_MS)
+  //   return () => clearInterval(interval)
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [])
 
   return (
     <>

@@ -15,7 +15,7 @@ import { NhapLieu } from '@/giao-dien/components/NhapLieu'
 import { purchaseApi } from '@/ha-tang/api/purchaseApi'
 import { supplierApi } from '@/ha-tang/api/supplierApi' // 👈 Import thêm cái này
 import { formatCurrency, formatDateTime } from '@/ha-tang/utils/formatters'
-import { Plus, Search, FileText, Trash2 } from 'lucide-react'
+import { Plus, Search, FileText, Trash2, Truck } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
 
@@ -62,17 +62,18 @@ export const TrangNhapHang = () => {
     }
   }
 
-  // 2. Hàm tra cứu tên NCC từ ID (Logic quan trọng nhất)
-  const getSupplierName = (supplierInfo: any) => {
-      // Nếu backend trả về object có tên sẵn
-      if (typeof supplierInfo === 'object' && supplierInfo?.name) {
-          return supplierInfo.name;
-      }
-      // Nếu backend trả về ID -> Tìm trong list suppliers
-      const sId = typeof supplierInfo === 'object' ? (supplierInfo._id || supplierInfo.id) : supplierInfo;
-      const found = suppliers.find(s => s.id === sId || (s as any)._id === sId);
-
-      return found ? found.name : "---";
+  // 2. Hàm tra cứu tên NCC từ ID/name - lấy từ database suppliers
+  const getSupplierName = (supplierInfo: any, purchase?: any) => {
+    const raw = supplierInfo ?? purchase?.supplier ?? purchase?.supplierName ?? purchase?.supplierId
+    if (!raw) return '---'
+    if (typeof raw === 'object' && raw?.name) return raw.name
+    const str = typeof raw === 'object' ? (raw._id || raw.id) : String(raw)
+    if (!str) return '---'
+    const foundById = suppliers.find((s: any) => (s.id || s._id) === str)
+    if (foundById) return foundById.name
+    const foundByName = suppliers.find((s: any) => s.name === str)
+    if (foundByName) return foundByName.name
+    return str
   }
 
   // 3. Filter tìm kiếm
@@ -83,7 +84,7 @@ export const TrangNhapHang = () => {
           // Tìm theo mã phiếu
           const codeMatch = (p.code || p.purchaseNumber || p.id)?.toLowerCase().includes(lowerQuery);
           // Tìm theo tên NCC (dùng hàm getSupplierName để tìm chính xác)
-          const supName = getSupplierName(p.supplier).toLowerCase();
+          const supName = getSupplierName(p.supplier, p).toLowerCase();
           const supplierMatch = supName.includes(lowerQuery);
 
           return codeMatch || supplierMatch;
@@ -119,8 +120,25 @@ export const TrangNhapHang = () => {
   const getStatusHuyHieu = (status: string) => {
     switch (status) {
       case 'completed': return <HuyHieu variant="success">Hoàn thành</HuyHieu>
+      case 'requesting': return <HuyHieu variant="warning">Đang yêu cầu</HuyHieu>
       case 'cancelled': return <HuyHieu variant="danger">Đã hủy</HuyHieu>
       default: return <HuyHieu variant="warning">Đang xử lý</HuyHieu>
+    }
+  }
+
+  const handleMarkCompleted = async (p: any) => {
+    const purchaseId = p.id || p._id
+    if (!hasPermission('create_purchase')) {
+      toast.error('Bạn không có quyền cập nhật')
+      return
+    }
+    if (!confirm('Đánh dấu phiếu này đã nhận hàng? Hệ thống sẽ cập nhật tồn kho.')) return
+    try {
+      await purchaseApi.updatePurchase.execute(purchaseId, { status: 'completed' })
+      toast.success('Đã đánh dấu hoàn thành')
+      loadData()
+    } catch (error) {
+      toast.error('Không thể cập nhật trạng thái')
     }
   }
 
@@ -163,7 +181,7 @@ export const TrangNhapHang = () => {
             {
               header: 'Nhà cung cấp',
               // 👇 SỬ DỤNG HÀM TRA CỨU ĐỂ HIỂN THỊ TÊN
-              accessor: (p: any) => <span className="font-medium text-blue-600">{getSupplierName(p.supplier)}</span>,
+              accessor: (p: any) => <span className="font-medium text-blue-600">{getSupplierName(p.supplier, p)}</span>,
             },
             {
               header: 'Tổng tiền',
@@ -184,10 +202,15 @@ export const TrangNhapHang = () => {
             {
               header: 'Thao tác',
               accessor: (p: any) => (
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 items-center">
                   <button onClick={() => navigate(`/purchases/${p.id || p._id}`)} className="p-2 text-blue-600 hover:bg-blue-50 rounded" title="Xem chi tiết">
                     <FileText size={16} />
                   </button>
+                  {p.status === 'requesting' && hasPermission('create_purchase') && (
+                    <button onClick={() => handleMarkCompleted(p)} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded" title="Đánh dấu đã nhận hàng">
+                      <Truck size={16} />
+                    </button>
+                  )}
                   {hasPermission('delete_product') && (
                     <button onClick={() => handleDelete(p.id || p._id)} className="p-2 text-red-600 hover:bg-red-50 rounded" title="Xóa">
                       <Trash2 size={16} />

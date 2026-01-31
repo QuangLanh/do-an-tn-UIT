@@ -15,6 +15,7 @@ import { DropdownTimKiem } from '@/giao-dien/components/DropdownTimKiem'
 import { UploadAnh } from '@/giao-dien/components/UploadAnh'
 import { Product, CreateProductDto } from '@/linh-vuc/products/entities/Product'
 import { productApi } from '@/ha-tang/api/productApi'
+import { supplierApi } from '@/ha-tang/api/supplierApi'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
 import { formatCurrency } from '@/ha-tang/utils/formatters'
 import toast from 'react-hot-toast'
@@ -47,15 +48,9 @@ export const TrangSanPham = () => {
   // 🔥 FIX LỖI QUYỀN ADMIN (CHẤP NHẬN CẢ HOA LẪN THƯỜNG)
   // ========================================================================
   const isAdmin = useMemo(() => {
-    // 1. Lấy role ra, chuyển về chuỗi, xóa khoảng trắng, chuyển thành chữ HOA
-    const role = String((user as any)?.role || '').trim().toUpperCase();
-
-    // 2. In ra Console để debug (Bạn nhớ F12 xem tab Console nhé)
-    console.log("👉 DEBUG ROLE:", role);
-
-    // 3. So sánh
-    return role === 'ADMIN' || role === 'QUAN_TRI_VIEN' || role === 'ROOT';
-  }, [user]);
+    const role = String((user as any)?.role || '').trim().toUpperCase()
+    return role === 'ADMIN' || role === 'QUAN_TRI_VIEN' || role === 'ROOT'
+  }, [user])
   // ========================================================================
 
   useEffect(() => {
@@ -311,6 +306,7 @@ export const TrangSanPham = () => {
           setEditingProduct(null)
         }}
         product={editingProduct}
+        products={products}
         onSuccess={loadProducts}
       />
 
@@ -334,65 +330,65 @@ interface ProductHopThoaiProps {
   isOpen: boolean
   onClose: () => void
   product: Product | null
+  products: Product[]
   onSuccess: () => void
 }
 
-const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoaiProps) => {
-  const [formData, setFormData] = useState<CreateProductDto>(() => {
-    if (product) {
-      return {
-        name: product.name || '',
-        barcode: product.barcode || '',
-        category: product.category || '',
-        importPrice: product.importPrice || 0,
-        salePrice: product.salePrice || 0,
-        stock: product.stock || 0,
-        unit: product.unit || '',
-        supplier: product.supplier || '',
-        description: product.description || '',
-        imageUrl: product.imageUrl || '',
-      }
-    }
-    return {
-      name: '',
-      barcode: '',
-      category: '',
-      importPrice: 0,
-      salePrice: 0,
-      stock: 0,
-      unit: '',
-      supplier: '',
-      description: '',
-      imageUrl: '',
-    }
-  })
+const emptyFormData: CreateProductDto = {
+  name: '', barcode: '', category: '', importPrice: 0, salePrice: 0, stock: 0,
+  unit: '', supplier: '', description: '', imageUrl: '',
+}
 
+const ProductHopThoai = ({ isOpen, onClose, product, products, onSuccess }: ProductHopThoaiProps) => {
+  const [formData, setFormData] = useState<CreateProductDto>(emptyFormData)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [allProducts, setAllProducts] = useState<Product[]>([])
-  const [barcodeInput, setBarcodeInput] = useState(product?.barcode || '')
+  const [suppliersFromApi, setSuppliersFromApi] = useState<{ name: string }[]>([])
+  const [barcodeInput, setBarcodeInput] = useState('')
   const [isCheckingBarcode, setIsCheckingBarcode] = useState(false)
   const barcodeInputRef = useRef<HTMLInputElement | null>(null)
 
+  // Reset form khi mở modal hoặc chuyển thêm mới / sửa (dùng product?.id tránh re-run do object reference thay đổi)
   useEffect(() => {
     if (isOpen) {
-      productApi.getAllProducts.execute().then(setAllProducts).catch(() => {})
+      if (product) {
+        setFormData({
+          name: product.name || '', barcode: product.barcode || '', category: product.category || '',
+          importPrice: product.importPrice || 0, salePrice: product.salePrice || 0, stock: product.stock || 0,
+          unit: product.unit || '', supplier: product.supplier || '', description: product.description || '',
+          imageUrl: product.imageUrl || '',
+        })
+        setBarcodeInput(product.barcode || '')
+      } else {
+        setFormData({ ...emptyFormData })
+        setBarcodeInput('')
+      }
+    }
+  }, [isOpen, product?.id])
+
+  // Chỉ gọi API suppliers khi mở modal (products đã có từ parent)
+  useEffect(() => {
+    if (isOpen) {
+      supplierApi.getAll.execute().then((data: any) => {
+        setSuppliersFromApi(Array.isArray(data) ? data : [])
+      }).catch(() => setSuppliersFromApi([]))
     }
   }, [isOpen])
 
   const categories = useMemo(() => {
-    const uniqueCategories = Array.from(new Set(allProducts.map((p) => p.category).filter(Boolean)))
+    const uniqueCategories = Array.from(new Set(products.map((p) => p.category).filter(Boolean)))
     return uniqueCategories.sort()
-  }, [allProducts])
+  }, [products])
 
   const suppliers = useMemo(() => {
-    const uniqueSuppliers = Array.from(new Set(allProducts.map((p) => p.supplier).filter(Boolean)))
-    return uniqueSuppliers.sort()
-  }, [allProducts])
+    const fromApi = suppliersFromApi.map((s: any) => s.name || s.code || '').filter(Boolean)
+    const fromProducts = Array.from(new Set(products.map((p) => p.supplier).filter(Boolean)))
+    return [...new Set([...fromApi, ...fromProducts])].sort()
+  }, [suppliersFromApi, products])
 
   const units = useMemo(() => {
-    const uniqueUnits = Array.from(new Set(allProducts.map((p) => p.unit).filter(Boolean)))
+    const uniqueUnits = Array.from(new Set(products.map((p) => p.unit).filter(Boolean)))
     return uniqueUnits.sort()
-  }, [allProducts])
+  }, [products])
 
   const handleBarcodeScan = async () => {
     const code = barcodeInput.trim()
@@ -417,7 +413,6 @@ const ProductHopThoai = ({ isOpen, onClose, product, onSuccess }: ProductHopThoa
         toast.success(`Đã tìm thấy sản phẩm: ${existingProduct.name}`)
       } else {
         setFormData((prev) => ({ ...prev, barcode: code }))
-        toast('Chưa tìm thấy sản phẩm với barcode này. Vui lòng điền thông tin sản phẩm.')
         toast('Chưa tìm thấy sản phẩm với barcode này. Vui lòng điền thông tin sản phẩm.')
         // Focus vào trường tên sản phẩm
         setTimeout(() => {

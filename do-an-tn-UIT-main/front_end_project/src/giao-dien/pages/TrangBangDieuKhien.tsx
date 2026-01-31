@@ -44,42 +44,35 @@ export const TrangBangDieuKhien = () => {
 const loadData = async () => {
     try {
       setIsLoading(true)
-      
-      // 1. Tải danh sách sản phẩm (giữ nguyên)
-      const productsData = await productApi.getAllProducts.execute()
-      setProducts(productsData)
 
-      // 2. Tải thống kê từ Dashboard API (bao gồm cả thống kê ghi nợ)
-      const dashboardSummary = await apiService.dashboard.summary()
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const todayEnd = new Date()
+      todayEnd.setHours(23, 59, 59, 999)
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
+      sevenDaysAgo.setHours(0, 0, 0, 0)
+
+      const [productsData, dashboardSummary, todaySummaryResponse] = await Promise.all([
+        productApi.getAllProducts.execute(),
+        apiService.dashboard.summary(),
+        apiService.transactions.summary({ from: today.toISOString(), to: todayEnd.toISOString() }),
+      ])
+
+      setProducts(productsData)
       if (dashboardSummary.debt) {
         setDebtSummary({
           totalDebtOrders: dashboardSummary.debt.totalDebtOrders || 0,
           totalDebtAmount: dashboardSummary.debt.totalDebtAmount || 0,
         })
       }
-      
-      // 2. Tải thông tin đơn hàng HÔM NAY (giữ nguyên)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const todayEnd = new Date()
-      todayEnd.setHours(23, 59, 59, 999)
-
-      const todaySummaryResponse = await apiService.transactions.summary({
-        from: today.toISOString(),
-        to: todayEnd.toISOString(),
-      })
-
       setTodaySummary({
         revenue: todaySummaryResponse.revenue || 0,
         profit: todaySummaryResponse.profit || 0,
         orders: todaySummaryResponse.totalOrders || 0,
       })
-      
-      // 3. Tải dữ liệu biểu đồ 7 ngày (SỬA ĐOẠN NÀY)
-      const sevenDaysAgo = new Date()
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
-      sevenDaysAgo.setHours(0, 0, 0, 0)
-      
+
+      // 3. Dữ liệu biểu đồ 7 ngày
       const days = []
       for (let i = 0; i < 7; i++) {
         const date = new Date(sevenDaysAgo)
@@ -87,38 +80,26 @@ const loadData = async () => {
         days.push(date)
       }
       
-      const salesData = []
-      
-      // --- BẮT ĐẦU SỬA ---
-      // Thay vì gọi orderApi rồi tự cộng, ta gọi api transaction summary cho từng ngày
-      // Cách này đảm bảo logic tính lợi nhuận Y HỆT như Backend
-      for (const day of days) {
-        const startOfDay = new Date(day);
-        startOfDay.setHours(0, 0, 0, 0);
-        
-        const endOfDay = new Date(day);
-        endOfDay.setHours(23, 59, 59, 999);
-
-        // Gọi API thống kê cho ngày 'day'
-        const dailySummary = await apiService.transactions.summary({
+      // Gọi API song song cho 7 ngày (tránh load chậm)
+      const salesData = await Promise.all(
+        days.map(async (day) => {
+          const startOfDay = new Date(day)
+          startOfDay.setHours(0, 0, 0, 0)
+          const endOfDay = new Date(day)
+          endOfDay.setHours(23, 59, 59, 999)
+          const dailySummary = await apiService.transactions.summary({
             from: startOfDay.toISOString(),
-            to: endOfDay.toISOString()
-        });
-        
-        // Format ngày hiển thị VN
-        const year = day.getFullYear();
-        const month = String(day.getMonth() + 1).padStart(2, '0');
-        const dateNum = String(day.getDate()).padStart(2, '0');
-        const dateStr = `${year}-${month}-${dateNum}`;
-
-        salesData.push({
-          date: dateStr,
-          revenue: dailySummary.revenue || 0,
-          profit: dailySummary.profit || 0, // Lấy trực tiếp từ Backend (đã trừ giá vốn đúng)
-          orders: dailySummary.totalOrders || 0
+            to: endOfDay.toISOString(),
+          })
+          const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
+          return {
+            date: dateStr,
+            revenue: dailySummary.revenue || 0,
+            profit: dailySummary.profit || 0,
+            orders: dailySummary.totalOrders || 0,
+          }
         })
-      }
-      // --- KẾT THÚC SỬA ---
+      )
 
       setDailySales(salesData)
 

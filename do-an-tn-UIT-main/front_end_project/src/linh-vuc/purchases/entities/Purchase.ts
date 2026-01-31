@@ -14,7 +14,7 @@ export interface PurchaseItem {
   subtotal: number
 }
 
-export type PurchaseStatus = 'pending' | 'completed' | 'cancelled'
+export type PurchaseStatus = 'pending' | 'requesting' | 'completed' | 'cancelled'
 
 export interface Purchase {
   id: string

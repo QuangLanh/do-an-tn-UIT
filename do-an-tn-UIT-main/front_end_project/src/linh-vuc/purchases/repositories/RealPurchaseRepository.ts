@@ -22,11 +22,13 @@ import { apiService } from '@/ha-tang/api'
  * Map backend purchase response to frontend Purchase entity
  */
 function mapBackendToFrontend(backendPurchase: any): Purchase {
-  const items: PurchaseItem[] = (backendPurchase.items || []).map((item: any) => {
+  const items: PurchaseItem[] = (backendPurchase.items || []).map((item: any, index: number) => {
     // Backend returns product as ObjectId or populated object
+    const productIdRaw = typeof item.product === 'string' ? item.product : (item.product?._id ?? item.product?.id)
+    const productIdStr = productIdRaw != null ? String(productIdRaw) : ''
     const product: Product = item.product && typeof item.product === 'object'
       ? {
-          id: item.product._id || item.product.id,
+          id: productIdStr || String(item.product._id ?? item.product.id ?? ''),
           name: item.product.name || item.productName,
           category: item.product.category || '',
           importPrice: item.product.purchasePrice || item.purchasePrice || 0,
@@ -52,8 +54,8 @@ function mapBackendToFrontend(backendPurchase: any): Purchase {
         }
 
     return {
-      id: item._id || item.id || '',
-      productId: typeof item.product === 'string' ? item.product : (item.product?._id || item.product?.id || ''),
+      id: item._id || item.id || `item-${productIdStr}-${index}`,
+      productId: productIdStr,
       product,
       quantity: item.quantity,
       unitPrice: item.purchasePrice || item.unitPrice || 0,
@@ -61,13 +63,15 @@ function mapBackendToFrontend(backendPurchase: any): Purchase {
     }
   })
 
+  const rawSupplier = backendPurchase.supplier || backendPurchase.supplierName || ''
+  const isObjectId = typeof rawSupplier === 'string' && /^[a-f0-9]{24}$/i.test(rawSupplier)
   return {
     id: backendPurchase._id || backendPurchase.id,
     purchaseNumber: backendPurchase.purchaseNumber || '',
     items,
     totalAmount: backendPurchase.total || backendPurchase.totalAmount || 0,
-    supplierId: backendPurchase.supplierId,
-    supplierName: backendPurchase.supplier || backendPurchase.supplierName || '',
+    supplierId: backendPurchase.supplierId || (isObjectId ? rawSupplier : undefined),
+    supplierName: rawSupplier,
     status: backendPurchase.status || 'pending',
     notes: backendPurchase.notes,
     createdAt: new Date(backendPurchase.createdAt || Date.now()),
@@ -80,16 +84,20 @@ function mapBackendToFrontend(backendPurchase: any): Purchase {
  * Map frontend CreatePurchaseDto to backend DTO
  */
 function mapFrontendToBackend(purchaseDto: CreatePurchaseDto | UpdatePurchaseDto): any {
-  return {
+  const payload: any = {
     items: purchaseDto.items?.map((item: any) => ({
       productId: item.productId,
       quantity: item.quantity,
       purchasePrice: item.unitPrice,
     })),
-    supplier: purchaseDto.supplierName,
+    supplier: purchaseDto.supplierId || purchaseDto.supplierName,
     supplierContact: '',
     notes: purchaseDto.notes,
   }
+  if ('status' in purchaseDto && purchaseDto.status) {
+    payload.status = purchaseDto.status
+  }
+  return payload
 }
 
 /**
