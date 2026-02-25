@@ -5,7 +5,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { apiService } from '@/ha-tang/api'
+import { API_ENDPOINTS, apiClient } from '@/ha-tang/api'
 
 interface SidebarState {
   isOpen: boolean
@@ -33,11 +33,18 @@ export const useSidebarStore = create<SidebarState>()(
 
       refreshPendingOrdersCount: async () => {
         try {
-          const data = await apiService.orders.list({
+          // Gọi API trực tiếp và đánh dấu skipGlobalLoading để không bật spinner toàn cục
+          const url = API_ENDPOINTS.orders.list({
             status: 'pending',
             isOnline: true,
           })
-          const raw = Array.isArray(data) ? data : (data as any)?.data
+          const response = await apiClient.get(url, {
+            // Thuộc tính custom, interceptor sẽ đọc để bỏ qua spinner
+            // (đã khai báo trong LoadingAwareConfig)
+            skipGlobalLoading: true as any,
+          } as any)
+
+          const raw = Array.isArray(response.data) ? response.data : (response as any)?.data
           const list = Array.isArray(raw) ? raw : []
           const count = list.length
           set({ pendingOrdersCount: count })

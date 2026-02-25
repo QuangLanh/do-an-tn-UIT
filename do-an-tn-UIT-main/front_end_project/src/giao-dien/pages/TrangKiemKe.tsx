@@ -15,7 +15,6 @@ import { PhanTrang } from '@/giao-dien/components/PhanTrang'
 import { NutBam } from '@/giao-dien/components/NutBam'
 import { Product } from '@/linh-vuc/products/entities/Product'
 import { InventoryAlert } from '@/linh-vuc/inventory/entities/InventoryAlert'
-import { productApi } from '@/ha-tang/api/productApi'
 import { purchaseApi } from '@/ha-tang/api/purchaseApi'
 import { supplierApi } from '@/ha-tang/api/supplierApi'
 import { InventoryService } from '@/linh-vuc/inventory/services/InventoryService'
@@ -23,13 +22,13 @@ import { formatCurrency } from '@/ha-tang/utils/formatters'
 import { CreatePurchaseDto } from '@/linh-vuc/purchases/entities/Purchase'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
+import { useProductStore } from '@/kho-trang-thai/khoSanPham'
 
 const inventoryService = new InventoryService()
 
 export const TrangKiemKe = () => {
-  const [products, setProducts] = useState<Product[]>([])
+  const { products, isLoading, loadProducts } = useProductStore()
   const [alerts, setAlerts] = useState<InventoryAlert[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [alertsCurrentPage, setAlertsCurrentPage] = useState(1)
   const [alertsItemsPerPage, setAlertsItemsPerPage] = useState(10)
   const [productsCurrentPage, setProductsCurrentPage] = useState(1)
@@ -48,14 +47,13 @@ export const TrangKiemKe = () => {
 
   const loadData = async () => {
     try {
-      const data = await productApi.getAllProducts.execute()
-      setProducts(data)
+      const data = await loadProducts()
       const generatedAlerts = inventoryService.generateInventoryAlerts(data)
       setAlerts(generatedAlerts)
     } catch (error) {
       toast.error('Không thể tải dữ liệu tồn kho')
     } finally {
-      setIsLoading(false)
+      // isLoading do store quản lý
     }
   }
 

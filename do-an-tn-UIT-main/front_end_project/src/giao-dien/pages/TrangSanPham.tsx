@@ -3,7 +3,7 @@
  * Trang quản lý sản phẩm với CRUD operations
  */
 
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo, useRef, lazy, Suspense } from 'react'
 import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react'
 import { NutBam } from '@/giao-dien/components/NutBam'
 import { NhapLieu } from '@/giao-dien/components/NhapLieu'
@@ -17,19 +17,19 @@ import { Product, CreateProductDto } from '@/linh-vuc/products/entities/Product'
 import { productApi } from '@/ha-tang/api/productApi'
 import { supplierApi } from '@/ha-tang/api/supplierApi'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
+import { useProductStore } from '@/kho-trang-thai/khoSanPham'
 import { formatCurrency } from '@/ha-tang/utils/formatters'
 import toast from 'react-hot-toast'
 
-// --- IMPORT REACT QUILL ---
-import ReactQuill from 'react-quill';
+// --- LAZY LOAD REACT QUILL ---
+const ReactQuill = lazy(() => import('react-quill'));
 import 'react-quill/dist/quill.snow.css';
 // -----------------------------
 
 export const TrangSanPham = () => {
-  const [products, setProducts] = useState<Product[]>([])
+  const { products, isLoading: productsLoading, loadProducts: loadProductsFromStore } = useProductStore()
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
 
   // State cho Modal Thêm/Sửa
   const [isHopThoaiOpen, setIsHopThoaiOpen] = useState(false)
@@ -80,13 +80,10 @@ export const TrangSanPham = () => {
 
   const loadProducts = async () => {
     try {
-      const data = await productApi.getAllProducts.execute()
-      setProducts(data)
+      const data = await loadProductsFromStore()
       setFilteredProducts(data)
     } catch (error) {
       toast.error('Không thể tải danh sách sản phẩm')
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -233,7 +230,7 @@ export const TrangSanPham = () => {
     },
   ]
 
-  if (isLoading) {
+  if (productsLoading && filteredProducts.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-gray-500 dark:text-gray-400">Đang tải...</div>
@@ -588,13 +585,15 @@ const ProductHopThoai = ({ isOpen, onClose, product, products, onSuccess }: Prod
             Mô tả sản phẩm
           </label>
           <div className="bg-white text-gray-900 rounded-lg overflow-hidden">
-            <ReactQuill
-              theme="snow"
-              value={formData.description}
-              onChange={(value) => setFormData({ ...formData, description: value })}
-              modules={quillModules}
-              className="h-48 mb-12"
-            />
+            <Suspense fallback={<div className="p-4 text-sm text-gray-500">Đang tải trình soạn thảo...</div>}>
+              <ReactQuill
+                theme="snow"
+                value={formData.description}
+                onChange={(value) => setFormData({ ...formData, description: value })}
+                modules={quillModules}
+                className="h-48 mb-12"
+              />
+            </Suspense>
           </div>
         </div>
 

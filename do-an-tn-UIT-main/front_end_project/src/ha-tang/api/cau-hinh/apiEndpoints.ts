@@ -139,6 +139,13 @@ export const API_ENDPOINTS = {
       const queryString = query.toString()
       return `/transactions/summary${queryString ? `?${queryString}` : ''}`
     },
+    dailySummary: (params?: { from?: string; to?: string }) => {
+      const query = new URLSearchParams()
+      if (params?.from) query.append('from', params.from)
+      if (params?.to) query.append('to', params.to)
+      const queryString = query.toString()
+      return `/transactions/daily-summary${queryString ? `?${queryString}` : ''}`
+    },
     monthly: (year?: number) => {
       const query = new URLSearchParams()
       if (year) query.append('year', year.toString())

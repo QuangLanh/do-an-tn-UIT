@@ -18,6 +18,16 @@ export class PurchaseItem {
 
   @Prop({ required: true })
   subtotal: number;
+
+  // Thông tin lô hàng (tùy chọn) - phục vụ quản lý hạn sử dụng
+  @Prop()
+  expiryDate?: Date;
+
+  @Prop()
+  manufactureDate?: Date;
+
+  @Prop()
+  lotNumber?: string;
 }
 
 @Schema({ timestamps: true })
@@ -30,6 +40,14 @@ export class Purchase {
 
   @Prop({ required: true })
   supplier: string;
+
+   // Liên kết chuẩn tới nhà cung cấp trong hệ thống (tùy chọn)
+  @Prop({ type: Types.ObjectId, ref: 'NhaCungCap', required: false })
+  supplierId?: Types.ObjectId;
+
+  // Snapshot tên NCC tại thời điểm nhập để tránh thay đổi lịch sử khi đổi tên NCC
+  @Prop()
+  supplierNameSnapshot?: string;
 
   @Prop()
   supplierContact?: string;

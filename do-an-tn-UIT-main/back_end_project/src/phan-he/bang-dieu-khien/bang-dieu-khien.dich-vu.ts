@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DichVuGiaoDich } from '../giao-dich/giao-dich.dich-vu';
 import { DichVuDonHang } from '../don-hang/don-hang.dich-vu';
 import { DichVuSanPham } from '../san-pham/san-pham.dich-vu';
+import { cacheNho } from '../../dung-chung/cache/cache-nho';
 
 @Injectable()
 export class DichVuBangDieuKhien {
@@ -38,6 +39,10 @@ export class DichVuBangDieuKhien {
   }
 
   async getSummary() {
+    const cacheKey = 'dashboard:summary';
+    const cached = cacheNho.get(cacheKey);
+    if (cached) return cached as Awaited<ReturnType<DichVuBangDieuKhien['getSummary']>>;
+
     // 1. Xử lý dữ liệu HÔM NAY (Today)
     const nowVN = this.getCurrentVNDate();
     const todayStr = this.formatVNDate(nowVN); // Luôn ra ngày 13/01 (nếu là hôm nay)
@@ -69,7 +74,7 @@ export class DichVuBangDieuKhien {
 
     // 4. Thống kê ghi nợ
     const debtStatistics = await this.dichVuDonHang.getDebtStatistics();
-    return {
+    const result = {
       today: {
         revenue: todaySummary.revenue,
         orders: todaySummary.totalOrders,
@@ -95,10 +100,17 @@ export class DichVuBangDieuKhien {
         })),
       },
     };
+    cacheNho.set(cacheKey, result);
+    return result;
   }
 
   async getTopProducts(limit: number = 10) {
-    return this.dichVuDonHang.getTopProducts(limit);
+    const cacheKey = `dashboard:top:${limit}`;
+    const cached = cacheNho.get(cacheKey);
+    if (cached) return cached as Awaited<ReturnType<DichVuBangDieuKhien['getTopProducts']>>;
+    const result = await this.dichVuDonHang.getTopProducts(limit);
+    cacheNho.set(cacheKey, result);
+    return result;
   }
 
   async getOrdersTrend(days: number = 7) {

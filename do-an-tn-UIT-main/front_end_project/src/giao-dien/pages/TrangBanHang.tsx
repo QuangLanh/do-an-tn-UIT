@@ -3,33 +3,22 @@
  * Trang bán hàng - sử dụng trực tiếp BieuMauDonHang
  */
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { BieuMauDonHang } from '@/giao-dien/components/BieuMauDonHang'
 import { Product } from '@/linh-vuc/products/entities/Product'
-import { productApi } from '@/ha-tang/api/productApi'
 import { orderApi } from '@/ha-tang/api/orderApi'
+import { useProductStore } from '@/kho-trang-thai/khoSanPham'
 import toast from 'react-hot-toast'
 
 export const TrangBanHang = () => {
-  const [products, setProducts] = useState<Product[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const { products, isLoading, loadProducts } = useProductStore()
 
   useEffect(() => {
-    loadProducts()
-  }, [])
-
-  const loadProducts = async () => {
-    try {
-      setIsLoading(true)
-      const productsData = await productApi.getAllProducts.execute()
-      setProducts(productsData)
-    } catch (error) {
+    loadProducts().catch((error) => {
       console.error('Error loading products:', error)
       toast.error('Có lỗi xảy ra khi tải danh sách sản phẩm')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    })
+  }, [loadProducts])
 
   const handleSubmit = async (orderData: any) => {
     try {

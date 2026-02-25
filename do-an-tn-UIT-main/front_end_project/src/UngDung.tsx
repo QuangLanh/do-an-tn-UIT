@@ -5,13 +5,10 @@
 
 import { useEffect } from 'react'
 import { useThemeStore } from '@/kho-trang-thai/khoChuDe'
-import { useLoadingStore } from '@/kho-trang-thai/khoTai'
-import { Spinner } from '@/giao-dien/components/Spinner'
 import UngDungDinhTuyen from '@/dinh-tuyen/UngDungDinhTuyen'
 
 function UngDung() {
   const { theme } = useThemeStore()
-  const { isLoading } = useLoadingStore()
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -22,10 +19,7 @@ function UngDung() {
   }, [theme])
 
   return (
-    <>
-      <UngDungDinhTuyen />
-      {isLoading && <Spinner />}
-    </>
+    <UngDungDinhTuyen />
   )
 }
 

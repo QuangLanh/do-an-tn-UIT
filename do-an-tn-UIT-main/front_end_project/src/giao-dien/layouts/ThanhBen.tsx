@@ -94,13 +94,11 @@ export const ThanhBen = () => {
     (item) => !item.permission || hasPermission(item.permission)
   )
 
-  // Số đơn hàng online chờ xử lý – refresh khi mount và định kỳ (empty deps tránh re-run gây re-render loop)
-  // useEffect(() => {
-  //   refreshPendingOrdersCount()
-  //   const interval = setInterval(refreshPendingOrdersCount, PENDING_ORDERS_POLL_INTERVAL_MS)
-  //   return () => clearInterval(interval)
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [])
+  // Số đơn hàng online chờ xử lý – load 1 lần khi mount
+  useEffect(() => {
+    refreshPendingOrdersCount()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <>
@@ -155,7 +153,7 @@ export const ThanhBen = () => {
                   {item.icon}
                   <span className="font-medium">{item.label}</span>
                 </div>
-                {item.path === '/orders/list' && pendingOrdersCount > 0 && (
+                {item.path === '/orders' && pendingOrdersCount > 0 && (
                   <span
                     className="flex-shrink-0 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-semibold"
                     title={`${pendingOrdersCount} đơn hàng chờ xử lý`}

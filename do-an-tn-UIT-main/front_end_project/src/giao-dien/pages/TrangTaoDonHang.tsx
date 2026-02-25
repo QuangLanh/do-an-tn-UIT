@@ -8,14 +8,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { BieuMauDonHang } from '@/giao-dien/components/BieuMauDonHang'
 import { Product } from '@/linh-vuc/products/entities/Product'
 import { Order } from '@/linh-vuc/orders/entities/Order'
-import { productApi } from '@/ha-tang/api/productApi'
 import { orderApi } from '@/ha-tang/api/orderApi'
+import { useProductStore } from '@/kho-trang-thai/khoSanPham'
 import toast from 'react-hot-toast'
 
 export const TrangTaoDonHang = () => {
-  const [products, setProducts] = useState<Product[]>([])
+  const { products, isLoading, loadProducts } = useProductStore()
   const [existingOrder, setExistingOrder] = useState<Order | undefined>(undefined)
-  const [isLoading, setIsLoading] = useState(true)
   const navigate = useNavigate()
   const { id } = useParams()
   const isEditMode = !!id
@@ -26,11 +25,7 @@ export const TrangTaoDonHang = () => {
 
   const loadData = async () => {
     try {
-      setIsLoading(true)
-      
-      // Load products
-      const productsData = await productApi.getAllProducts.execute()
-      setProducts(productsData)
+      await loadProducts()
       
       // If edit mode, load existing order
       if (isEditMode && id) {
@@ -46,7 +41,7 @@ export const TrangTaoDonHang = () => {
       console.error('Error loading data:', error)
       toast.error('Có lỗi xảy ra khi tải dữ liệu')
     } finally {
-      setIsLoading(false)
+      // isLoading được quản lý bởi store; không cần set tại đây
     }
   }
 

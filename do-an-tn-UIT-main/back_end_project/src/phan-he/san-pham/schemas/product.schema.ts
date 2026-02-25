@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export type ProductDocument = Product & Document;
 
@@ -13,6 +13,13 @@ export class Product {
 
   @Prop()
   description?: string;
+
+  // Thông tin mô tả thêm cho báo cáo / hiển thị
+  @Prop()
+  brand?: string;
+
+  @Prop()
+  origin?: string;
 
   @Prop({ required: true })
   category: string;
@@ -37,6 +44,18 @@ export class Product {
 
   @Prop()
   imageUrl?: string;
+
+  // Danh sách tag hỗ trợ tìm kiếm/lọc
+  @Prop({ type: [String], default: [] })
+  tags?: string[];
+
+  // Nhà cung cấp mặc định (tùy chọn)
+  @Prop({ type: Types.ObjectId, ref: 'NhaCungCap' })
+  defaultSupplierId?: Types.ObjectId;
+
+  // Thời hạn sử dụng tính theo tháng (nếu có)
+  @Prop()
+  shelfLifeMonths?: number;
 
   @Prop({ default: true })
   isActive: boolean;

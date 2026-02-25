@@ -4,6 +4,7 @@ import { DichVuSanPham } from '../san-pham/san-pham.dich-vu';
 import { TrangThaiDonHang } from '../../dung-chung/liet-ke/trang-thai-don-hang.enum';
 import * as PDFDocument from 'pdfkit';
 import { Response } from 'express';
+import { cacheNho } from '../../dung-chung/cache/cache-nho';
 
 @Injectable()
 export class DichVuBaoCao {
@@ -115,6 +116,10 @@ export class DichVuBaoCao {
   }
 
   async getDailySalesReport(days: number = 30) {
+    const cacheKey = `reports:daily-sales:${days}`;
+    const cached = cacheNho.get(cacheKey);
+    if (cached) return cached as Awaited<ReturnType<DichVuBaoCao['getDailySalesReport']>>;
+
     const dailyMap = new Map<string, any>();
     for (let i = 0; i < days; i++) {
         const d = new Date();
@@ -146,13 +151,19 @@ export class DichVuBaoCao {
         if (o.orderType !== 'RETURN') dayStat.orders += 1;
     }
 
-    return Array.from(dailyMap.values()).sort((a: any, b: any) =>
+    const result = Array.from(dailyMap.values()).sort((a: any, b: any) =>
         new Date(a.date).getTime() - new Date(b.date).getTime()
     );
+    cacheNho.set(cacheKey, result);
+    return result;
   }
 
   async getTopProductsReport(limit: number = 10) {
-     const orders = await this.dichVuDonHang.findAll({ status: TrangThaiDonHang.COMPLETED });
+    const cacheKey = `reports:top-products:${limit}`;
+    const cached = cacheNho.get(cacheKey);
+    if (cached) return cached as Awaited<ReturnType<DichVuBaoCao['getTopProductsReport']>>;
+
+    const orders = await this.dichVuDonHang.findAll({ status: TrangThaiDonHang.COMPLETED });
      const costMap = await this.getProductCostMap();
      const productMap = new Map<string, any>();
 
@@ -194,9 +205,11 @@ export class DichVuBaoCao {
             }
         }
      }
-     return Array.from(productMap.values())
+     const result = Array.from(productMap.values())
         .sort((a: any, b: any) => b.quantitySold - a.quantitySold)
         .slice(0, limit);
+    cacheNho.set(cacheKey, result);
+    return result;
   }
 
   // --- PDF Export và Inventory giữ nguyên ---

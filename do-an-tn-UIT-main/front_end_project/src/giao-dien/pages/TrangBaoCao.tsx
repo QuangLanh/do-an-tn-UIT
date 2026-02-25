@@ -9,7 +9,7 @@ import { NutBam } from '@/giao-dien/components/NutBam'
 import { TheThongTin } from '@/giao-dien/components/TheThongTin'
 import { BangDuLieu } from '@/giao-dien/components/BangDuLieu'
 import { Product } from '@/linh-vuc/products/entities/Product'
-import { productApi } from '@/ha-tang/api/productApi'
+import { useProductStore } from '@/kho-trang-thai/khoSanPham'
 import { reportApi } from '@/ha-tang/api/reportApi'
 import { formatCurrency, formatDate } from '@/ha-tang/utils/formatters'
 import toast from 'react-hot-toast'
@@ -19,28 +19,29 @@ import jsPDF from 'jspdf'
 // Sử dụng reportApi thay vì khởi tạo ReportService trực tiếp
 
 export const TrangBaoCao = () => {
-  const [products, setProducts] = useState<Product[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const { products, isLoading, loadProducts } = useProductStore()
   const [isLoadingReport, setIsLoadingReport] = useState(true)
   const [isExporting, setIsExporting] = useState(false)
   const reportRef = useRef<HTMLDivElement>(null)
   const [dailySales, setDailySales] = useState<any[]>([])
   const [topProducts, setTopProducts] = useState<any[]>([])
+  const hasLoadedRef = useRef(false)
 
   useEffect(() => {
+    if (hasLoadedRef.current) return
+    hasLoadedRef.current = true
     loadData()
   }, [])
 
   const loadData = async () => {
     try {
-      // Tải dữ liệu sản phẩm
-      const data = await productApi.getAllProducts.execute()
-      setProducts(data)
+      // Tải dữ liệu sản phẩm (dùng cache nếu có)
+      await loadProducts()
     } catch (error) {
       toast.error('Không thể tải dữ liệu báo cáo')
       console.error('Error loading products:', error)
     } finally {
-      setIsLoading(false)
+      // isLoading của sản phẩm được quản lý trong store
     }
   }
 
@@ -105,14 +106,6 @@ export const TrangBaoCao = () => {
     } finally {
       setIsExporting(false)
     }
-  }
-
-  if (isLoading || isLoadingReport) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500 dark:text-gray-400">Đang tải...</div>
-      </div>
-    )
   }
 
   // Calculate summary - safe with default values

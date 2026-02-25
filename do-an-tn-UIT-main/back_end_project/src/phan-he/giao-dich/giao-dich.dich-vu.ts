@@ -1,6 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { DichVuDonHang } from '../don-hang/don-hang.dich-vu';
 import { DichVuNhapHang } from '../nhap-hang/nhap-hang.dich-vu';
+import { cacheNho } from '../../dung-chung/cache/cache-nho';
+
+// Kiểu kết quả chuẩn cho hàm getSummary, dùng lại ở nhiều nơi
+export interface TransactionSummary {
+  revenue: number;
+  cost: number;
+  orderCost: number;
+  purchaseCost: number;
+  profit: number;
+  profitMargin: number;
+  totalOrders: number;
+  totalPurchases: number;
+  averageOrderValue: number;
+  averagePurchaseValue: number;
+  period: {
+    from?: string;
+    to?: string;
+  };
+}
 
 @Injectable()
 export class DichVuGiaoDich {
@@ -24,7 +43,11 @@ export class DichVuGiaoDich {
     }
   }
 
-  async getSummary(from?: Date, to?: Date) {
+  async getSummary(from?: Date, to?: Date): Promise<TransactionSummary> {
+    const cacheKey = `tx:summary:${from?.toISOString() ?? ''}:${to?.toISOString() ?? ''}`;
+    const cached = cacheNho.get<TransactionSummary>(cacheKey);
+    if (cached) return cached;
+
     const orderStats = await this.dichVuDonHang.getStatistics(from, to);
     const purchaseStats = await this.dichVuNhapHang.getStatistics(from, to);
 
@@ -40,7 +63,7 @@ export class DichVuGiaoDich {
     const profit = revenue - cost;
     const profitMargin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
-    return {
+    const result: TransactionSummary = {
       revenue,
       cost,
       orderCost,
@@ -56,6 +79,69 @@ export class DichVuGiaoDich {
         to: to?.toISOString(),
       },
     };
+    cacheNho.set(cacheKey, result);
+    return result;
+  }
+
+  /**
+   * Trả về danh sách thống kê theo từng ngày trong khoảng from - to.
+   * Dùng cho biểu đồ 7 ngày gần nhất trên Dashboard.
+   * Nếu không truyền from/to, mặc định lấy 7 ngày gần nhất (bao gồm hôm nay).
+   */
+  async getDailySummary(from?: Date, to?: Date) {
+    let start = from ? new Date(from) : new Date();
+    let end = to ? new Date(to) : new Date();
+
+    if (!from || !to) {
+      end.setHours(23, 59, 59, 999);
+      start = new Date(end);
+      start.setDate(start.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+    }
+
+    // Bảo đảm start <= end
+    if (start > end) {
+      const tmp = start;
+      start = end;
+      end = tmp;
+    }
+
+    const cacheKey = `tx:daily:${start.toISOString()}:${end.toISOString()}`;
+    const cached = cacheNho.get(cacheKey);
+    if (cached) return cached as Awaited<ReturnType<DichVuGiaoDich['getDailySummary']>>;
+
+    const days: Date[] = [];
+    const cursor = new Date(start);
+    cursor.setHours(0, 0, 0, 0);
+
+    while (cursor <= end) {
+      days.push(new Date(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    const results = [];
+
+    for (const day of days) {
+      const dayStart = new Date(day);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(day);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const summary = await this.getSummary(dayStart, dayEnd);
+      const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(
+        day.getDate(),
+      ).padStart(2, '0')}`;
+
+      results.push({
+        date: dateStr,
+        revenue: summary.revenue || 0,
+        profit: summary.profit || 0,
+        orders: summary.totalOrders || 0,
+      });
+    }
+
+    cacheNho.set(cacheKey, results);
+    return results;
   }
 
   async getMonthlyData(year?: number) {

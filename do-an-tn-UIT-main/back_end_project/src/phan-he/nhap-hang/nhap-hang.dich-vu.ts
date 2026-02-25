@@ -50,6 +50,9 @@ export class DichVuNhapHang {
         quantity: item.quantity,
         purchasePrice: item.purchasePrice,
         subtotal: itemSubtotal,
+        expiryDate: item.expiryDate ? new Date(item.expiryDate) : undefined,
+        manufactureDate: item.manufactureDate ? new Date(item.manufactureDate) : undefined,
+        lotNumber: item.lotNumber,
       });
     }
 
@@ -64,6 +67,10 @@ export class DichVuNhapHang {
       purchaseNumber,
       items: purchaseItems,
       supplier: createPurchaseDto.supplier,
+      supplierId: createPurchaseDto.supplierId
+        ? new Types.ObjectId(createPurchaseDto.supplierId)
+        : undefined,
+      supplierNameSnapshot: createPurchaseDto.supplier,
       supplierContact: createPurchaseDto.supplierContact,
       total,
       notes: createPurchaseDto.notes,

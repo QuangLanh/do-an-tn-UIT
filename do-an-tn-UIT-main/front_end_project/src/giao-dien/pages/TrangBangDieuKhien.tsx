@@ -3,22 +3,21 @@
  * Trang dashboard với thống kê và biểu đồ
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { TheThongKe } from '@/giao-dien/components/TheThongKe'
 import { TheThongTin } from '@/giao-dien/components/TheThongTin'
 import { DollarSign, TrendingUp, ShoppingCart, Package, AlertTriangle, CreditCard } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { productApi } from '@/ha-tang/api/productApi'
-import { orderApi } from '@/ha-tang/api/orderApi'
 import { apiService } from '@/ha-tang/api'
 import { InventoryService } from '@/linh-vuc/inventory/services/InventoryService'
 import { Product } from '@/linh-vuc/products/entities/Product'
 import { formatCurrency } from '@/ha-tang/utils/formatters'
+import { useProductStore } from '@/kho-trang-thai/khoSanPham'
 
 const inventoryService = new InventoryService()
 
 export const TrangBangDieuKhien = () => {
-  const [products, setProducts] = useState<Product[]>([])
+  const { products, loadProducts } = useProductStore()
   const [dailySales, setDailySales] = useState<any[]>([])
   const [topProducts, setTopProducts] = useState<any[]>([])
   const [transactionSummary, setTransactionSummary] = useState<{
@@ -36,8 +35,11 @@ export const TrangBangDieuKhien = () => {
     totalDebtAmount: number
   }>({ totalDebtOrders: 0, totalDebtAmount: 0 })
   const [isLoading, setIsLoading] = useState(true)
+  const hasLoadedRef = useRef(false)
 
   useEffect(() => {
+    if (hasLoadedRef.current) return
+    hasLoadedRef.current = true
     loadData()
   }, [])
 
@@ -53,13 +55,20 @@ const loadData = async () => {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
       sevenDaysAgo.setHours(0, 0, 0, 0)
 
-      const [productsData, dashboardSummary, todaySummaryResponse] = await Promise.all([
-        productApi.getAllProducts.execute(),
+      const [_, dashboardSummary, todaySummaryResponse, dailySummary, summary, topProductsData] = await Promise.all([
+        loadProducts(),
         apiService.dashboard.summary(),
         apiService.transactions.summary({ from: today.toISOString(), to: todayEnd.toISOString() }),
+        apiService.transactions.dailySummary({
+          from: sevenDaysAgo.toISOString(),
+          to: todayEnd.toISOString(),
+        }),
+        apiService.transactions.summary({
+          from: sevenDaysAgo.toISOString(),
+          to: todayEnd.toISOString(),
+        }),
+        apiService.dashboard.topProducts(5),
       ])
-
-      setProducts(productsData)
       if (dashboardSummary.debt) {
         setDebtSummary({
           totalDebtOrders: dashboardSummary.debt.totalDebtOrders || 0,
@@ -72,75 +81,15 @@ const loadData = async () => {
         orders: todaySummaryResponse.totalOrders || 0,
       })
 
-      // 3. Dữ liệu biểu đồ 7 ngày
-      const days = []
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(sevenDaysAgo)
-        date.setDate(date.getDate() + i)
-        days.push(date)
-      }
-      
-      // Gọi API song song cho 7 ngày (tránh load chậm)
-      const salesData = await Promise.all(
-        days.map(async (day) => {
-          const startOfDay = new Date(day)
-          startOfDay.setHours(0, 0, 0, 0)
-          const endOfDay = new Date(day)
-          endOfDay.setHours(23, 59, 59, 999)
-          const dailySummary = await apiService.transactions.summary({
-            from: startOfDay.toISOString(),
-            to: endOfDay.toISOString(),
-          })
-          const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
-          return {
-            date: dateStr,
-            revenue: dailySummary.revenue || 0,
-            profit: dailySummary.profit || 0,
-            orders: dailySummary.totalOrders || 0,
-          }
-        })
-      )
+      // 3. Dữ liệu biểu đồ 7 ngày (đã được backend trả sẵn)
+      setDailySales(dailySummary || [])
 
-      setDailySales(salesData)
-
-      // 4. Tổng kết 7 ngày (giữ nguyên)
-      const summary = await apiService.transactions.summary({
-        from: sevenDaysAgo.toISOString(),
-        to: todayEnd.toISOString(),
-      })
-
+      // 4. Tổng kết 7 ngày
       setTransactionSummary({
         revenue: summary.revenue || 0,
         profit: summary.profit || 0,
         cost: summary.cost || 0,
       })
-      
-      // 5. Top sản phẩm (giữ nguyên logic hoặc tối ưu sau)
-      const allOrders = await orderApi.getAllOrders.execute()
-      const completedOrders = allOrders.filter(o => o.status === 'completed')
-      const productSales = new Map()
-      
-      for (const order of completedOrders) {
-        for (const item of order.items) {
-          const productId = item.productId
-          const currentSales = productSales.get(productId) || {
-            productId,
-            productName: item.product.name,
-            quantitySold: 0,
-            revenue: 0,
-            profit: 0
-          }
-          currentSales.quantitySold += item.quantity
-          currentSales.revenue += item.subtotal
-          // Phần top sản phẩm này chỉ để hiển thị tương đối, có thể giữ nguyên
-          currentSales.profit += (item.unitPrice - (item.product.importPrice || 0)) * item.quantity
-          productSales.set(productId, currentSales)
-        }
-      }
-      
-      const topProductsData = Array.from(productSales.values())
-        .sort((a, b) => b.quantitySold - a.quantitySold)
-        .slice(0, 5)
       
       setTopProducts(topProductsData)
 

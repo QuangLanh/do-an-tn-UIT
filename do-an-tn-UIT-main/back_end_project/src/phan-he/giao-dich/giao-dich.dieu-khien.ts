@@ -33,6 +33,20 @@ export class DieuKhienGiaoDich {
     return this.dichVuGiaoDich.getSummary(fromDate, toDate);
   }
 
+  @Get('daily-summary')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiOperation({
+    summary: 'Get daily transaction summary in a date range (for charts)',
+  })
+  @ApiResponse({ status: 200, description: 'Return daily transaction summary list' })
+  @ApiQuery({ name: 'from', required: false })
+  @ApiQuery({ name: 'to', required: false })
+  getDailySummary(@Query('from') from?: string, @Query('to') to?: string) {
+    const fromDate = from ? new Date(from) : undefined;
+    const toDate = to ? new Date(to) : undefined;
+    return this.dichVuGiaoDich.getDailySummary(fromDate, toDate);
+  }
+
   @Get('monthly')
   @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({

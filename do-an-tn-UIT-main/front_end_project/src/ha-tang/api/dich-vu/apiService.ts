@@ -190,6 +190,9 @@ export class ApiService extends BaseApiService {
 
     monthly: (year?: number) =>
       this.get(API_ENDPOINTS.transactions.monthly(year)),
+
+    dailySummary: (params?: { from?: string; to?: string }) =>
+      this.get(API_ENDPOINTS.transactions.dailySummary(params)),
   }
 
   // ==================== REPORTS ====================

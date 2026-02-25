@@ -92,7 +92,10 @@ async function gieoDuLieu() {
           sku: taoSKU(tenSanPham) + '-' + Math.floor(Math.random() * 10000),
           
           description: sp.description || `<div>Sản phẩm ${tenSanPham}</div>`,
+          brand: sp.brand || undefined,
+          origin: sp.origin || undefined,
           category: sp.category || 'Chưa phân loại',
+          tags: Array.isArray(sp.tags) ? sp.tags : [],
           
           purchasePrice: sp.importPrice || (sp.price ? Math.round(sp.price * 0.7) : 0),
           salePrice: sp.price || 0,
@@ -102,9 +105,10 @@ async function gieoDuLieu() {
           unit: sp.unit || 'cái',
           
           imageUrl: sp.imageUrl || '', 
-          images: sp.images || (sp.imageUrl ? [sp.imageUrl] : []), 
-          
-          status: 'active'
+          // images & status được giữ lại trong file JSON để frontend có thể dùng,
+          // nhưng schema backend hiện chỉ lưu imageUrl/isActive
+          // isActive luôn true cho dữ liệu seed
+          isActive: true,
         };
 
         await dichVuSanPham.create(sanPhamMoi);

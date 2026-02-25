@@ -17,7 +17,6 @@ import { TheThongTin } from '@/giao-dien/components/TheThongTin'
 
 // API Clients
 import { apiClient } from '@/ha-tang/api/index'
-import { productApi } from '@/ha-tang/api/productApi'
 import { purchaseApi } from '@/ha-tang/api/purchaseApi'
 import { supplierApi } from '@/ha-tang/api/supplierApi'
 import { normalizePhoneInput, isValidPhone10 } from '@/ha-tang/utils/formatters'
@@ -26,9 +25,10 @@ import { normalizePhoneInput, isValidPhone10 } from '@/ha-tang/utils/formatters'
 import { Product } from '@/linh-vuc/products/entities/Product'
 import { Purchase } from '@/linh-vuc/purchases/entities/Purchase'
 import { Supplier } from '@/linh-vuc/suppliers/entities/Supplier'
+import { useProductStore } from '@/kho-trang-thai/khoSanPham'
 
 export const TrangTaoNhapHang = () => {
-  const [products, setProducts] = useState<Product[]>([])
+  const { products, isLoading: isProductLoading, loadProducts } = useProductStore()
   const [suppliers, setSuppliers] = useState<Supplier[]>([]) 
   const [selectedSupplierId, setSelectedSupplierId] = useState('') 
   const [existingPurchase, setExistingPurchase] = useState<Purchase | undefined>(undefined)
@@ -52,10 +52,9 @@ export const TrangTaoNhapHang = () => {
     try {
       setIsLoading(true)
       const [productsData, suppliersData] = await Promise.all([
-        productApi.getAllProducts.execute(),
+        loadProducts(),
         supplierApi.getAll.execute()
       ])
-      setProducts(productsData)
       setSuppliers(suppliersData)
 
       if (isEditMode && id) {

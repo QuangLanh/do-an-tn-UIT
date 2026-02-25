@@ -78,6 +78,23 @@ export const BieuMauDonHang = ({
   // --- LOGIC MỚI: QUẢN LÝ KHÁCH HÀNG THÂN THIẾT (SỬA LỖI TRÙNG TÊN) ---
   const [knownCustomers, setKnownCustomers] = useState<KnownCustomer[]>([])
 
+  // Đồng bộ state khi existingOrder được load async (trang chi tiết đơn hàng)
+  useEffect(() => {
+    if (!existingOrder) return
+
+    setItems(existingOrder.items || [])
+    setCustomerName(existingOrder.customerName || '')
+    setCustomerPhone(existingOrder.customerPhone || '')
+    setNotes(existingOrder.notes || '')
+    setDiscount(existingOrder.discount || 0)
+    setCustomerType(existingOrder.customerName ? 'vip' : defaultCustomerType)
+
+    const debt =
+      existingOrder.paymentStatus === 'DEBT' || (existingOrder as any).wasDebt === true || false
+    setIsDebt(debt)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingOrder?.id])
+
   useEffect(() => {
     if (existingOrder) {
       const debt = existingOrder.paymentStatus === 'DEBT' || (existingOrder as any).wasDebt === true

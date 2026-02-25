@@ -15,6 +15,8 @@ import { DichVuSanPham } from '../san-pham/san-pham.dich-vu';
 import { DichVuKhachHang } from '../khach-hang/khach-hang.dich-vu';
 import { TrangThaiDonHang } from '../../dung-chung/liet-ke/trang-thai-don-hang.enum';
 import { ThaoTacTonKho } from '../san-pham/dto/cap-nhat-ton-kho.dto';
+import { DonHangGateway } from './don-hang.gateway';
+import { cacheNho } from '../../dung-chung/cache/cache-nho';
 
 @Injectable()
 export class DichVuDonHang {
@@ -24,7 +26,15 @@ export class DichVuDonHang {
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     private dichVuSanPham: DichVuSanPham,
     private dichVuKhachHang: DichVuKhachHang,
+    private donHangGateway: DonHangGateway,
   ) {}
+
+  /** Xóa cache dashboard/transactions/reports khi có đơn mới hoặc cập nhật */
+  private invalidateDashboardCache(): void {
+    cacheNho.clearByPrefix('dashboard:');
+    cacheNho.clearByPrefix('tx:');
+    cacheNho.clearByPrefix('reports:');
+  }
 
   // --- HÀM HỖ TRỢ: TỰ ĐỘNG ĐIỀN GIÁ VỐN CHO ĐƠN CŨ ---
   private async enrichOrdersWithCost(orders: any[]): Promise<any[]> {
@@ -163,6 +173,8 @@ export class DichVuDonHang {
         quantity: item.quantity,
       });
     }
+    this.donHangGateway.emitOrderCreated(savedOrder);
+    this.invalidateDashboardCache();
     return savedOrder;
   }
 
@@ -313,7 +325,12 @@ export class DichVuDonHang {
       updateData.paymentStatus = 'DEBT';
     }
 
-    return this.orderModel.findByIdAndUpdate(id, updateData, { new: true }).exec();
+    const updated = await this.orderModel.findByIdAndUpdate(id, updateData, { new: true }).exec();
+    if (updated) {
+      this.donHangGateway.emitOrderUpdated(updated);
+      this.invalidateDashboardCache();
+    }
+    return updated;
   }
 
   async payDebt(id: string): Promise<Order> {
@@ -321,7 +338,10 @@ export class DichVuDonHang {
     if (!order) throw new NotFoundException('Order not found');
     order.paymentStatus = 'PAID';
     order.paidAt = new Date();
-    return order.save();
+    const saved = await order.save();
+    this.donHangGateway.emitOrderUpdated(saved);
+    this.invalidateDashboardCache();
+    return saved;
   }
 
   async updateCustomerInfo(id: string, dto: CapNhatThongTinKhachDto): Promise<Order> {
@@ -341,7 +361,10 @@ export class DichVuDonHang {
     if (paymentStatus === 'PAID' && !order.paidAt) {
       order.paidAt = new Date();
     }
-    return order.save();
+    const saved = await order.save();
+    this.donHangGateway.emitOrderUpdated(saved);
+    this.invalidateDashboardCache();
+    return saved;
   }
 
   async findDebts(): Promise<Order[]> {
@@ -549,6 +572,8 @@ export class DichVuDonHang {
     if (originalId) {
       await this.orderModel.findByIdAndUpdate(originalId, { hasAfterSale: true }).exec();
     }
+    this.donHangGateway.emitOrderCreated(saved);
+    this.invalidateDashboardCache();
     return saved;
   }
 
@@ -616,6 +641,8 @@ export class DichVuDonHang {
     if (originalId) {
       await this.orderModel.findByIdAndUpdate(originalId, { hasAfterSale: true }).exec();
     }
+    this.donHangGateway.emitOrderCreated(saved);
+    this.invalidateDashboardCache();
     return saved;
   }
 
@@ -735,7 +762,8 @@ export class DichVuDonHang {
 
     const savedOrder = await order.save();
     this.logger.log(`Customer order created: ${savedOrder.orderNumber}`);
-
+    this.donHangGateway.emitOrderCreated(savedOrder);
+    this.invalidateDashboardCache();
     return savedOrder;
   }
 
@@ -791,7 +819,8 @@ export class DichVuDonHang {
     }
 
     this.logger.log(`Customer order cancelled: ${updatedOrder.orderNumber}`);
-
+    this.donHangGateway.emitOrderUpdated(updatedOrder);
+    this.invalidateDashboardCache();
     return updatedOrder;
   }
 }

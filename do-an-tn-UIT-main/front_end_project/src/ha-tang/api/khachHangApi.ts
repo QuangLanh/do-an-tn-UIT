@@ -18,57 +18,94 @@ const apiClient: AxiosInstance = axios.create({
   },
 })
 
+// Thời gian trễ tối thiểu trước khi hiển thị spinner toàn cục (ms)
+const GLOBAL_LOADING_DELAY = 250;
+
+// Kiểu mở rộng cho config để lưu thông tin loading
+type LoadingAwareConfig = InternalAxiosRequestConfig & {
+  _loadingTimeoutId?: number;
+  _loadingStarted?: boolean;
+  /** Nếu true, bỏ qua spinner global (dùng cho các request nền như badge, socket sync, ...) */
+  skipGlobalLoading?: boolean;
+};
+
 // Request interceptor - Thêm JWT token vào header và bắt đầu loading
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Bắt đầu loading
-    const { startLoading } = useLoadingStore.getState()
-    startLoading()
+    const cfg = config as LoadingAwareConfig;
 
-    const persistedState = localStorage.getItem('auth-storage')
+    // Đặt timer: chỉ bật spinner nếu request > GLOBAL_LOADING_DELAY
+    // và không được đánh dấu skipGlobalLoading
+    if (!cfg.skipGlobalLoading) {
+      const { startLoading } = useLoadingStore.getState();
+      const timeoutId = window.setTimeout(() => {
+        startLoading();
+        cfg._loadingStarted = true;
+      }, GLOBAL_LOADING_DELAY);
+
+      cfg._loadingTimeoutId = timeoutId;
+    }
+
+    const persistedState = localStorage.getItem('auth-storage');
     
     if (persistedState) {
       try {
-        const authData = JSON.parse(persistedState)
+        const authData = JSON.parse(persistedState);
         const token =
           authData?.state?.token ||
           authData?.state?.user?.token
         if (token) {
-          config.headers = config.headers || {}
-          config.headers.Authorization = `Bearer ${token}`
+          config.headers = config.headers || {};
+          config.headers.Authorization = `Bearer ${token}`;
         }
       } catch (error) {
-        console.error('Error parsing auth token:', error)
+        console.error('Error parsing auth token:', error);
       }
     }
     
-    return config
+    return cfg;
   },
   (error: AxiosError) => {
-    // Dừng loading khi có lỗi trong request
-    const { stopLoading } = useLoadingStore.getState()
-    stopLoading()
-    return Promise.reject(error)
+    // Dừng loading khi có lỗi trong request thiết lập
+    const { stopLoading } = useLoadingStore.getState();
+    stopLoading();
+    return Promise.reject(error);
   }
 )
 
 // Response interceptor - Xử lý errors và dừng loading
 apiClient.interceptors.response.use(
   (response: any) => {
-    // Dừng loading khi request thành công
-    const { stopLoading } = useLoadingStore.getState()
-    stopLoading()
-    return response
+    const cfg = (response.config || {}) as LoadingAwareConfig;
+    const { stopLoading } = useLoadingStore.getState();
+
+    // Huỷ timer nếu chưa kịp bật loading
+    if (cfg._loadingTimeoutId) {
+      clearTimeout(cfg._loadingTimeoutId);
+    }
+
+    // Chỉ gọi stopLoading nếu đã từng startLoading cho request này
+    if (cfg._loadingStarted) {
+      stopLoading();
+    }
+
+    return response;
   },
   (error: AxiosError) => {
-    // Dừng loading khi có lỗi
-    const { stopLoading } = useLoadingStore.getState()
-    stopLoading()
+    const cfg = (error.config || {}) as LoadingAwareConfig;
+    const { stopLoading } = useLoadingStore.getState();
+
+    if (cfg && cfg._loadingTimeoutId) {
+      clearTimeout(cfg._loadingTimeoutId);
+    }
+    if (cfg && cfg._loadingStarted) {
+      stopLoading();
+    }
 
     if (error.response) {
       // Server trả về error
-      const { status, data } = error.response
-      const requestUrl = (error.config?.url || '').toLowerCase()
+      const { status, data } = error.response;
+      const requestUrl = (error.config?.url || '').toLowerCase();
 
       if (status === 401) {
         // Không redirect khi 401 từ chính request đăng nhập (tránh refresh trang khi sai mật khẩu / tài khoản khóa)
