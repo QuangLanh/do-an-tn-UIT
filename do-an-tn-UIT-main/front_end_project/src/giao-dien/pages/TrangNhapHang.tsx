@@ -7,6 +7,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { NutBam } from '@/giao-dien/components/NutBam'
 import { TheThongTin } from '@/giao-dien/components/TheThongTin'
+import { HopThoai } from '@/giao-dien/components/HopThoai'
 import { BangDuLieu } from '@/giao-dien/components/BangDuLieu'
 import { PhanTrang } from '@/giao-dien/components/PhanTrang'
 import { HuyHieu } from '@/giao-dien/components/HuyHieu'
@@ -15,9 +16,10 @@ import { NhapLieu } from '@/giao-dien/components/NhapLieu'
 import { purchaseApi } from '@/ha-tang/api/purchaseApi'
 import { supplierApi } from '@/ha-tang/api/supplierApi' // 👈 Import thêm cái này
 import { formatCurrency, formatDateTime } from '@/ha-tang/utils/formatters'
-import { Plus, Search, FileText, Trash2, Truck } from 'lucide-react'
+import { Plus, Search, FileText, Trash2, Truck, Bell } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
+import { PurchaseRecommendation, PurchaseRecommendationItem } from '@/linh-vuc/purchases/entities/PurchaseRecommendation'
 
 export const TrangNhapHang = () => {
   const [purchases, setPurchases] = useState<any[]>([]) // Dùng any cho linh hoạt
@@ -25,6 +27,9 @@ export const TrangNhapHang = () => {
   const [filteredPurchases, setFilteredPurchases] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [isRecommendationsLoading, setIsRecommendationsLoading] = useState(false)
+  const [recommendations, setRecommendations] = useState<PurchaseRecommendation | null>(null)
+  const [isRecommendationModalOpen, setIsRecommendationModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
 
@@ -53,6 +58,7 @@ export const TrangNhapHang = () => {
       setPurchases(sortedData)
       setFilteredPurchases(sortedData)
       setSuppliers(suppliersData) // Lưu NCC để tra cứu
+      await loadRecommendations()
 
     } catch (error) {
       toast.error('Không thể tải dữ liệu')
@@ -101,6 +107,39 @@ export const TrangNhapHang = () => {
     return filteredPurchases.slice(startIndex, startIndex + itemsPerPage)
   }, [filteredPurchases, currentPage, itemsPerPage])
 
+  const recommendedItems = useMemo(() => {
+    if (!recommendations) return []
+    return [
+      ...recommendations.highPriority,
+      ...recommendations.mediumPriority,
+      ...recommendations.lowPriority,
+    ].filter((item) => item.recommendedQuantity > 0)
+  }, [recommendations])
+
+  const recommendedNeedCount = useMemo(() => recommendedItems.length, [recommendedItems])
+
+  const totalRecommendedAmount = useMemo(
+    () =>
+      recommendedItems.reduce(
+        (sum, item) => sum + item.recommendedQuantity * Number(item.suggestedPurchasePrice || 0),
+        0
+      ),
+    [recommendedItems]
+  )
+
+  const loadRecommendations = async () => {
+    try {
+      setIsRecommendationsLoading(true)
+      const recommendationData = await purchaseApi.getRecommendations()
+      setRecommendations(recommendationData)
+    } catch (error) {
+      setRecommendations(null)
+      toast.error('Không thể tải danh sách sản phẩm cần nhập')
+    } finally {
+      setIsRecommendationsLoading(false)
+    }
+  }
+
   const handleDelete = async (id: string) => {
     if (!hasPermission('delete_product')) {
       toast.error('Bạn không có quyền xóa')
@@ -146,14 +185,26 @@ export const TrangNhapHang = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Quản lý nhập hàng</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">Tổng số: {purchases.length} phiếu</p>
         </div>
-        <NutBam onClick={() => navigate('/purchases/new')}>
-          <Plus size={20} className="mr-2" /> Tạo phiếu nhập
-        </NutBam>
+        <div className="flex items-center gap-3">
+          {/* Thông báo số phiếu đang yêu cầu - đồng bộ style với nút hành động */}
+          <button
+            type="button"
+            onClick={() => setIsRecommendationModalOpen(true)}
+            className="inline-flex items-center px-3 py-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300 transition-colors"
+            title="Xem danh sách sản phẩm cần nhập"
+          >
+            <Bell size={18} className="mr-2" />
+            <span className="text-sm font-medium">{recommendedNeedCount} sản phẩm cần nhập</span>
+          </button>
+          <NutBam onClick={() => navigate('/purchases/new')}>
+            <Plus size={20} className="mr-2" /> Tạo phiếu nhập
+          </NutBam>
+        </div>
       </div>
 
       <div className="flex items-center space-x-4">
@@ -232,6 +283,67 @@ export const TrangNhapHang = () => {
           />
         )}
       </TheThongTin>
+
+      <HopThoai
+        isOpen={isRecommendationModalOpen}
+        onClose={() => setIsRecommendationModalOpen(false)}
+        title="Sản phẩm cần nhập"
+        size="lg"
+      >
+        {isRecommendationsLoading ? (
+          <div className="py-8 text-center text-gray-500 dark:text-gray-400">
+            Đang tải dữ liệu gợi ý...
+          </div>
+        ) : recommendedItems.length === 0 ? (
+          <div className="py-8 text-center text-gray-500 dark:text-gray-400">
+            Hiện chưa có sản phẩm cần nhập
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 text-left">
+                    <th className="py-2 pr-2">Sản phẩm</th>
+                    <th className="py-2 px-2">Tồn kho</th>
+                    <th className="py-2 px-2">SL gợi ý nhập</th>
+                    <th className="py-2 px-2">Đơn giá nhập</th>
+                    <th className="py-2 pl-2 text-right">Tổng tiền SP</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recommendedItems.map((item: PurchaseRecommendationItem) => {
+                    const unitPrice = Number(item.suggestedPurchasePrice || 0)
+                    const lineTotal = unitPrice * item.recommendedQuantity
+                    return (
+                      <tr key={`recommended-${item.productId}`} className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-2 pr-2">
+                          <div className="font-medium text-gray-900 dark:text-white">{item.productName}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{item.reason}</div>
+                        </td>
+                        <td className="py-2 px-2">{item.currentStock}</td>
+                        <td className="py-2 px-2 font-semibold text-amber-600 dark:text-amber-400">
+                          {item.recommendedQuantity}
+                        </td>
+                        <td className="py-2 px-2">{formatCurrency(unitPrice)}</td>
+                        <td className="py-2 pl-2 text-right font-semibold">{formatCurrency(lineTotal)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end pt-2 border-t border-gray-200 dark:border-gray-700">
+              <div className="text-sm">
+                <span className="text-gray-600 dark:text-gray-400 mr-2">Tổng tiền gợi ý:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(totalRecommendedAmount)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </HopThoai>
     </div>
   )
 }

@@ -11,6 +11,7 @@ import { BangDuLieu } from './BangDuLieu'
 import { PhanTrang } from './PhanTrang'
 import { Product } from '@/linh-vuc/products/entities/Product'
 import { PurchaseItem, Purchase } from '@/linh-vuc/purchases/entities/Purchase'
+import { PurchaseRecommendation } from '@/linh-vuc/purchases/entities/PurchaseRecommendation'
 import { purchaseApi } from '@/ha-tang/api/purchaseApi'
 import { formatCurrency } from '@/ha-tang/utils/formatters'
 import { Plus, Minus, Trash2, Search } from 'lucide-react'
@@ -19,6 +20,8 @@ import toast from 'react-hot-toast'
 interface BieuMauNhapHangProps {
   existingPurchase?: Purchase
   products: Product[]
+  recommendations?: PurchaseRecommendation | null
+  isRecommendationLoading?: boolean
   onSubmit: (purchase: any) => void
   onCancel: () => void
 }
@@ -26,6 +29,8 @@ interface BieuMauNhapHangProps {
 export const BieuMauNhapHang = ({
   existingPurchase,
   products,
+  recommendations,
+  isRecommendationLoading = false,
   onSubmit,
   onCancel,
 }: BieuMauNhapHangProps) => {
@@ -58,6 +63,9 @@ export const BieuMauNhapHang = ({
     return filteredProducts.slice(startIndex, endIndex)
   }, [filteredProducts, currentPage, itemsPerPage])
 
+  const findProductById = (productId: string): Product | undefined =>
+    products.find((p: any) => String(p.id || p._id) === String(productId))
+
   const handleAddItem = (product: Product) => {
     const existingItemIndex = items.findIndex(item => item.productId === product.id)
     
@@ -76,6 +84,35 @@ export const BieuMauNhapHang = ({
       setItems([...items, newItem])
     }
     toast.success(`Đã thêm ${product.name}`)
+  }
+
+  const handleAddRecommendedItem = (productId: string, suggestedQty: number, suggestedPrice?: number) => {
+    const product = findProductById(productId)
+    if (!product) {
+      toast.error('Không tìm thấy sản phẩm trong danh sách hiện tại')
+      return
+    }
+
+    const qtyToAdd = Math.max(1, Number(suggestedQty || 0))
+    const unitPrice = Number(suggestedPrice || 0) > 0 ? Number(suggestedPrice) : product.importPrice
+    const existingItemIndex = items.findIndex(item => item.productId === product.id)
+
+    if (existingItemIndex >= 0) {
+      const updatedItems = [...items]
+      const item = updatedItems[existingItemIndex]
+      const newQty = item.quantity + qtyToAdd
+      updatedItems[existingItemIndex] = {
+        ...item,
+        quantity: newQty,
+        subtotal: newQty * item.unitPrice
+      }
+      setItems(updatedItems)
+    } else {
+      const newItem = purchaseApi.service.createPurchaseItem(product, qtyToAdd, unitPrice)
+      setItems([...items, newItem])
+    }
+
+    toast.success(`Đã thêm gợi ý: ${product.name}`)
   }
 
   // --- 1. XỬ LÝ NHẬP TỪ BÀN PHÍM (CHO PHÉP XÓA TRẮNG) ---
@@ -204,6 +241,71 @@ export const BieuMauNhapHang = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <TheThongTin title="Gợi ý nhập hàng">
+        <div id="goi-y-nhap-hang-anchor"></div>
+        {isRecommendationLoading ? (
+          <div className="text-center py-6 text-gray-500 dark:text-gray-400">Đang tải gợi ý...</div>
+        ) : !recommendations ? (
+          <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+            Chưa có dữ liệu gợi ý nhập hàng
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              Cập nhật lúc: {new Date(recommendations.generatedAt).toLocaleString('vi-VN')}
+            </div>
+
+            {([
+              { key: 'highPriority', label: 'Ưu tiên cao', color: 'text-red-600 dark:text-red-400' },
+              { key: 'mediumPriority', label: 'Ưu tiên trung bình', color: 'text-amber-600 dark:text-amber-400' },
+              { key: 'lowPriority', label: 'Ưu tiên thấp', color: 'text-emerald-600 dark:text-emerald-400' },
+            ] as const).map((group) => {
+              const list = recommendations[group.key]
+              return (
+                <div key={group.key} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                  <div className={`font-semibold mb-2 ${group.color}`}>
+                    {group.label} ({list.length})
+                  </div>
+                  {list.length === 0 ? (
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Không có sản phẩm</div>
+                  ) : (
+                    <div className="space-y-2 max-h-56 overflow-y-auto">
+                      {list.map((item) => (
+                        <div
+                          key={`${group.key}-${item.productId}`}
+                          className="flex items-start justify-between gap-3 p-2 border border-gray-100 dark:border-gray-800 rounded"
+                        >
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 dark:text-white truncate">{item.productName}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Tồn: {item.currentStock} | Gợi ý: {item.recommendedQuantity}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.reason}</p>
+                          </div>
+                          <NutBam
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() =>
+                              handleAddRecommendedItem(
+                                item.productId,
+                                item.recommendedQuantity,
+                                item.suggestedPurchasePrice
+                              )
+                            }
+                          >
+                            <Plus size={14} className="mr-1" /> Thêm
+                          </NutBam>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </TheThongTin>
 
       {/* 🟢 ĐÃ XÓA PHẦN "THÔNG TIN NHÀ CUNG CẤP" Ở ĐÂY (VÌ ĐÃ CÓ Ở TRANG CHA) */}
 

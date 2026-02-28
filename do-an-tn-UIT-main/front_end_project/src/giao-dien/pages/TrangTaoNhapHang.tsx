@@ -22,16 +22,18 @@ import { supplierApi } from '@/ha-tang/api/supplierApi'
 import { normalizePhoneInput, isValidPhone10 } from '@/ha-tang/utils/formatters'
 
 // Types
-import { Product } from '@/linh-vuc/products/entities/Product'
 import { Purchase } from '@/linh-vuc/purchases/entities/Purchase'
+import { PurchaseRecommendation } from '@/linh-vuc/purchases/entities/PurchaseRecommendation'
 import { Supplier } from '@/linh-vuc/suppliers/entities/Supplier'
 import { useProductStore } from '@/kho-trang-thai/khoSanPham'
 
 export const TrangTaoNhapHang = () => {
-  const { products, isLoading: isProductLoading, loadProducts } = useProductStore()
+  const { products, loadProducts } = useProductStore()
   const [suppliers, setSuppliers] = useState<Supplier[]>([]) 
   const [selectedSupplierId, setSelectedSupplierId] = useState('') 
   const [existingPurchase, setExistingPurchase] = useState<Purchase | undefined>(undefined)
+  const [recommendations, setRecommendations] = useState<PurchaseRecommendation | null>(null)
+  const [isRecommendationLoading, setIsRecommendationLoading] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -51,11 +53,21 @@ export const TrangTaoNhapHang = () => {
   const loadData = async () => {
     try {
       setIsLoading(true)
-      const [productsData, suppliersData] = await Promise.all([
+      setIsRecommendationLoading(true)
+      const [, suppliersData] = await Promise.all([
         loadProducts(),
         supplierApi.getAll.execute()
       ])
       setSuppliers(suppliersData)
+      try {
+        const recommendationData = await purchaseApi.getRecommendations()
+        setRecommendations(recommendationData)
+      } catch (error) {
+        setRecommendations(null)
+        toast.error('Không thể tải gợi ý nhập hàng')
+      } finally {
+        setIsRecommendationLoading(false)
+      }
 
       if (isEditMode && id) {
         const purchase = await purchaseApi.service.getPurchaseById(id)
@@ -100,7 +112,7 @@ export const TrangTaoNhapHang = () => {
             const prodName = prodObj.name || item.productName;
             if (prodName && products?.length) {
               const found = products.find((p: any) => (p.name || '').toLowerCase() === String(prodName).toLowerCase());
-              rawId = found?.id ?? found?._id;
+              rawId = found?.id;
             }
           }
           const realId = rawId != null && rawId !== '' ? String(rawId).trim() : '';
@@ -253,6 +265,8 @@ export const TrangTaoNhapHang = () => {
         key={refreshKey}
         existingPurchase={existingPurchase}
         products={products}
+        recommendations={recommendations}
+        isRecommendationLoading={isRecommendationLoading}
         onSubmit={handleSubmit}
         onCancel={() => navigate('/purchases')}
       />
