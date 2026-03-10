@@ -39,11 +39,11 @@ export const ThanhBen = () => {
       label: 'Bán hàng',
       icon: <ShoppingCart size={20} />,
     },
-    // {
-    //   path: '/orders/list',
-    //   label: 'Danh sách đơn đặt hàng',
-    //   icon: <ListOrdered size={20} />,
-    // },
+    {
+      path: '/orders/list',
+      label: 'Danh sách đơn đặt hàng',
+      icon: <ListOrdered size={20} />,
+    },
     {
       path: '/orders',
       label: 'Quản lý đơn hàng',
@@ -153,7 +153,7 @@ export const ThanhBen = () => {
                   {item.icon}
                   <span className="font-medium">{item.label}</span>
                 </div>
-                {item.path === '/orders' && pendingOrdersCount > 0 && (
+                {item.path === '/orders/list' && pendingOrdersCount > 0 && (
                   <span
                     className="flex-shrink-0 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-semibold"
                     title={`${pendingOrdersCount} đơn hàng chờ xử lý`}
