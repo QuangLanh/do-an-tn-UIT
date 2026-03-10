@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Trash2, Phone, MapPin } from 'lucide-react'
+import { Plus, Search, Trash2, Phone, MapPin, Eye, Pencil } from 'lucide-react'
 import { NutBam } from '@/giao-dien/components/NutBam'
 import { NhapLieu } from '@/giao-dien/components/NhapLieu'
 import { BangDuLieu } from '@/giao-dien/components/BangDuLieu'
@@ -14,8 +14,12 @@ export const TrangNhaCungCap = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   
-  // Form state
-  const [formData, setFormData] = useState({ name: '', phone: '', address: '', contactPerson: '' })
+  // Quản lý chế độ Modal (Thêm/Sửa/Xem) và ID đang chọn
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  
+  // Form state (Đã đồng bộ 'contact' thay vì 'contactPerson')
+  const [formData, setFormData] = useState({ name: '', phone: '', address: '', contact: '' })
 
   useEffect(() => {
     loadData()
@@ -28,9 +32,38 @@ export const TrangNhaCungCap = () => {
     } catch (error) {
       console.log("Lỗi tải API, dùng dữ liệu mẫu");
       setSuppliers([
-        { id: '1', code: 'NCC001', name: 'Công ty TNHH ABC', phone: '0123456789', address: '123 Đường A, Quận 1', contactPerson: 'Nguyễn Văn A', isActive: true },
+        { id: '1', code: 'NCC001', name: 'Công ty TNHH ABC', phone: '0123456789', address: '123 Đường A, Quận 1', contact: 'Nguyễn Văn A', isActive: true },
       ])
     }
+  }
+
+  const handleAddNew = () => {
+    setModalMode('create')
+    setFormData({ name: '', phone: '', address: '', contact: '' })
+    setIsModalOpen(true)
+  }
+
+  const handleView = (supplier: Supplier) => {
+    setModalMode('view')
+    setFormData({ 
+      name: supplier.name, 
+      phone: supplier.phone, 
+      address: supplier.address || '', 
+      contact: supplier.contact || '' 
+    })
+    setIsModalOpen(true)
+  }
+
+  const handleEdit = (supplier: Supplier) => {
+    setModalMode('edit')
+    setSelectedId(supplier.id || (supplier as any)._id)
+    setFormData({ 
+      name: supplier.name, 
+      phone: supplier.phone, 
+      address: supplier.address || '', 
+      contact: supplier.contact || '' 
+    })
+    setIsModalOpen(true)
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -40,39 +73,54 @@ export const TrangNhaCungCap = () => {
       return
     }
     try {
-      // 1. Tự sinh mã code
-      const randomCode = `NCC${Math.floor(1000 + Math.random() * 9000)}`;
+      if (modalMode === 'create') {
+        const randomCode = `NCC${Math.floor(1000 + Math.random() * 9000)}`;
+        await supplierApi.create.execute({
+          ...formData,
+          code: randomCode
+        } as any)
+        toast.success('Thêm nhà cung cấp thành công')
+      } else if (modalMode === 'edit' && selectedId) {
+        await supplierApi.update.execute(selectedId, formData as any)
+        toast.success('Cập nhật nhà cung cấp thành công')
+      }
 
-      // 2. Gửi API (Gộp code + dữ liệu form)
-      await supplierApi.create.execute({
-        ...formData,      // Bung toàn bộ dữ liệu form ra (name, phone, address, contactPerson)
-        code: randomCode  // Thêm trường code bắt buộc
-      } as any)
-
-      toast.success('Thêm nhà cung cấp thành công')
       setIsModalOpen(false)
       loadData()
-      setFormData({ name: '', phone: '', address: '', contactPerson: '' })
     } catch (error) {
       console.error(error)
-      toast.error('Lỗi khi thêm: Kiểm tra lại xem Backend đã cho phép field contactPerson chưa?')
+      toast.error('Lỗi khi lưu dữ liệu. Kiểm tra lại backend.')
     }
   }
 
-  const handleDelete = async (id: string) => {
+  // ĐÃ SỬA: Nhận toàn bộ object supplier để tự trích xuất ID an toàn
+  const handleDelete = async (supplier: Supplier) => {
+    const finalId = supplier.id || (supplier as any)._id;
+    
+    if (!finalId) {
+      toast.error("Lỗi: Không tìm thấy ID nhà cung cấp.");
+      return;
+    }
+
     if(!confirm("Bạn chắc chắn muốn xóa?")) return;
     try {
-        await supplierApi.delete.execute(id);
-        toast.success("Đã xóa");
+        await supplierApi.delete.execute(finalId);
+        toast.success("Đã xóa thành công");
         loadData();
-    } catch (e) { toast.error("Lỗi xóa"); }
+    } catch (e) { 
+        console.error(e);
+        toast.error("Lỗi xóa nhà cung cấp"); 
+    }
   }
+
+  const modalTitle = modalMode === 'create' ? 'Thêm Nhà Cung Cấp' : 
+                     modalMode === 'edit' ? 'Sửa Nhà Cung Cấp' : 'Chi Tiết Nhà Cung Cấp';
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Nhà Cung Cấp</h1>
-        <NutBam onClick={() => setIsModalOpen(true)}>
+        <NutBam onClick={handleAddNew}>
           <Plus size={20} className="mr-2"/> Thêm NCC
         </NutBam>
       </div>
@@ -98,16 +146,27 @@ export const TrangNhaCungCap = () => {
                     <div className="flex items-center gap-1 text-gray-500"><MapPin size={12}/> {s.address}</div>
                 </div>
             )},
-            { header: 'Người liên hệ', accessor: 'contactPerson' as keyof Supplier },
+            { header: 'Người liên hệ', accessor: 'contact' as keyof Supplier },
             { header: 'Thao tác', accessor: (s: Supplier) => (
-                <button onClick={() => handleDelete(s.id)} className="text-red-500 hover:bg-red-50 p-2 rounded"><Trash2 size={18}/></button>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => handleView(s)} className="text-blue-500 hover:bg-blue-50 p-2 rounded" title="Xem chi tiết"><Eye size={18}/></button>
+                  <button onClick={() => handleEdit(s)} className="text-yellow-500 hover:bg-yellow-50 p-2 rounded" title="Sửa"><Pencil size={18}/></button>
+                  {/* ĐÃ SỬA: Truyền toàn bộ object 's' vào handleDelete */}
+                  <button onClick={() => handleDelete(s)} className="text-red-500 hover:bg-red-50 p-2 rounded" title="Xóa"><Trash2 size={18}/></button>
+                </div>
             )}
         ]} 
       />
 
-      <HopThoai isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Thêm Nhà Cung Cấp">
+      <HopThoai isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalTitle}>
         <form onSubmit={handleSave} className="space-y-4">
-          <NhapLieu label="Tên NCC *" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+          <NhapLieu 
+            label="Tên NCC *" 
+            value={formData.name} 
+            onChange={e => setFormData({...formData, name: e.target.value})} 
+            required 
+            disabled={modalMode === 'view'}
+          />
           <NhapLieu
             label="Số điện thoại *"
             type="tel"
@@ -117,12 +176,28 @@ export const TrangNhaCungCap = () => {
             value={formData.phone}
             onChange={e => setFormData({...formData, phone: normalizePhoneInput(e.target.value)})}
             required
+            disabled={modalMode === 'view'}
           />
-          <NhapLieu label="Người liên hệ" value={formData.contactPerson} onChange={e => setFormData({...formData, contactPerson: e.target.value})} />
-          <NhapLieu label="Địa chỉ" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
+          <NhapLieu 
+            label="Người liên hệ" 
+            value={formData.contact} 
+            onChange={e => setFormData({...formData, contact: e.target.value})} 
+            disabled={modalMode === 'view'}
+          />
+          <NhapLieu 
+            label="Địa chỉ" 
+            value={formData.address} 
+            onChange={e => setFormData({...formData, address: e.target.value})} 
+            disabled={modalMode === 'view'}
+          />
+          
           <div className="flex justify-end gap-3 pt-4">
-            <NutBam type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Hủy</NutBam>
-            <NutBam type="submit">Lưu</NutBam>
+            <NutBam type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
+              {modalMode === 'view' ? 'Đóng' : 'Hủy'}
+            </NutBam>
+            {modalMode !== 'view' && (
+              <NutBam type="submit">Lưu</NutBam>
+            )}
           </div>
         </form>
       </HopThoai>

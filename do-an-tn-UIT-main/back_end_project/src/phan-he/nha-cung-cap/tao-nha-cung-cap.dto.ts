@@ -23,5 +23,5 @@ export class TaoNhaCungCapDto {
 
   @IsString()
   @IsOptional()
-  contactPerson?: string;
+  contact?: string;
 }

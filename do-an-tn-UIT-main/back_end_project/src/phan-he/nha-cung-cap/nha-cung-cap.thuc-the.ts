@@ -6,19 +6,23 @@ export type TaiLieuNhaCungCap = NhaCungCap & Document;
 @Schema({ timestamps: true, collection: 'nha-cung-cap' })
 export class NhaCungCap {
   @Prop({ required: true, unique: true })
-  code: string; // Mã NCC (Ví dụ: NCC001)
+  code: string;
 
   @Prop({ required: true })
-  name: string; // Tên nhà cung cấp
+  name: string;
 
   @Prop({ required: true })
-  phone: string; // Số điện thoại
+  phone: string;
 
   @Prop()
-  address: string; // Địa chỉ
+  address: string;
 
   @Prop()
   email: string;
+
+  // THÊM DÒNG NÀY ĐỂ DATABASE CHỊU LƯU
+  @Prop()
+  contact: string; 
 
   @Prop({ default: true })
   isActive: boolean;

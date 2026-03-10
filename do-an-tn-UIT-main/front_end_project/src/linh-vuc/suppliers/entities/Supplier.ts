@@ -7,7 +7,7 @@ export interface Supplier {
   phone: string;       // Số điện thoại
   address?: string;    // Địa chỉ (không bắt buộc)
   email?: string;      // Email (không bắt buộc)
-  contactPerson?: string; // Người liên hệ
+  contact?: string; // Người liên hệ
   note?: string;       // Ghi chú
   isActive: boolean;   // Trạng thái hoạt động
 }

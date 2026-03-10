@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { NhaCungCap, TaiLieuNhaCungCap } from './nha-cung-cap.thuc-the';
 import { TaoNhaCungCapDto } from './tao-nha-cung-cap.dto';
+import { CapNhatNhaCungCapDto } from './cap-nhat-nha-cung-cap.dto';
 
 @Injectable()
 export class DichVuNhaCungCap {
@@ -13,7 +14,13 @@ export class DichVuNhaCungCap {
     return moi.save();
   }
 
+  async update(id: string, updateDto: CapNhatNhaCungCapDto): Promise<NhaCungCap> {
+    return this.modelNhaCungCap.findByIdAndUpdate(id, updateDto, { new: true }).exec();
+  }
   async layTatCa(): Promise<NhaCungCap[]> {
     return this.modelNhaCungCap.find().exec();
+  }
+  async xoa(id: string) {
+    return this.modelNhaCungCap.findByIdAndDelete(id).exec();
   }
 }
