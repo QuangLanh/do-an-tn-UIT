@@ -3,21 +3,28 @@
  * Trang bán hàng - sử dụng trực tiếp BieuMauDonHang
  */
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { BieuMauDonHang } from '@/giao-dien/components/BieuMauDonHang'
-import { Product } from '@/linh-vuc/products/entities/Product'
 import { orderApi } from '@/ha-tang/api/orderApi'
+import { apiService } from '@/ha-tang/api'
 import { useProductStore } from '@/kho-trang-thai/khoSanPham'
 import toast from 'react-hot-toast'
 
 export const TrangBanHang = () => {
   const { products, isLoading, loadProducts } = useProductStore()
+  const [expiredProductIds, setExpiredProductIds] = useState<string[]>([])
 
   useEffect(() => {
-    loadProducts().catch((error) => {
-      console.error('Error loading products:', error)
-      toast.error('Có lỗi xảy ra khi tải danh sách sản phẩm')
-    })
+    const load = async () => {
+      await loadProducts().catch((error) => {
+        console.error('Error loading products:', error)
+        toast.error('Có lỗi xảy ra khi tải danh sách sản phẩm')
+      })
+      const statusMap = (await apiService.purchases.expiryStatus(7).catch(() => ({}))) as Record<string, { expiredQty?: number }>
+      const expired = Object.entries(statusMap || {}).filter(([, v]) => (v?.expiredQty ?? 0) > 0).map(([k]) => k)
+      setExpiredProductIds(expired)
+    }
+    load()
   }, [loadProducts])
 
   const handleSubmit = async (orderData: any) => {
@@ -61,6 +68,7 @@ export const TrangBanHang = () => {
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         defaultCustomerType="retail"
+        expiredProductIds={expiredProductIds}
       />
     </div>
   )

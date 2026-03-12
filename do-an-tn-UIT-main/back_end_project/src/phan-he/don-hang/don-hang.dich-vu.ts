@@ -13,6 +13,8 @@ import { CapNhatTrangThaiDonHangDto } from './dto/cap-nhat-trang-thai-don-hang.d
 import { CapNhatThongTinKhachDto } from './dto/cap-nhat-thong-tin-khach.dto';
 import { DichVuSanPham } from '../san-pham/san-pham.dich-vu';
 import { DichVuKhachHang } from '../khach-hang/khach-hang.dich-vu';
+import { DichVuNhapHang } from '../nhap-hang/nhap-hang.dich-vu';
+import { DichVuStockBatch } from '../nhap-hang/stock-batch.dich-vu';
 import { TrangThaiDonHang } from '../../dung-chung/liet-ke/trang-thai-don-hang.enum';
 import { ThaoTacTonKho } from '../san-pham/dto/cap-nhat-ton-kho.dto';
 import { DonHangGateway } from './don-hang.gateway';
@@ -26,6 +28,8 @@ export class DichVuDonHang {
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     private dichVuSanPham: DichVuSanPham,
     private dichVuKhachHang: DichVuKhachHang,
+    private dichVuNhapHang: DichVuNhapHang,
+    private dichVuStockBatch: DichVuStockBatch,
     private donHangGateway: DonHangGateway,
   ) {}
 
@@ -109,10 +113,18 @@ export class DichVuDonHang {
     const orderItems = [];
     let subtotal = 0;
 
+    const expiryMap = await this.dichVuNhapHang.getProductExpiryStatusMap(7);
     for (const item of createOrderDto.items) {
       const product = await this.dichVuSanPham.findOne(item.productId);
       if (!product.isActive) throw new BadRequestException(`Product ${product.name} inactive`);
       if (product.stock < item.quantity) throw new BadRequestException(`Insufficient stock`);
+
+      const expiryInfo = expiryMap[item.productId];
+      if (expiryInfo?.expiredQty > 0) {
+        throw new BadRequestException(
+          `Không thể bán sản phẩm "${product.name}" đã hết hạn. Vui lòng loại bỏ hàng hết hạn khỏi tồn kho trước.`,
+        );
+      }
 
       const itemSubtotal = product.salePrice * item.quantity;
       subtotal += itemSubtotal;
@@ -168,10 +180,15 @@ export class DichVuDonHang {
     }
 
     for (const item of createOrderDto.items) {
-      await this.dichVuSanPham.updateStock(item.productId, {
-        operation: ThaoTacTonKho.SUBTRACT,
-        quantity: item.quantity,
-      });
+      const hasBatches = await this.dichVuStockBatch.hasBatches(item.productId);
+      if (hasBatches) {
+        await this.dichVuStockBatch.deductFEFO(item.productId, item.quantity);
+      } else {
+        await this.dichVuSanPham.updateStock(item.productId, {
+          operation: ThaoTacTonKho.SUBTRACT,
+          quantity: item.quantity,
+        });
+      }
     }
     this.donHangGateway.emitOrderCreated(savedOrder);
     this.invalidateDashboardCache();
@@ -518,17 +535,29 @@ export class DichVuDonHang {
         importPrice: giaVon,
       });
       total -= itemSubtotal;
-      await this.dichVuSanPham.updateStock(returnItem.productId, {
-        operation: ThaoTacTonKho.ADD,
-        quantity: returnItem.quantity,
-      });
+      const hasBatchesRet = await this.dichVuStockBatch.hasBatches(returnItem.productId);
+      if (hasBatchesRet) {
+        await this.dichVuStockBatch.addStockForReturn(returnItem.productId, returnItem.quantity, orderItem.productName);
+      } else {
+        await this.dichVuSanPham.updateStock(returnItem.productId, {
+          operation: ThaoTacTonKho.ADD,
+          quantity: returnItem.quantity,
+        });
+      }
     }
 
+    const expiryMapExchange = await this.dichVuNhapHang.getProductExpiryStatusMap(7);
     for (const exchangeItem of dto.exchangeItems) {
       const product = await this.dichVuSanPham.findOne(exchangeItem.productId);
       if (!product?.isActive) throw new BadRequestException(`Sản phẩm không còn bán`);
       if (product.stock < exchangeItem.quantity) {
         throw new BadRequestException(`Sản phẩm ${product.name} không đủ số lượng. Còn: ${product.stock}`);
+      }
+      const expInfo = expiryMapExchange[exchangeItem.productId];
+      if (expInfo?.expiredQty > 0) {
+        throw new BadRequestException(
+          `Không thể bán sản phẩm "${product.name}" đã hết hạn. Vui lòng loại bỏ hàng hết hạn khỏi tồn kho trước.`,
+        );
       }
       const price = product.salePrice ?? product['salePrice'] ?? 0;
       const giaVon = product['importPrice'] ?? product['purchasePrice'] ?? 0;
@@ -542,10 +571,15 @@ export class DichVuDonHang {
         importPrice: giaVon,
       });
       total += itemSubtotal;
-      await this.dichVuSanPham.updateStock(exchangeItem.productId, {
-        operation: ThaoTacTonKho.SUBTRACT,
-        quantity: exchangeItem.quantity,
-      });
+      const hasBatchesEx = await this.dichVuStockBatch.hasBatches(exchangeItem.productId);
+      if (hasBatchesEx) {
+        await this.dichVuStockBatch.deductFEFO(exchangeItem.productId, exchangeItem.quantity);
+      } else {
+        await this.dichVuSanPham.updateStock(exchangeItem.productId, {
+          operation: ThaoTacTonKho.SUBTRACT,
+          quantity: exchangeItem.quantity,
+        });
+      }
     }
 
     const orderNumber = await this.generateExchangeNumber();
@@ -614,9 +648,14 @@ export class DichVuDonHang {
       });
 
       if (returnDto.isRestocked) {
-        await this.dichVuSanPham.updateStock(returnItem.productId, {
-          operation: ThaoTacTonKho.ADD, quantity: returnItem.quantity,
-        });
+        const hasBatchesRet = await this.dichVuStockBatch.hasBatches(returnItem.productId);
+        if (hasBatchesRet) {
+          await this.dichVuStockBatch.addStockForReturn(returnItem.productId, returnItem.quantity, orderItem.productName);
+        } else {
+          await this.dichVuSanPham.updateStock(returnItem.productId, {
+            operation: ThaoTacTonKho.ADD, quantity: returnItem.quantity,
+          });
+        }
       }
     }
 
@@ -675,6 +714,8 @@ export class DichVuDonHang {
       throw new BadRequestException('Đơn hàng phải có ít nhất 1 sản phẩm');
     }
 
+    const expiryMapCustomer = await this.dichVuNhapHang.getProductExpiryStatusMap(7);
+
     // Validate and prepare order items
     const orderItems = [];
     let subtotal = 0;
@@ -693,6 +734,13 @@ export class DichVuDonHang {
         );
       }
 
+      const expInfo = expiryMapCustomer[item.productId];
+      if (expInfo?.expiredQty > 0) {
+        throw new BadRequestException(
+          `Sản phẩm "${product.name}" đã hết hạn, không thể bán.`,
+        );
+      }
+
       const itemSubtotal = item.price * item.quantity;
       subtotal += itemSubtotal;
 
@@ -707,11 +755,16 @@ export class DichVuDonHang {
         importPrice: giaVon,
       });
 
-      // Update stock
-      await this.dichVuSanPham.updateStock(item.productId, {
-        operation: ThaoTacTonKho.SUBTRACT,
-        quantity: item.quantity,
-      });
+      // Update stock (FEFO khi có batches)
+      const hasBatches = await this.dichVuStockBatch.hasBatches(item.productId);
+      if (hasBatches) {
+        await this.dichVuStockBatch.deductFEFO(item.productId, item.quantity);
+      } else {
+        await this.dichVuSanPham.updateStock(item.productId, {
+          operation: ThaoTacTonKho.SUBTRACT,
+          quantity: item.quantity,
+        });
+      }
     }
 
     // Calculate total
@@ -791,12 +844,18 @@ export class DichVuDonHang {
       );
     }
 
-    // Restore stock
+    // Restore stock (dùng batch nếu có, tạo lô hoàn trả)
     for (const item of order.items) {
-      await this.dichVuSanPham.updateStock(item.product.toString(), {
-        operation: ThaoTacTonKho.ADD,
-        quantity: item.quantity,
-      });
+      const productId = item.product?.toString?.() || '';
+      const hasBatches = await this.dichVuStockBatch.hasBatches(productId);
+      if (hasBatches) {
+        await this.dichVuStockBatch.addStockForReturn(productId, item.quantity, item.productName);
+      } else {
+        await this.dichVuSanPham.updateStock(productId, {
+          operation: ThaoTacTonKho.ADD,
+          quantity: item.quantity,
+        });
+      }
     }
 
     // Update order status using findByIdAndUpdate

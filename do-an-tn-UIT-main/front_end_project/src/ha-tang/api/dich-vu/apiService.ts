@@ -67,7 +67,8 @@ export class ApiService extends BaseApiService {
     list: (params?: { category?: string; search?: string; lowStock?: boolean }) =>
       this.get(API_ENDPOINTS.products.list(params)),
 
-    detail: (id: string) => this.get(API_ENDPOINTS.products.detail(id)),
+    detail: (id: string, noCache?: boolean) =>
+      this.get(API_ENDPOINTS.products.detail(id, noCache)),
 
     byBarcode: (barcode: string) => this.get(API_ENDPOINTS.products.byBarcode(barcode)),
 
@@ -181,6 +182,17 @@ export class ApiService extends BaseApiService {
 
     lowPriorityRecommendations: () =>
       this.get(API_ENDPOINTS.purchases.lowPriorityRecommendations()),
+
+    expiryWarnings: (days?: number) =>
+      this.get(API_ENDPOINTS.purchases.expiryWarnings(days)),
+
+    expiryStatus: (days?: number) =>
+      this.get(API_ENDPOINTS.purchases.expiryStatus(days)),
+
+    removeExpired: (productId: string) =>
+      this.post(API_ENDPOINTS.purchases.removeExpired(), { productId }),
+    batchesByProduct: (productId: string) =>
+      this.get(API_ENDPOINTS.purchases.batchesByProduct(productId)),
   }
 
   // ==================== TRANSACTIONS ====================

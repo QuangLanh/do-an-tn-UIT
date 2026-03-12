@@ -58,8 +58,12 @@ function mapBackendToFrontend(backendPurchase: any): Purchase {
       productId: productIdStr,
       product,
       quantity: item.quantity,
+      orderedQuantity: item.orderedQuantity ?? item.quantity,
       unitPrice: item.purchasePrice || item.unitPrice || 0,
       subtotal: item.subtotal || item.quantity * (item.purchasePrice || 0),
+      manufactureDate: item.manufactureDate ? String(item.manufactureDate).slice(0, 10) : undefined,
+      expiryDate: item.expiryDate ? String(item.expiryDate).slice(0, 10) : undefined,
+      lotNumber: item.lotNumber,
     }
   })
 
@@ -115,6 +119,10 @@ function mapRecommendationToFrontend(backendRec: any): PurchaseRecommendation {
     suggestedPurchasePrice: item.suggestedPurchasePrice || 0,
     averageDailySales: item.averageDailySales || 0,
     totalSoldLast30Days: item.totalSoldLast30Days || 0,
+    seasonalFactor: item.seasonalFactor || 1,
+    seasonalDemand: item.seasonalDemand || 0,
+    reorderPoint: item.reorderPoint || 0,
+    seasonLabel: item.seasonLabel || '',
   })
 
   return {
@@ -122,6 +130,8 @@ function mapRecommendationToFrontend(backendRec: any): PurchaseRecommendation {
     mediumPriority: (backendRec.mediumPriority || []).map(mapItem),
     lowPriority: (backendRec.lowPriority || []).map(mapItem),
     generatedAt: backendRec.generatedAt || new Date().toISOString(),
+    currentMonth: backendRec.currentMonth || new Date().getMonth() + 1,
+    currentSeasonLabel: backendRec.currentSeasonLabel || '',
   }
 }
 
@@ -239,6 +249,10 @@ export class RealPurchaseRepository implements IPurchaseRepository {
         suggestedPurchasePrice: item.suggestedPurchasePrice || 0,
         averageDailySales: item.averageDailySales || 0,
         totalSoldLast30Days: item.totalSoldLast30Days || 0,
+        seasonalFactor: item.seasonalFactor || 1,
+        seasonalDemand: item.seasonalDemand || 0,
+        reorderPoint: item.reorderPoint || 0,
+        seasonLabel: item.seasonLabel || '',
       }))
     } catch (error) {
       console.error('Error fetching high priority recommendations:', error)
@@ -261,6 +275,10 @@ export class RealPurchaseRepository implements IPurchaseRepository {
         suggestedPurchasePrice: item.suggestedPurchasePrice || 0,
         averageDailySales: item.averageDailySales || 0,
         totalSoldLast30Days: item.totalSoldLast30Days || 0,
+        seasonalFactor: item.seasonalFactor || 1,
+        seasonalDemand: item.seasonalDemand || 0,
+        reorderPoint: item.reorderPoint || 0,
+        seasonLabel: item.seasonLabel || '',
       }))
     } catch (error) {
       console.error('Error fetching low priority recommendations:', error)

@@ -10,11 +10,15 @@ export interface PurchaseItem {
   productId: string
   product: Product
   quantity: number
+  orderedQuantity?: number
   unitPrice: number // Giá nhập
   subtotal: number
+  expiryDate?: string      // YYYY-MM-DD
+  manufactureDate?: string // YYYY-MM-DD
+  lotNumber?: string
 }
 
-export type PurchaseStatus = 'pending' | 'requesting' | 'completed' | 'cancelled'
+export type PurchaseStatus = 'pending' | 'received' | 'cancelled' | 'requesting' | 'completed'
 
 export interface Purchase {
   id: string

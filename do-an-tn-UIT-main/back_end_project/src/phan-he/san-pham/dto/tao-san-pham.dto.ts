@@ -52,6 +52,11 @@ export class TaoSanPhamDto {
   @IsOptional()
   unit?: string;
 
+  @ApiProperty({ example: 'Nhà cung cấp A', required: false })
+  @IsString()
+  @IsOptional()
+  supplier?: string;
+
   @ApiProperty({ example: '8934563123456', required: false })
   @IsString()
   @IsOptional()

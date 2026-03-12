@@ -226,7 +226,7 @@ export const BieuMauNhapHang = ({
         // supplierName: supplierName, // Đã bỏ trường này vì trang cha lo liệu
         notes,
         totalAmount,
-        status: existingPurchase?.status || 'completed',
+        status: existingPurchase?.status || 'pending',
       }
       
       onSubmit(purchaseData)
@@ -241,6 +241,7 @@ export const BieuMauNhapHang = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {!existingPurchase && (
       <TheThongTin title="Gợi ý nhập hàng">
         <div id="goi-y-nhap-hang-anchor"></div>
         {isRecommendationLoading ? (
@@ -251,8 +252,13 @@ export const BieuMauNhapHang = ({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              Cập nhật lúc: {new Date(recommendations.generatedAt).toLocaleString('vi-VN')}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+              <span>Cập nhật lúc: {new Date(recommendations.generatedAt).toLocaleString('vi-VN')}</span>
+              {(recommendations as any).currentSeasonLabel && (
+                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 rounded-full font-medium">
+                  🌤 {(recommendations as any).currentSeasonLabel}
+                </span>
+              )}
             </div>
 
             {([
@@ -306,6 +312,7 @@ export const BieuMauNhapHang = ({
           </div>
         )}
       </TheThongTin>
+      )}
 
       {/* 🟢 ĐÃ XÓA PHẦN "THÔNG TIN NHÀ CUNG CẤP" Ở ĐÂY (VÌ ĐÃ CÓ Ở TRANG CHA) */}
 

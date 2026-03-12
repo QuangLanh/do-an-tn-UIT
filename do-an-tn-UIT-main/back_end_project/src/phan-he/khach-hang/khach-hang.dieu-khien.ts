@@ -67,4 +67,16 @@ export class DieuKhienKhachHang {
       updated: result.updated,
     };
   }
+
+  @Post('classify')
+  @VaiTro(VaiTroNguoiDung.ADMIN)
+  @ApiOperation({ summary: 'Phân loại lại tất cả khách hàng theo tổng chi tiêu (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Đã phân loại khách hàng' })
+  async classifyCustomers() {
+    const result = await this.dichVuKhachHang.xepLoaiTatCaKhachHang();
+    return {
+      message: `Đã phân loại ${result.updated} khách hàng`,
+      updated: result.updated,
+    };
+  }
 }

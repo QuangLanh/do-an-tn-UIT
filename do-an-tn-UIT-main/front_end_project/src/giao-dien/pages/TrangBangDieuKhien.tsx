@@ -6,7 +6,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { TheThongKe } from '@/giao-dien/components/TheThongKe'
 import { TheThongTin } from '@/giao-dien/components/TheThongTin'
-import { DollarSign, TrendingUp, ShoppingCart, Package, AlertTriangle, CreditCard } from 'lucide-react'
+import { DollarSign, TrendingUp, ShoppingCart, Package, AlertTriangle, CreditCard, Clock, XCircle } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { apiService } from '@/ha-tang/api'
 import { InventoryService } from '@/linh-vuc/inventory/services/InventoryService'
@@ -34,6 +34,11 @@ export const TrangBangDieuKhien = () => {
     totalDebtOrders: number
     totalDebtAmount: number
   }>({ totalDebtOrders: 0, totalDebtAmount: 0 })
+  const [expirySummary, setExpirySummary] = useState<{
+    expiringCount: number
+    expiredCount: number
+    criticalCount?: number
+  }>({ expiringCount: 0, expiredCount: 0 })
   const [isLoading, setIsLoading] = useState(true)
   const hasLoadedRef = useRef(false)
 
@@ -73,6 +78,13 @@ const loadData = async () => {
         setDebtSummary({
           totalDebtOrders: dashboardSummary.debt.totalDebtOrders || 0,
           totalDebtAmount: dashboardSummary.debt.totalDebtAmount || 0,
+        })
+      }
+      if (dashboardSummary.alerts) {
+        setExpirySummary({
+          expiringCount: dashboardSummary.alerts.expiringCount || 0,
+          expiredCount: dashboardSummary.alerts.expiredCount || 0,
+          criticalCount: dashboardSummary.alerts.criticalCount ?? 0,
         })
       }
       setTodaySummary({
@@ -125,7 +137,7 @@ const loadData = async () => {
       </div>
 
       {/* Stats TheThongTins */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <TheThongKe
           title="Doanh thu hôm nay"
           value={formatCurrency(todayRevenue)}
@@ -150,11 +162,33 @@ const loadData = async () => {
           icon={CreditCard}
           color={debtSummary.totalDebtOrders > 0 ? 'yellow' : 'green'}
         />
+      </div>
+
+      {/* Inventory & Expiry Alerts */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <TheThongKe
-          title="Sản phẩm sắp hết"
+          title="Sản phẩm sắp hết kho"
           value={lowStockCount}
           icon={AlertTriangle}
           color={lowStockCount > 0 ? 'red' : 'green'}
+        />
+        <TheThongKe
+          title="Cận hạn (≤7 ngày)"
+          value={expirySummary.criticalCount ?? 0}
+          icon={AlertTriangle}
+          color={(expirySummary.criticalCount ?? 0) > 0 ? 'red' : 'green'}
+        />
+        <TheThongKe
+          title="Sắp hết hạn (7-30 ngày)"
+          value={expirySummary.expiringCount}
+          icon={Clock}
+          color={expirySummary.expiringCount > 0 ? 'yellow' : 'green'}
+        />
+        <TheThongKe
+          title="Đã hết hạn"
+          value={expirySummary.expiredCount}
+          icon={XCircle}
+          color={expirySummary.expiredCount > 0 ? 'red' : 'green'}
         />
       </div>
 

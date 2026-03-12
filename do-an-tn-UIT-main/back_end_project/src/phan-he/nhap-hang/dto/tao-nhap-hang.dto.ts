@@ -4,7 +4,6 @@ import {
   IsString,
   IsNumber,
   IsOptional,
-  IsDateString,
   ValidateNested,
   Min,
 } from 'class-validator';
@@ -25,20 +24,6 @@ export class MucNhapHangDto {
   @Min(0)
   purchasePrice: number;
 
-  @ApiProperty({ example: '2026-12-31', required: false, description: 'Hạn sử dụng (ISO 8601: YYYY-MM-DD)' })
-  @IsOptional()
-  @IsDateString()
-  expiryDate?: string;
-
-  @ApiProperty({ example: '2026-01-01', required: false, description: 'Ngày sản xuất (ISO 8601: YYYY-MM-DD)' })
-  @IsOptional()
-  @IsDateString()
-  manufactureDate?: string;
-
-  @ApiProperty({ example: 'LOT-2026-001', required: false, description: 'Số lô sản xuất' })
-  @IsOptional()
-  @IsString()
-  lotNumber?: string;
 }
 
 export class TaoNhapHangDto {

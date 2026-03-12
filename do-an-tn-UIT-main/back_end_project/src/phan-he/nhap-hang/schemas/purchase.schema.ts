@@ -13,6 +13,10 @@ export class PurchaseItem {
   @Prop({ required: true })
   quantity: number;
 
+  // Số lượng đặt ban đầu để đối chiếu với số lượng nhận thực tế
+  @Prop()
+  orderedQuantity?: number;
+
   @Prop({ required: true })
   purchasePrice: number;
 

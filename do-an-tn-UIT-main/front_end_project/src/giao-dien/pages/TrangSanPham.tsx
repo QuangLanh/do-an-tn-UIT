@@ -3,8 +3,8 @@
  * Trang quản lý sản phẩm với CRUD operations
  */
 
-import { useEffect, useState, useMemo, useRef, lazy, Suspense } from 'react'
-import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react'
+import { useEffect, useLayoutEffect, useState, useMemo, useRef, lazy, Suspense } from 'react'
+import { Plus, Search, Edit, Trash2, Eye, TrendingDown } from 'lucide-react'
 import { NutBam } from '@/giao-dien/components/NutBam'
 import { NhapLieu } from '@/giao-dien/components/NhapLieu'
 import { BangDuLieu } from '@/giao-dien/components/BangDuLieu'
@@ -16,6 +16,7 @@ import { UploadAnh } from '@/giao-dien/components/UploadAnh'
 import { Product, CreateProductDto } from '@/linh-vuc/products/entities/Product'
 import { productApi } from '@/ha-tang/api/productApi'
 import { supplierApi } from '@/ha-tang/api/supplierApi'
+import { apiClient } from '@/ha-tang/api/index'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
 import { useProductStore } from '@/kho-trang-thai/khoSanPham'
 import { formatCurrency } from '@/ha-tang/utils/formatters'
@@ -59,11 +60,12 @@ export const TrangSanPham = () => {
 
   useEffect(() => {
     if (searchQuery) {
+      const q = searchQuery.toLowerCase()
       const filtered = products.filter(
         (p) =>
-          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.supplier.toLowerCase().includes(searchQuery.toLowerCase())
+          (p.name || '').toLowerCase().includes(q) ||
+          (p.category || '').toLowerCase().includes(q) ||
+          (p.supplier || '').toLowerCase().includes(q)
       )
       setFilteredProducts(filtered)
     } else {
@@ -78,9 +80,9 @@ export const TrangSanPham = () => {
     return filteredProducts.slice(startIndex, endIndex)
   }, [filteredProducts, currentPage, itemsPerPage])
 
-  const loadProducts = async () => {
+  const loadProducts = async (force = false) => {
     try {
-      const data = await loadProductsFromStore()
+      const data = await loadProductsFromStore(force)
       setFilteredProducts(data)
     } catch (error) {
       toast.error('Không thể tải danh sách sản phẩm')
@@ -104,19 +106,51 @@ export const TrangSanPham = () => {
     try {
       await productApi.deleteProduct.execute(id)
       toast.success('Đã xóa sản phẩm thành công')
-      loadProducts()
+      loadProducts(true)
     } catch (error) {
       toast.error('Không thể xóa sản phẩm')
     }
   }
 
-  const handleEdit = (product: Product) => {
+  const handleEdit = async (product: Product) => {
     if (!isAdmin) {
       toast.error('Bạn không có quyền sửa sản phẩm (Cần quyền ADMIN)')
       return
     }
-    setEditingProduct(product)
-    setIsHopThoaiOpen(true)
+    const id = product?.id ?? (product as any)?._id
+    const idStr = id ? String(id).trim() : ''
+    if (!idStr) {
+      toast.error('Không tìm thấy ID sản phẩm')
+      return
+    }
+    try {
+      // Luôn gọi API lấy chi tiết trước khi mở modal (noCache để tránh dữ liệu cũ)
+      const fullProduct = await productApi.service.getProductById(idStr)
+      const merged: Product = fullProduct
+        ? {
+            ...fullProduct,
+            id: fullProduct.id || idStr,
+            name: fullProduct.name || product.name || '',
+            barcode: fullProduct.barcode ?? product.barcode ?? '',
+            category: fullProduct.category || product.category || '',
+            importPrice: fullProduct.importPrice ?? product.importPrice ?? 0,
+            salePrice: fullProduct.salePrice ?? product.salePrice ?? 0,
+            stock: fullProduct.stock ?? product.stock ?? 0,
+            unit: fullProduct.unit || product.unit || '',
+            supplier: fullProduct.supplier || product.supplier || '',
+            description: fullProduct.description || product.description || '',
+            imageUrl: fullProduct.imageUrl || product.imageUrl || '',
+          }
+        : { ...product, id: idStr }
+      // Đặt product trước, mở modal sau - đảm bảo form nhận đúng dữ liệu
+      setEditingProduct(merged)
+      setIsHopThoaiOpen(true)
+    } catch {
+      // Fallback: dùng dữ liệu từ danh sách
+      setEditingProduct({ ...product, id: idStr })
+      setIsHopThoaiOpen(true)
+      toast.error('Không tải được từ API, dùng dữ liệu từ danh sách')
+    }
   }
 
   const handleCreate = () => {
@@ -294,9 +328,8 @@ export const TrangSanPham = () => {
         </div>
       )}
 
-      {/* HopThoai (Create/Edit) */}
+      {/* HopThoai (Create/Edit) - không dùng key để tránh remount gây form trống lần mở thứ 2 */}
       <ProductHopThoai
-        key={editingProduct ? editingProduct.id : 'create-new'}
         isOpen={isHopThoaiOpen}
         onClose={() => {
           setIsHopThoaiOpen(false)
@@ -328,7 +361,7 @@ interface ProductHopThoaiProps {
   onClose: () => void
   product: Product | null
   products: Product[]
-  onSuccess: () => void
+  onSuccess: (force?: boolean) => void
 }
 
 const emptyFormData: CreateProductDto = {
@@ -344,14 +377,21 @@ const ProductHopThoai = ({ isOpen, onClose, product, products, onSuccess }: Prod
   const [isCheckingBarcode, setIsCheckingBarcode] = useState(false)
   const barcodeInputRef = useRef<HTMLInputElement | null>(null)
 
-  // Reset form khi mở modal hoặc chuyển thêm mới / sửa (dùng product?.id tránh re-run do object reference thay đổi)
-  useEffect(() => {
+  // useLayoutEffect: đồng bộ form TRƯỚC khi browser paint
+  // Khi đóng modal cũng reset form để lần mở sau luôn nhận đúng dữ liệu
+  useLayoutEffect(() => {
     if (isOpen) {
-      if (product) {
+      if (product && (product.id || (product as any)._id)) {
         setFormData({
-          name: product.name || '', barcode: product.barcode || '', category: product.category || '',
-          importPrice: product.importPrice || 0, salePrice: product.salePrice || 0, stock: product.stock || 0,
-          unit: product.unit || '', supplier: product.supplier || '', description: product.description || '',
+          name: product.name || '',
+          barcode: product.barcode || '',
+          category: product.category || '',
+          importPrice: Number(product.importPrice ?? 0),
+          salePrice: Number(product.salePrice ?? 0),
+          stock: Number(product.stock ?? 0),
+          unit: product.unit || '',
+          supplier: product.supplier || '',
+          description: product.description || '',
           imageUrl: product.imageUrl || '',
         })
         setBarcodeInput(product.barcode || '')
@@ -359,8 +399,12 @@ const ProductHopThoai = ({ isOpen, onClose, product, products, onSuccess }: Prod
         setFormData({ ...emptyFormData })
         setBarcodeInput('')
       }
+    } else {
+      // Reset form khi đóng modal - tránh form trống khi mở lần 2
+      setFormData({ ...emptyFormData })
+      setBarcodeInput('')
     }
-  }, [isOpen, product?.id])
+  }, [isOpen, product])
 
   // Chỉ gọi API suppliers khi mở modal (products đã có từ parent)
   useEffect(() => {
@@ -395,19 +439,24 @@ const ProductHopThoai = ({ isOpen, onClose, product, products, onSuccess }: Prod
     try {
       const existingProduct = await productApi.service.getProductByBarcode(code)
       if (existingProduct) {
-        setFormData({
-          name: existingProduct.name,
-          category: existingProduct.category,
-          importPrice: existingProduct.importPrice,
-          salePrice: existingProduct.salePrice,
-          stock: existingProduct.stock,
-          unit: existingProduct.unit,
-          supplier: existingProduct.supplier,
-          description: existingProduct.description || '',
-          imageUrl: existingProduct.imageUrl || '',
+        const fullProduct = existingProduct.id
+          ? await productApi.service.getProductById(existingProduct.id)
+          : null
+        const source = fullProduct || existingProduct
+        setFormData((prev) => ({
+          ...prev,
+          name: source.name || prev.name,
+          category: source.category || prev.category,
+          importPrice: Number(source.importPrice ?? prev.importPrice ?? 0),
+          salePrice: Number(source.salePrice ?? prev.salePrice ?? 0),
+          stock: Number(source.stock ?? prev.stock ?? 0),
+          unit: source.unit || prev.unit,
+          supplier: source.supplier || prev.supplier,
+          description: source.description || prev.description || '',
+          imageUrl: source.imageUrl || prev.imageUrl || '',
           barcode: code,
-        })
-        toast.success(`Đã tìm thấy sản phẩm: ${existingProduct.name}`)
+        }))
+        toast.success(`Đã tìm thấy sản phẩm: ${source.name}`)
       } else {
         setFormData((prev) => ({ ...prev, barcode: code }))
         toast('Chưa tìm thấy sản phẩm với barcode này. Vui lòng điền thông tin sản phẩm.')
@@ -452,7 +501,7 @@ const ProductHopThoai = ({ isOpen, onClose, product, products, onSuccess }: Prod
         await productApi.createProduct.execute(formData)
         toast.success('Thêm sản phẩm thành công')
       }
-      onSuccess()
+      onSuccess(true)
       onClose()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra')
@@ -620,6 +669,21 @@ interface ProductDetailModalProps {
 }
 
 const ProductDetailModal = ({ isOpen, onClose, product, onEdit, canEdit }: ProductDetailModalProps) => {
+  const [priceHistory, setPriceHistory] = useState<any[]>([])
+  const [isPriceHistoryLoading, setIsPriceHistoryLoading] = useState(false)
+
+  useEffect(() => {
+    if (isOpen && product?.id) {
+      setIsPriceHistoryLoading(true)
+      apiClient.get(`/purchases/price-history/${product.id}`)
+        .then((res) => setPriceHistory(res.data || []))
+        .catch(() => setPriceHistory([]))
+        .finally(() => setIsPriceHistoryLoading(false))
+    } else {
+      setPriceHistory([])
+    }
+  }, [isOpen, product?.id])
+
   if (!product) return null
 
   // Helper xử lý ảnh
@@ -699,6 +763,47 @@ const ProductDetailModal = ({ isOpen, onClose, product, onEdit, canEdit }: Produ
             </div>
           </div>
         </div>
+
+        {/* Lịch sử giá nhập */}
+        {canEdit && (
+          <div>
+            <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+              <TrendingDown size={16} /> Lịch sử giá nhập
+            </h4>
+            {isPriceHistoryLoading ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">Đang tải...</p>
+            ) : priceHistory.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">Chưa có lịch sử giá nhập</p>
+            ) : (
+              <div className="overflow-x-auto max-h-48 overflow-y-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead className="sticky top-0 bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="text-left py-2 px-3 border-b border-gray-200 dark:border-gray-600 font-medium">Ngày nhập</th>
+                      <th className="text-left py-2 px-3 border-b border-gray-200 dark:border-gray-600 font-medium">Nhà cung cấp</th>
+                      <th className="text-right py-2 px-3 border-b border-gray-200 dark:border-gray-600 font-medium">Giá nhập</th>
+                      <th className="text-right py-2 px-3 border-b border-gray-200 dark:border-gray-600 font-medium">SL</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {priceHistory.map((h, i) => (
+                      <tr key={i} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td className="py-2 px-3 text-gray-600 dark:text-gray-400">
+                          {new Date(h.purchaseDate).toLocaleDateString('vi-VN')}
+                        </td>
+                        <td className="py-2 px-3 text-gray-700 dark:text-gray-300">{h.supplier}</td>
+                        <td className="py-2 px-3 text-right font-semibold text-blue-600 dark:text-blue-400">
+                          {formatCurrency(h.purchasePrice)}
+                        </td>
+                        <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">{h.quantity}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100 dark:border-gray-700">
           <NutBam variant="secondary" onClick={onClose}>

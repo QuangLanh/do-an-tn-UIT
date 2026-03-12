@@ -39,6 +39,10 @@ export class Product {
   @Prop()
   unit?: string;
 
+  // Nhà cung cấp theo tên để hiển thị và lọc nhanh ở UI
+  @Prop()
+  supplier?: string;
+
   @Prop()
   barcode?: string;
 

@@ -17,8 +17,11 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { DichVuNhapHang } from './nhap-hang.dich-vu';
+import { DichVuStockBatch } from './stock-batch.dich-vu';
 import { DichVuGoiYNhapHang } from './goi-y-nhap-hang.dich-vu';
 import { TaoNhapHangDto } from './dto/tao-nhap-hang.dto';
+import { NhanHangDto } from './dto/nhan-hang.dto';
+import { LoaiBoHetHanDto } from './dto/loai-bo-het-han.dto';
 import { BaoVeJwt } from '../../dung-chung/bao-ve/bao-ve-jwt';
 import { BaoVeVaiTro } from '../../dung-chung/bao-ve/bao-ve-vai-tro';
 import { VaiTro } from '../../dung-chung/trang-tri/vai-tro.trang-tri';
@@ -32,6 +35,7 @@ import { VaiTroNguoiDung } from '../../dung-chung/liet-ke/vai-tro-nguoi-dung.enu
 export class DieuKhienNhapHang {
   constructor(
     private readonly dichVuNhapHang: DichVuNhapHang,
+    private readonly dichVuStockBatch: DichVuStockBatch,
     private readonly recommendationService: DichVuGoiYNhapHang,
   ) {}
 
@@ -42,8 +46,9 @@ export class DieuKhienNhapHang {
   create(
     @Body() createPurchaseDto: TaoNhapHangDto,
     @NguoiDungHienTai('id') userId: string,
+    @NguoiDungHienTai('fullName') userFullName: string,
   ) {
-    return this.dichVuNhapHang.create(createPurchaseDto, userId);
+    return this.dichVuNhapHang.create(createPurchaseDto, userId, userFullName || 'Nhân viên');
   }
 
   @Get()
@@ -114,6 +119,52 @@ export class DieuKhienNhapHang {
     return this.recommendationService.getLowPriorityRecommendations();
   }
 
+  @Get('price-history/:productId')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiOperation({ summary: 'Get import price history for a product' })
+  @ApiResponse({ status: 200, description: 'Return price history' })
+  getPriceHistory(@Param('productId') productId: string) {
+    return this.dichVuNhapHang.getPriceHistory(productId);
+  }
+
+  @Get('expiry-warnings')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiOperation({ summary: 'Get products with expiry warnings (expired & expiring soon)' })
+  @ApiResponse({ status: 200, description: 'Return expiry warnings' })
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Days threshold for "expiring soon" (default: 7)' })
+  getExpiryWarnings(@Query('days') days?: string) {
+    return this.dichVuNhapHang.getExpiryWarnings(days ? parseInt(days, 10) : 7);
+  }
+
+  @Get('batches/product/:productId')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiOperation({ summary: 'Get stock batches for a product (inventory detail)' })
+  @ApiResponse({ status: 200, description: 'Return batches with expiry status' })
+  getProductBatches(@Param('productId') productId: string) {
+    return this.dichVuStockBatch.getBatchesByProduct(productId);
+  }
+
+  @Get('expiry-status')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiOperation({ summary: 'Get expiry status per product (expired, near_expiry, normal)' })
+  @ApiResponse({ status: 200, description: 'Return productId -> { status, expiredQty, nearExpiryQty }' })
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Days for near expiry (default: 7)' })
+  getExpiryStatus(@Query('days') days?: string) {
+    return this.dichVuNhapHang.getProductExpiryStatusMap(days ? parseInt(days, 10) : 7);
+  }
+
+  @Post('remove-expired')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiOperation({ summary: 'Remove expired stock for a product' })
+  @ApiResponse({ status: 200, description: 'Expired quantity removed from stock' })
+  removeExpiredStock(
+    @Body() dto: LoaiBoHetHanDto,
+    @NguoiDungHienTai('id') userId: string,
+    @NguoiDungHienTai('fullName') userFullName: string,
+  ) {
+    return this.dichVuNhapHang.removeExpiredStock(dto.productId, userId, userFullName || 'Nhân viên');
+  }
+
   @Get(':id')
   @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
   @ApiOperation({ summary: 'Get purchase by ID (Admin, Manager, Accountant)' })
@@ -130,12 +181,29 @@ export class DieuKhienNhapHang {
     return this.dichVuNhapHang.update(id, updateData);
   }
 
+  @Patch(':id/receive')
+  @VaiTro(VaiTroNguoiDung.ADMIN, VaiTroNguoiDung.STAFF)
+  @ApiOperation({ summary: 'Receive goods checklist and update stock' })
+  @ApiResponse({ status: 200, description: 'Purchase received successfully' })
+  receiveGoods(
+    @Param('id') id: string,
+    @Body() receiveDto: NhanHangDto,
+    @NguoiDungHienTai('id') userId: string,
+    @NguoiDungHienTai('fullName') userFullName: string,
+  ) {
+    return this.dichVuNhapHang.receiveGoods(id, receiveDto, userId, userFullName || 'Nhân viên');
+  }
+
   @Delete(':id')
   @VaiTro(VaiTroNguoiDung.ADMIN)
   @ApiOperation({ summary: 'Delete purchase (Admin only)' })
   @ApiResponse({ status: 200, description: 'Purchase deleted successfully' })
-  remove(@Param('id') id: string) {
-    return this.dichVuNhapHang.remove(id);
+  remove(
+    @Param('id') id: string,
+    @NguoiDungHienTai('id') userId: string,
+    @NguoiDungHienTai('fullName') userFullName: string,
+  ) {
+    return this.dichVuNhapHang.remove(id, userId, userFullName || 'Nhân viên');
   }
 }
 

@@ -14,6 +14,7 @@ import { HuyHieu } from '@/giao-dien/components/HuyHieu'
 import { NhapLieu } from '@/giao-dien/components/NhapLieu'
 // API
 import { purchaseApi } from '@/ha-tang/api/purchaseApi'
+import { apiClient } from '@/ha-tang/api'
 import { supplierApi } from '@/ha-tang/api/supplierApi' // 👈 Import thêm cái này
 import { formatCurrency, formatDateTime } from '@/ha-tang/utils/formatters'
 import { Plus, Search, FileText, Trash2, Truck, Bell } from 'lucide-react'
@@ -30,6 +31,10 @@ export const TrangNhapHang = () => {
   const [isRecommendationsLoading, setIsRecommendationsLoading] = useState(false)
   const [recommendations, setRecommendations] = useState<PurchaseRecommendation | null>(null)
   const [isRecommendationModalOpen, setIsRecommendationModalOpen] = useState(false)
+  const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false)
+  const [receivingPurchase, setReceivingPurchase] = useState<any | null>(null)
+  const [receiveChecklistItems, setReceiveChecklistItems] = useState<any[]>([])
+  const [isReceiving, setIsReceiving] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
 
@@ -158,26 +163,86 @@ export const TrangNhapHang = () => {
 
   const getStatusHuyHieu = (status: string) => {
     switch (status) {
-      case 'completed': return <HuyHieu variant="success">Hoàn thành</HuyHieu>
-      case 'requesting': return <HuyHieu variant="warning">Đang yêu cầu</HuyHieu>
+      case 'received': return <HuyHieu variant="success">Đã nhận hàng</HuyHieu>
+      case 'completed': return <HuyHieu variant="success">Đã nhận hàng</HuyHieu>
+      case 'pending': return <HuyHieu variant="warning">Chờ nhận hàng</HuyHieu>
+      case 'requesting': return <HuyHieu variant="warning">Chờ nhận hàng</HuyHieu>
       case 'cancelled': return <HuyHieu variant="danger">Đã hủy</HuyHieu>
       default: return <HuyHieu variant="warning">Đang xử lý</HuyHieu>
     }
   }
 
   const handleMarkCompleted = async (p: any) => {
-    const purchaseId = p.id || p._id
-    if (!hasPermission('create_purchase')) {
-      toast.error('Bạn không có quyền cập nhật')
+    const srcItems = p.items || []
+    if (!srcItems.length) {
+      toast.error('Phiếu nhập không có sản phẩm để nhận')
       return
     }
-    if (!confirm('Đánh dấu phiếu này đã nhận hàng? Hệ thống sẽ cập nhật tồn kho.')) return
+
+    setReceivingPurchase(p)
+    setReceiveChecklistItems(
+      srcItems.map((it: any) => ({
+        productId: String(it.productId || it.product?._id || it.product?.id || it.product || ''),
+        productName: it.product?.name || it.productName || 'Sản phẩm',
+        orderedQuantity: Number(it.orderedQuantity ?? it.quantity ?? 0),
+        receivedQuantity: Number(it.quantity ?? 0),
+        actualPurchasePrice: Number(it.unitPrice ?? it.purchasePrice ?? 0),
+        manufactureDate: it.manufactureDate ? String(it.manufactureDate).slice(0, 10) : '',
+        expiryDate: it.expiryDate ? String(it.expiryDate).slice(0, 10) : '',
+        lotNumber: it.lotNumber || '',
+      }))
+    )
+    setIsReceiveModalOpen(true)
+  }
+
+  const updateChecklistItem = (idx: number, patch: any) => {
+    setReceiveChecklistItems((prev) => prev.map((item, i) => (i === idx ? { ...item, ...patch } : item)))
+  }
+
+  const handleConfirmReceive = async () => {
+    if (!receivingPurchase) return
+    const purchaseId = receivingPurchase.id || receivingPurchase._id
+    if (!purchaseId) return
+
+    for (const item of receiveChecklistItems) {
+      if (Number(item.receivedQuantity) < 0) {
+        toast.error(`Số lượng nhận của ${item.productName} phải >= 0`)
+        return
+      }
+      if (!item.manufactureDate || !item.expiryDate) {
+        toast.error(`Vui lòng nhập ngày SX và HSD cho ${item.productName}`)
+        return
+      }
+      const mfg = new Date(item.manufactureDate)
+      const exp = new Date(item.expiryDate)
+      if (exp <= mfg) {
+        toast.error(`HSD phải lớn hơn ngày SX (${item.productName})`)
+        return
+      }
+    }
+
     try {
-      await purchaseApi.updatePurchase.execute(purchaseId, { status: 'completed' })
-      toast.success('Đã đánh dấu hoàn thành')
+      setIsReceiving(true)
+      await apiClient.patch(`/purchases/${purchaseId}/receive`, {
+        items: receiveChecklistItems.map((it) => ({
+          productId: it.productId,
+          receivedQuantity: Number(it.receivedQuantity),
+          actualPurchasePrice: Number(it.actualPurchasePrice),
+          manufactureDate: it.manufactureDate,
+          expiryDate: it.expiryDate,
+          lotNumber: it.lotNumber || undefined,
+        })),
+      })
+      toast.success('Đã nhận hàng và cập nhật tồn kho')
+      setIsReceiveModalOpen(false)
+      setReceivingPurchase(null)
+      setReceiveChecklistItems([])
       loadData()
-    } catch (error) {
-      toast.error('Không thể cập nhật trạng thái')
+    } catch (error: any) {
+      const msg = error?.response?.data?.message
+      toast.error(Array.isArray(msg) ? msg.join(', ') : msg || 'Không thể xác nhận nhận hàng')
+    } finally {
+      setIsReceiving(false)
     }
   }
 
@@ -235,7 +300,7 @@ export const TrangNhapHang = () => {
               accessor: (p: any) => <span className="font-medium text-blue-600">{getSupplierName(p.supplier, p)}</span>,
             },
             {
-              header: 'Tổng tiền',
+              header: 'Tổng tiền dự kiến',
               // Tự tính tổng tiền nếu backend chưa trả về totalAmount
               accessor: (p: any) => {
                   const total = p.totalAmount || p.items?.reduce((sum: number, i: any) => sum + (i.quantity * (i.purchasePrice || i.importPrice || 0)), 0) || 0;
@@ -257,9 +322,14 @@ export const TrangNhapHang = () => {
                   <button onClick={() => navigate(`/purchases/${p.id || p._id}`)} className="p-2 text-blue-600 hover:bg-blue-50 rounded" title="Xem chi tiết">
                     <FileText size={16} />
                   </button>
-                  {p.status === 'requesting' && hasPermission('create_purchase') && (
-                    <button onClick={() => handleMarkCompleted(p)} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded" title="Đánh dấu đã nhận hàng">
-                      <Truck size={16} />
+                  {(p.status === 'pending' || p.status === 'requesting') && hasPermission('create_purchase') && (
+                    <button
+                      onClick={() => handleMarkCompleted(p)}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-emerald-700 border border-emerald-300 rounded hover:bg-emerald-50"
+                      title="Nhận hàng"
+                    >
+                      <Truck size={14} />
+                      Nhận hàng
                     </button>
                   )}
                   {hasPermission('delete_product') && (
@@ -340,6 +410,110 @@ export const TrangNhapHang = () => {
                   {formatCurrency(totalRecommendedAmount)}
                 </span>
               </div>
+            </div>
+          </div>
+        )}
+      </HopThoai>
+
+      <HopThoai
+        isOpen={isReceiveModalOpen}
+        onClose={() => {
+          if (isReceiving) return
+          setIsReceiveModalOpen(false)
+          setReceivingPurchase(null)
+          setReceiveChecklistItems([])
+        }}
+        title="Nhận hàng thực tế"
+        size="xl"
+      >
+        {!receivingPurchase ? null : (
+          <div className="space-y-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Phiếu: <span className="font-semibold text-gray-900 dark:text-white">{receivingPurchase.purchaseNumber || receivingPurchase.code}</span>
+            </div>
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <div className="max-h-[52vh] overflow-auto">
+                <table className="min-w-[980px] w-full text-sm table-fixed">
+                  <thead className="sticky top-0 bg-gray-50 dark:bg-gray-800 z-10">
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="py-3 px-3 text-left w-[28%]">Sản phẩm</th>
+                      <th className="py-3 px-3 text-left w-[10%]">SL đặt</th>
+                      <th className="py-3 px-3 text-left w-[12%]">SL nhận</th>
+                      <th className="py-3 px-3 text-left w-[14%]">Giá thực tế</th>
+                      <th className="py-3 px-3 text-left w-[18%]">Ngày SX</th>
+                      <th className="py-3 px-3 text-left w-[18%]">Hạn SD</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {receiveChecklistItems.map((item, idx) => {
+                      const qtyDiff = Number(item.receivedQuantity) - Number(item.orderedQuantity)
+                      return (
+                        <tr key={`${item.productId}-${idx}`} className="border-b border-gray-100 dark:border-gray-800 align-top">
+                          <td className="py-3 px-3">
+                            <div className="font-medium text-gray-900 dark:text-white leading-5">{item.productName}</div>
+                            {qtyDiff !== 0 && (
+                              <div className={`mt-1 text-xs ${qtyDiff < 0 ? 'text-amber-600' : 'text-blue-600'}`}>
+                                {qtyDiff < 0 ? `Thiếu ${Math.abs(qtyDiff)}` : `Dư ${qtyDiff}`} so với đặt
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 text-left font-semibold">{item.orderedQuantity}</td>
+                          <td className="py-3 px-3">
+                            <input
+                              type="number"
+                              min={0}
+                              value={item.receivedQuantity}
+                              onChange={(e) => updateChecklistItem(idx, { receivedQuantity: Number(e.target.value) })}
+                              className="w-24 block text-left border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-2 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            />
+                          </td>
+                          <td className="py-3 px-3">
+                            <input
+                              type="number"
+                              min={0}
+                              value={item.actualPurchasePrice}
+                              onChange={(e) => updateChecklistItem(idx, { actualPurchasePrice: Number(e.target.value) })}
+                              className="w-32 block text-left border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-2 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            />
+                          </td>
+                          <td className="py-3 px-3">
+                            <input
+                              type="date"
+                              value={item.manufactureDate}
+                              onChange={(e) => updateChecklistItem(idx, { manufactureDate: e.target.value })}
+                              className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-2 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            />
+                          </td>
+                          <td className="py-3 px-3">
+                            <input
+                              type="date"
+                              value={item.expiryDate}
+                              onChange={(e) => updateChecklistItem(idx, { expiryDate: e.target.value })}
+                              className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-2 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            />
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <NutBam
+                variant="secondary"
+                onClick={() => {
+                  setIsReceiveModalOpen(false)
+                  setReceivingPurchase(null)
+                  setReceiveChecklistItems([])
+                }}
+                disabled={isReceiving}
+              >
+                Hủy
+              </NutBam>
+              <NutBam onClick={handleConfirmReceive} isLoading={isReceiving}>
+                Xác nhận nhận hàng
+              </NutBam>
             </div>
           </div>
         )}

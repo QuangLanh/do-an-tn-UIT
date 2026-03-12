@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DichVuGiaoDich } from '../giao-dich/giao-dich.dich-vu';
 import { DichVuDonHang } from '../don-hang/don-hang.dich-vu';
 import { DichVuSanPham } from '../san-pham/san-pham.dich-vu';
+import { DichVuNhapHang } from '../nhap-hang/nhap-hang.dich-vu';
 import { cacheNho } from '../../dung-chung/cache/cache-nho';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class DichVuBangDieuKhien {
     private dichVuGiaoDich: DichVuGiaoDich,
     private dichVuDonHang: DichVuDonHang,
     private dichVuSanPham: DichVuSanPham,
+    private dichVuNhapHang: DichVuNhapHang,
   ) {}
 
   /**
@@ -74,6 +76,10 @@ export class DichVuBangDieuKhien {
 
     // 4. Thống kê ghi nợ
     const debtStatistics = await this.dichVuDonHang.getDebtStatistics();
+
+    // 5. Cảnh báo hạn sử dụng (từ batch: sắp hết hạn, cận hạn, đã hết hạn)
+    const expiryWarnings = await this.dichVuNhapHang.getExpiryWarnings(7);
+
     const result = {
       today: {
         revenue: todaySummary.revenue,
@@ -98,6 +104,9 @@ export class DichVuBangDieuKhien {
           currentStock: p.stock,
           minStockLevel: p.minStockLevel,
         })),
+        expiringCount: expiryWarnings.expiringCount,
+        expiredCount: expiryWarnings.expiredCount,
+        criticalCount: expiryWarnings.criticalCount ?? 0,
       },
     };
     cacheNho.set(cacheKey, result);

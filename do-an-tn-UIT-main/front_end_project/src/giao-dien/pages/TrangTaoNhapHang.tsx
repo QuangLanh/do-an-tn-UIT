@@ -5,7 +5,7 @@
  */
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { UserPlus, Truck } from 'lucide-react'
+import { UserPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 // Component
@@ -44,7 +44,6 @@ export const TrangTaoNhapHang = () => {
   const navigate = useNavigate()
   const { id } = useParams()
   const isEditMode = !!id
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -123,14 +122,16 @@ export const TrangTaoNhapHang = () => {
               productId: String(realId),
               quantity: Number(item.quantity),
               // Backend bắt buộc dùng 'purchasePrice', không được dùng 'importPrice'
-              purchasePrice: Number(item.unitPrice || item.importPrice || 0)
+              purchasePrice: Number(item.unitPrice || item.importPrice || 0),
           };
       });
 
       // 2. TẠO PAYLOAD
       // ❌ Đã xóa 'supplierName' vì Backend cấm gửi lên
+      const selectedSupplier = suppliers.find((s) => String((s as any).id || (s as any)._id) === String(selectedSupplierId))
       const finalPayload = {
-          supplier: String(selectedSupplierId), 
+          supplier: selectedSupplier?.name || String(selectedSupplierId),
+          supplierId: String(selectedSupplierId),
           items: cleanItems,
           notes: purchaseDataFromChild.notes || "",
       };
@@ -151,22 +152,6 @@ export const TrangTaoNhapHang = () => {
       const msg = error.response?.data?.message || error.message;
       toast.error(Array.isArray(msg) ? msg.join(', ') : msg);
       throw error; 
-    }
-  }
-
-  const handleMarkCompleted = async () => {
-    if (!id || !existingPurchase) return
-    if (!confirm('Đánh dấu phiếu này đã nhận hàng? Hệ thống sẽ cập nhật tồn kho.')) return
-    try {
-      setIsUpdatingStatus(true)
-      await apiClient.patch(`/purchases/${id}`, { status: 'completed' })
-      toast.success('Đã đánh dấu hoàn thành')
-      setRefreshKey((k) => k + 1)
-      loadData()
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Không thể cập nhật')
-    } finally {
-      setIsUpdatingStatus(false)
     }
   }
 
@@ -213,16 +198,12 @@ export const TrangTaoNhapHang = () => {
         </div>
       </div>
 
-      {isEditMode && existingPurchase?.status === 'requesting' && (
-        <TheThongTin title="Đang yêu cầu nhà cung cấp giao hàng">
-          <div className="flex items-center justify-between">
-            <p className="text-amber-800 dark:text-amber-200 text-sm">
-              Phiếu ở trạng thái <strong>Đang yêu cầu</strong>. Khi nhà cung cấp đã giao hàng, bấm nút bên dưới để đánh dấu hoàn thành → cập nhật tồn kho và báo cáo doanh thu, lợi nhuận.
-            </p>
-            <NutBam onClick={handleMarkCompleted} disabled={isUpdatingStatus} isLoading={isUpdatingStatus}>
-              <Truck size={18} className="mr-2" /> Đánh dấu đã nhận hàng
-            </NutBam>
-          </div>
+      {isEditMode && (existingPurchase?.status === 'pending' || existingPurchase?.status === 'requesting') && (
+        <TheThongTin title="Phiếu đang chờ nhận hàng">
+          <p className="text-amber-800 dark:text-amber-200 text-sm">
+            Phiếu ở trạng thái <strong>pending</strong>. Vui lòng quay lại trang danh sách phiếu nhập và bấm
+            <strong> Nhận hàng</strong> để nhập checklist thực tế (số lượng nhận, giá thực tế, ngày SX/HSD).
+          </p>
         </TheThongTin>
       )}
 

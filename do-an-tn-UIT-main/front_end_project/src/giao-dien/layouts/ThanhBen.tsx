@@ -5,7 +5,7 @@
 
 import { useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Home, Package, AlertTriangle, FileText, ShoppingCart, Truck, X, ClipboardList, CreditCard, RefreshCw, ListOrdered, Users } from 'lucide-react'
+import { Home, Package, AlertTriangle, FileText, ShoppingCart, Truck, X, ClipboardList, CreditCard, RefreshCw, ListOrdered, Users, History, Database } from 'lucide-react'
 import { useSidebarStore } from '@/kho-trang-thai/khoThanhBen'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
 
@@ -86,6 +86,23 @@ export const ThanhBen = () => {
       label: 'Báo cáo',
       icon: <FileText size={20} />,
       permission: 'view_reports',
+    },
+    {
+      path: '/customers',
+      label: 'Khách hàng',
+      icon: <Users size={20} />,
+      permission: 'manage_users',
+    },
+    {
+      path: '/audit-logs',
+      label: 'Lịch sử thao tác',
+      icon: <History size={20} />,
+    },
+    {
+      path: '/backup',
+      label: 'Sao lưu dữ liệu',
+      icon: <Database size={20} />,
+      permission: 'manage_users',
     },
   
   ]

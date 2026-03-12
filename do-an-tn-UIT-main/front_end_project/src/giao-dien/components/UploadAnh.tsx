@@ -3,7 +3,7 @@
  * Component upload và preview ảnh
  */
 
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Upload, X, Image as ImageIcon } from 'lucide-react'
 
 interface UploadAnhProps {
@@ -21,8 +21,20 @@ export const UploadAnh = ({
   required = false,
   className = '',
 }: UploadAnhProps) => {
-  const [preview, setPreview] = useState<string | null>(value || null)
+  const toDisplayUrl = (url?: string) => {
+    if (!url) return null
+    if (url.startsWith('data:image') || url.startsWith('http')) return url
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`
+    return `${apiUrl}${cleanUrl}`
+  }
+
+  const [preview, setPreview] = useState<string | null>(toDisplayUrl(value))
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    setPreview(toDisplayUrl(value))
+  }, [value])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

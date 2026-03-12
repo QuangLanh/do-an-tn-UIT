@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DichVuDonHang } from '../don-hang/don-hang.dich-vu';
 import { DichVuSanPham } from '../san-pham/san-pham.dich-vu';
+import { DichVuNhapHang } from '../nhap-hang/nhap-hang.dich-vu';
 import { TrangThaiDonHang } from '../../dung-chung/liet-ke/trang-thai-don-hang.enum';
 import * as PDFDocument from 'pdfkit';
 import { Response } from 'express';
@@ -13,6 +14,7 @@ export class DichVuBaoCao {
   constructor(
     private dichVuDonHang: DichVuDonHang,
     private dichVuSanPham: DichVuSanPham,
+    private dichVuNhapHang: DichVuNhapHang,
   ) {}
 
   // Helper lấy giá vốn
@@ -249,5 +251,36 @@ export class DichVuBaoCao {
       })),
       generatedAt: new Date().toISOString(),
     };
+  }
+
+  async createBackup(res: Response): Promise<void> {
+    const [products, orders, purchases] = await Promise.all([
+      this.dichVuSanPham.findAll(),
+      this.dichVuDonHang.findAll({}),
+      this.dichVuNhapHang.findAll(),
+    ]);
+
+    const backup = {
+      backupDate: new Date().toISOString(),
+      version: '1.0',
+      collections: {
+        products,
+        orders,
+        purchases,
+      },
+      stats: {
+        totalProducts: products.length,
+        totalOrders: orders.length,
+        totalPurchases: purchases.length,
+      },
+    };
+
+    const filename = `backup-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.json`;
+    const jsonStr = JSON.stringify(backup, null, 2);
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', Buffer.byteLength(jsonStr, 'utf8'));
+    res.send(jsonStr);
   }
 }

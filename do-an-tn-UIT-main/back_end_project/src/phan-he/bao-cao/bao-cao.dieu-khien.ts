@@ -70,4 +70,12 @@ export class DieuKhienBaoCao {
   async getInventoryReport() {
     return this.dichVuBaoCao.getInventoryReport();
   }
+
+  // 6. Backup database
+  @Get('backup')
+  @VaiTro(VaiTroNguoiDung.ADMIN)
+  @ApiOperation({ summary: 'Tải xuống file backup database (Admin only)' })
+  async backupDatabase(@Res() res: Response) {
+    return this.dichVuBaoCao.createBackup(res);
+  }
 }

@@ -13,6 +13,7 @@ import { TrangDangNhap } from '@/giao-dien/pages/TrangDangNhap'
 import { TrangBangDieuKhien } from '@/giao-dien/pages/TrangBangDieuKhien'
 import { TrangSanPham } from '@/giao-dien/pages/TrangSanPham'
 import { TrangKiemKe } from '@/giao-dien/pages/TrangKiemKe'
+import { ErrorBoundary } from '@/giao-dien/components/ErrorBoundary'
 import { TrangBaoCao } from '@/giao-dien/pages/TrangBaoCao'
 import { TrangDonHang } from '@/giao-dien/pages/TrangDonHang'
 import { TrangDanhSachDonDatHang } from '@/giao-dien/pages/TrangDanhSachDonDatHang'
@@ -30,6 +31,9 @@ import { TrangKhongTimThay } from '@/giao-dien/pages/TrangKhongTimThay'
 // import { TrangDanhSachMuaHang } from '@/giao-dien/pages/khach-hang/TrangDanhSachMuaHang'
 // import { TrangLichSuMuaHang } from '@/giao-dien/pages/khach-hang/TrangLichSuMuaHang'
 import { TrangNhaCungCap } from '@/giao-dien/pages/TrangNhaCungCap'
+import { TrangLichSuThaoTac } from '@/giao-dien/pages/TrangLichSuThaoTac'
+import { TrangKhachHang } from '@/giao-dien/pages/TrangKhachHang'
+import { TrangSaoDuLieu } from '@/giao-dien/pages/TrangSaoDuLieu'
 
 const UngDungDinhTuyen = () => {
   const { isAuthenticated } = useAuthStore()
@@ -74,7 +78,9 @@ const UngDungDinhTuyen = () => {
         element={
           <TuyenBaoVe requiredRoles={['admin', 'staff']}>
             <BoCucChinh>
-              <TrangKiemKe />
+              <ErrorBoundary>
+                <TrangKiemKe />
+              </ErrorBoundary>
             </BoCucChinh>
           </TuyenBaoVe>
         }
@@ -218,6 +224,39 @@ const UngDungDinhTuyen = () => {
           <TuyenBaoVe requiredRoles={['admin']} requiredPermission="manage_users">
             <BoCucChinh>
               <TrangDanhSachTaiKhoan />
+            </BoCucChinh>
+          </TuyenBaoVe>
+        }
+      />
+
+      <Route
+        path="/audit-logs"
+        element={
+          <TuyenBaoVe requiredRoles={['admin', 'staff']}>
+            <BoCucChinh>
+              <TrangLichSuThaoTac />
+            </BoCucChinh>
+          </TuyenBaoVe>
+        }
+      />
+
+      <Route
+        path="/customers"
+        element={
+          <TuyenBaoVe requiredRoles={['admin']}>
+            <BoCucChinh>
+              <TrangKhachHang />
+            </BoCucChinh>
+          </TuyenBaoVe>
+        }
+      />
+
+      <Route
+        path="/backup"
+        element={
+          <TuyenBaoVe requiredRoles={['admin']} requiredPermission="manage_users">
+            <BoCucChinh>
+              <TrangSaoDuLieu />
             </BoCucChinh>
           </TuyenBaoVe>
         }

@@ -199,6 +199,8 @@ export class PurchaseRepository implements IPurchaseRepository {
       mediumPriority: [],
       lowPriority: [],
       generatedAt: new Date().toISOString(),
+      currentMonth: new Date().getMonth() + 1,
+      currentSeasonLabel: '',
     }
   }
 

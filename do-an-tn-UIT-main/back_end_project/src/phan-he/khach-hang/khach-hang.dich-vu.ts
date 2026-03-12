@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { KhachHang, KhachHangDocument } from './schemas/khach-hang.schema';
+import { KhachHang, KhachHangDocument, LoaiKhachHang } from './schemas/khach-hang.schema';
 import { Order, OrderDocument } from '../don-hang/schemas/order.schema';
 
 @Injectable()
@@ -149,6 +149,52 @@ export class DichVuKhachHang {
     }
 
     return { created, updated };
+  }
+
+  private xacDinhLoaiKhachHang(tongChiTieu: number): LoaiKhachHang {
+    if (tongChiTieu >= 2_000_000) return LoaiKhachHang.VIP;
+    if (tongChiTieu >= 500_000) return LoaiKhachHang.TIEM_NANG;
+    return LoaiKhachHang.THUONG;
+  }
+
+  async xepLoaiTatCaKhachHang(): Promise<{ updated: number }> {
+    const allCustomers = await this.khachHangModel.find().exec();
+    let updated = 0;
+
+    for (const customer of allCustomers) {
+      const phone = customer.soDienThoai;
+      if (!phone) continue;
+
+      const orderStats = await this.orderModel.aggregate([
+        {
+          $match: {
+            customerPhone: phone,
+            status: { $nin: ['cancelled'] },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            tongChiTieu: { $sum: '$total' },
+            soLanMua: { $sum: 1 },
+          },
+        },
+      ]);
+
+      const tongChiTieu = orderStats[0]?.tongChiTieu || 0;
+      const soLanMua = orderStats[0]?.soLanMua || 0;
+      const loaiKhachHang = this.xacDinhLoaiKhachHang(tongChiTieu);
+
+      await this.khachHangModel.findByIdAndUpdate(customer._id, {
+        tongChiTieu,
+        soLanMua,
+        loaiKhachHang,
+      });
+      updated++;
+    }
+
+    this.logger.log(`Đã xếp loại ${updated} khách hàng`);
+    return { updated };
   }
 }
 

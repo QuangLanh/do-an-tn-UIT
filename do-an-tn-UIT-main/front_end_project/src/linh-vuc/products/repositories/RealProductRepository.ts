@@ -9,22 +9,43 @@ import { apiService } from '@/ha-tang/api'
 
 /**
  * Map backend product response to frontend Product entity
+ * Hỗ trợ nhiều định dạng: wrapped (data), Mongoose doc, plain object
  */
 function mapBackendToFrontend(backendProduct: any): Product {
+  // Nếu response bọc trong { data: product } hoặc { product: product }
+  const raw = backendProduct?.data ?? backendProduct?.product ?? backendProduct
+  if (!raw || typeof raw !== 'object') {
+    return {
+      id: backendProduct?._id || backendProduct?.id,
+      name: '',
+      barcode: '',
+      category: '',
+      importPrice: 0,
+      salePrice: 0,
+      stock: 0,
+      unit: '',
+      supplier: '',
+      description: '',
+      imageUrl: '',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+  }
+  const p = raw
   return {
-    id: backendProduct._id || backendProduct.id,
-    name: backendProduct.name,
-    barcode: backendProduct.barcode,
-    category: backendProduct.category,
-    importPrice: backendProduct.purchasePrice || backendProduct.importPrice,
-    salePrice: backendProduct.salePrice,
-    stock: backendProduct.stock || 0,
-    unit: backendProduct.unit || '',
-    supplier: backendProduct.supplier || '',
-    description: backendProduct.description,
-    imageUrl: backendProduct.imageUrl,
-    createdAt: new Date(backendProduct.createdAt || Date.now()),
-    updatedAt: new Date(backendProduct.updatedAt || Date.now()),
+    id: p._id?.toString?.() || p._id || p.id,
+    name: p.name ?? '',
+    barcode: p.barcode ?? '',
+    category: p.category ?? '',
+    importPrice: Number(p.purchasePrice ?? p.importPrice ?? 0),
+    salePrice: Number(p.salePrice ?? p.price ?? 0),
+    stock: Number(p.stock ?? 0),
+    unit: p.unit ?? '',
+    supplier: p.supplier ?? '',
+    description: p.description ?? '',
+    imageUrl: p.imageUrl ?? '',
+    createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
+    updatedAt: p.updatedAt ? new Date(p.updatedAt) : new Date(),
   }
 }
 
@@ -39,12 +60,8 @@ function mapFrontendToBackend(product: CreateProductDto | UpdateProductDto): any
     salePrice: product.salePrice,
     stock: product.stock ?? 0,
     unit: product.unit,
+    supplier: (product as any).supplier,
     description: product.description,
-  }
-
-  // Add optional fields if they exist
-  if ('supplier' in product) {
-    // Backend doesn't have supplier field in schema, but we'll keep it for compatibility
   }
 
   // Add barcode if it exists
@@ -74,9 +91,9 @@ export class RealProductRepository implements IProductRepository {
     }
   }
 
-  async findById(id: string): Promise<Product | null> {
+  async findById(id: string, noCache = true): Promise<Product | null> {
     try {
-      const product = await apiService.products.detail(id)
+      const product = await apiService.products.detail(id, noCache)
       return product ? mapBackendToFrontend(product) : null
     } catch (error) {
       console.error('Error fetching product:', error)

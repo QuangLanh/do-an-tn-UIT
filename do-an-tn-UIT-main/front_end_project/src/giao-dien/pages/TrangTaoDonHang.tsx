@@ -6,15 +6,16 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { BieuMauDonHang } from '@/giao-dien/components/BieuMauDonHang'
-import { Product } from '@/linh-vuc/products/entities/Product'
 import { Order } from '@/linh-vuc/orders/entities/Order'
 import { orderApi } from '@/ha-tang/api/orderApi'
+import { apiService } from '@/ha-tang/api'
 import { useProductStore } from '@/kho-trang-thai/khoSanPham'
 import toast from 'react-hot-toast'
 
 export const TrangTaoDonHang = () => {
   const { products, isLoading, loadProducts } = useProductStore()
   const [existingOrder, setExistingOrder] = useState<Order | undefined>(undefined)
+  const [expiredProductIds, setExpiredProductIds] = useState<string[]>([])
   const navigate = useNavigate()
   const { id } = useParams()
   const isEditMode = !!id
@@ -26,7 +27,10 @@ export const TrangTaoDonHang = () => {
   const loadData = async () => {
     try {
       await loadProducts()
-      
+      const statusMap = (await apiService.purchases.expiryStatus(7).catch(() => ({}))) as Record<string, { expiredQty?: number }>
+      const expired = Object.entries(statusMap || {}).filter(([, v]) => (v?.expiredQty ?? 0) > 0).map(([k]) => k)
+      setExpiredProductIds(expired)
+
       // If edit mode, load existing order
       if (isEditMode && id) {
         const order = await orderApi.service.getOrderById(id)
@@ -95,6 +99,7 @@ export const TrangTaoDonHang = () => {
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         readOnly={isEditMode}
+        expiredProductIds={expiredProductIds}
       />
     </div>
   )

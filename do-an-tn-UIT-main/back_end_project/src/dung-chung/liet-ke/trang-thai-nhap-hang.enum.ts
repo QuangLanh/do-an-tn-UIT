@@ -1,11 +1,17 @@
 /**
  * Trạng thái phiếu nhập hàng
- * - requesting: Đang yêu cầu (tạo từ gợi ý tồn kho, chờ NCC giao hàng)
- * - completed: Hoàn thành (đã nhận hàng, đã cập nhật tồn kho)
+ * - pending: Đã tạo phiếu nhưng chưa nhận hàng thực tế
+ * - received: Đã nhận hàng và đã cập nhật tồn kho theo checklist
  * - cancelled: Đã hủy
+ *
+ * Ghi chú: giữ alias REQUESTING/COMPLETED để tương thích dữ liệu cũ.
  */
 export enum TrangThaiNhapHang {
-  REQUESTING = 'requesting', // Đang yêu cầu
-  COMPLETED = 'completed',   // Hoàn thành
-  CANCELLED = 'cancelled',   // Đã hủy
+  PENDING = 'pending',
+  RECEIVED = 'received',
+  CANCELLED = 'cancelled',
+
+  // Legacy aliases for backward compatibility
+  REQUESTING = 'pending',
+  COMPLETED = 'received',
 }

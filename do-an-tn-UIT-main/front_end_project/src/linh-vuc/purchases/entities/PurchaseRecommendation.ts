@@ -12,6 +12,11 @@ export interface PurchaseRecommendationItem {
   minStockLevel: number
   averageDailySales: number
   totalSoldLast30Days: number
+  // Seasonal fields
+  seasonalFactor: number
+  seasonalDemand: number
+  reorderPoint: number
+  seasonLabel: string
   recommendedQuantity: number
   priority: RecommendationPriority
   reason: string
@@ -23,5 +28,7 @@ export interface PurchaseRecommendation {
   mediumPriority: PurchaseRecommendationItem[]
   lowPriority: PurchaseRecommendationItem[]
   generatedAt: string
+  currentMonth: number
+  currentSeasonLabel: string
 }
 

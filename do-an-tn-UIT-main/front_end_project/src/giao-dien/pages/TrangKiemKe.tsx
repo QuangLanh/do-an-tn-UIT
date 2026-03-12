@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { AlertTriangle, Package, TrendingDown, Truck, FilePlus } from 'lucide-react'
+import { AlertTriangle, Package, TrendingDown, Truck, FilePlus, Clock, XCircle, Trash2 } from 'lucide-react'
 import { TheThongTin } from '@/giao-dien/components/TheThongTin'
 import { BangDuLieu } from '@/giao-dien/components/BangDuLieu'
 import { HuyHieu } from '@/giao-dien/components/HuyHieu'
@@ -20,11 +20,57 @@ import { supplierApi } from '@/ha-tang/api/supplierApi'
 import { InventoryService } from '@/linh-vuc/inventory/services/InventoryService'
 import { formatCurrency } from '@/ha-tang/utils/formatters'
 import { CreatePurchaseDto } from '@/linh-vuc/purchases/entities/Purchase'
+import { apiService } from '@/ha-tang/api'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/kho-trang-thai/khoXacThuc'
 import { useProductStore } from '@/kho-trang-thai/khoSanPham'
+import type { PurchaseRecommendation, PurchaseRecommendationItem } from '@/linh-vuc/purchases/entities/PurchaseRecommendation'
 
 const inventoryService = new InventoryService()
+
+/** Chuyển gợi ý backend sang InventoryAlert (dùng chung logic với TrangTaoNhapHang) */
+function mapRecommendationsToAlerts(
+  recs: PurchaseRecommendation,
+  products: Product[]
+): InventoryAlert[] {
+  const all: PurchaseRecommendationItem[] = [
+    ...(recs.highPriority ?? []),
+    ...(recs.mediumPriority ?? []),
+    ...(recs.lowPriority ?? []),
+  ]
+  const productMap = new Map<string, Product>()
+  for (const p of products) {
+    const key = (p.id ?? (p as any)._id)?.toString()
+    if (key) productMap.set(key, p)
+  }
+  const mapPriority = (p: string): InventoryAlert['alertLevel'] => {
+    if (p === 'high') return 'critical'
+    return 'low'
+  }
+  return all.map((item) => {
+    const product =
+      productMap.get(item.productId) ??
+      ({
+        id: item.productId,
+        _id: item.productId,
+        name: item.productName,
+        category: '',
+        unit: 'cái',
+        importPrice: item.suggestedPurchasePrice ?? 0,
+        supplier: 'Chưa có NCC',
+        stock: item.currentStock,
+      } as unknown as Product)
+    return {
+      id: `alert-${item.productId}`,
+      product,
+      currentStock: item.currentStock,
+      threshold: item.minStockLevel,
+      alertLevel: mapPriority(item.priority),
+      suggestedReorderQuantity: item.recommendedQuantity,
+      createdAt: new Date(),
+    }
+  })
+}
 
 export const TrangKiemKe = () => {
   const { products, isLoading, loadProducts } = useProductStore()
@@ -39,6 +85,18 @@ export const TrangKiemKe = () => {
   const [previewPurchases, setPreviewPurchases] = useState<CreatePurchaseDto[]>([])
   const [previewSupplierIds, setPreviewSupplierIds] = useState<string[]>([])
   const [suppliers, setSuppliers] = useState<{ id: string; name: string; phone: string }[]>([])
+  const [expiryWarnings, setExpiryWarnings] = useState<{
+    expiredCount: number
+    expiringCount: number
+    criticalCount?: number
+    expiredItems: any[]
+    expiringItems: any[]
+    criticalItems?: any[]
+  }>({ expiredCount: 0, expiringCount: 0, expiredItems: [], expiringItems: [] })
+  const [batchDetailProduct, setBatchDetailProduct] = useState<Product | null>(null)
+  const [batchDetail, setBatchDetail] = useState<any[]>([])
+  const [expiryStatusMap, setExpiryStatusMap] = useState<Record<string, { status: string; expiredQty: number; nearExpiryQty: number }>>({})
+  const [removingExpiredId, setRemovingExpiredId] = useState<string | null>(null)
   const { hasPermission } = useAuthStore()
 
   useEffect(() => {
@@ -47,13 +105,46 @@ export const TrangKiemKe = () => {
 
   const loadData = async () => {
     try {
-      const data = await loadProducts()
-      const generatedAlerts = inventoryService.generateInventoryAlerts(data)
+      const [data, recs, , statusMap] = await Promise.all([
+        loadProducts(),
+        purchaseApi.getRecommendations().catch(() => null),
+        apiService.purchases.expiryWarnings(7)
+          .then((w: any) => setExpiryWarnings(w))
+          .catch(() => {}),
+        apiService.purchases.expiryStatus(7).catch(() => ({})),
+      ])
+      setExpiryStatusMap(statusMap || {})
+      // Dùng gợi ý từ backend (cùng API với TrangTaoNhapHang) thay vì tính local
+      let generatedAlerts: InventoryAlert[]
+      try {
+        generatedAlerts = recs && recs.highPriority
+          ? mapRecommendationsToAlerts(recs, data ?? [])
+          : inventoryService.generateInventoryAlerts(data ?? [])
+      } catch (mapErr) {
+        generatedAlerts = inventoryService.generateInventoryAlerts(data ?? [])
+      }
       setAlerts(generatedAlerts)
     } catch (error) {
       toast.error('Không thể tải dữ liệu tồn kho')
+      setAlerts([])
+    }
+  }
+
+  const handleRemoveExpired = async (productId: string) => {
+    if (!hasPermission('update_product')) {
+      toast.error('Bạn không có quyền thao tác')
+      return
+    }
+    if (!confirm('Xác nhận loại bỏ hàng hết hạn khỏi tồn kho?')) return
+    try {
+      setRemovingExpiredId(productId)
+      const res = await apiService.purchases.removeExpired(productId)
+      toast.success(`Đã loại bỏ ${(res as any).removedQty} đơn vị hàng hết hạn: ${(res as any).productName}`)
+      loadData()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Không thể loại bỏ')
     } finally {
-      // isLoading do store quản lý
+      setRemovingExpiredId(null)
     }
   }
 
@@ -220,6 +311,25 @@ export const TrangKiemKe = () => {
     return products.slice(startIndex, endIndex)
   }, [products, productsCurrentPage, productsItemsPerPage])
 
+  const handleViewBatchDetail = useCallback(async (product: Product) => {
+    const pid = product.id || (product as any)._id
+    if (!pid) return
+    try {
+      const batches = await apiService.purchases.batchesByProduct(String(pid))
+      setBatchDetail(Array.isArray(batches) ? batches : [])
+      setBatchDetailProduct(product)
+    } catch {
+      toast.error('Không thể tải chi tiết lô')
+      setBatchDetail([])
+      setBatchDetailProduct(null)
+    }
+  }, [])
+
+  const closeBatchDetail = useCallback(() => {
+    setBatchDetailProduct(null)
+    setBatchDetail([])
+  }, [])
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -336,6 +446,23 @@ export const TrangKiemKe = () => {
     },
   ]
 
+  const getExpiryBadge = (product: Product) => {
+    const pid = product.id || (product as any)._id
+    const info = pid ? expiryStatusMap[String(pid)] : null
+    if (!info) return <HuyHieu variant="default">Bình thường</HuyHieu>
+    if (info.status === 'expired') return <HuyHieu variant="danger">Đã hết hạn</HuyHieu>
+    if (info.status === 'critical') return <HuyHieu variant="danger">Cận hạn ≤7 ngày</HuyHieu>
+    if (info.status === 'near_expiry') return <HuyHieu variant="warning">Sắp hết hạn</HuyHieu>
+    return <HuyHieu variant="success">Bình thường</HuyHieu>
+  }
+
+  const getBatchStatusBadge = (status: string) => {
+    if (status === 'expired') return <HuyHieu variant="danger">Đã hết hạn</HuyHieu>
+    if (status === 'critical') return <HuyHieu variant="danger">Cận hạn</HuyHieu>
+    if (status === 'near_expiry') return <HuyHieu variant="warning">Sắp hết hạn</HuyHieu>
+    return <HuyHieu variant="success">Bình thường</HuyHieu>
+  }
+
   const allProductsColumns = [
     { header: 'Tên sản phẩm', accessor: 'name' as keyof Product },
     { header: 'Danh mục', accessor: 'category' as keyof Product },
@@ -348,10 +475,35 @@ export const TrangKiemKe = () => {
       ),
     },
     {
+      header: 'Trạng thái HSD',
+      accessor: (product: Product) => getExpiryBadge(product),
+    },
+    {
       header: 'Giá trị tồn',
       accessor: (product: Product) => formatCurrency(product.importPrice * product.stock),
     },
     { header: 'Nhà cung cấp', accessor: 'supplier' as keyof Product },
+    {
+      header: 'Thao tác',
+      accessor: (product: Product) => {
+        const pid = product.id || (product as any)._id
+        const info = pid ? expiryStatusMap[String(pid)] : null
+        const hasExpired = info?.status === 'expired' && info?.expiredQty > 0
+        if (!hasExpired) return null
+        return (
+          <NutBam
+            size="sm"
+            variant="secondary"
+            onClick={() => handleRemoveExpired(String(pid))}
+            disabled={removingExpiredId === String(pid)}
+            title="Loại bỏ hàng hết hạn khỏi tồn kho"
+          >
+            <Trash2 size={14} className="mr-1 inline" />
+            Loại bỏ hàng hết hạn
+          </NutBam>
+        )
+      },
+    },
   ]
 
   return (
@@ -365,7 +517,7 @@ export const TrangKiemKe = () => {
       </div>
 
       {/* Thống kê nhanh */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <TheThongKe
           title="Tổng giá trị tồn kho"
           value={formatCurrency(totalInventoryValue)}
@@ -379,18 +531,105 @@ export const TrangKiemKe = () => {
           color="yellow"
         />
         <TheThongKe
-          title="Tồn kho rất thấp"
-          value={criticalStockProducts.length}
+          title="Cận hạn (≤7 ngày)"
+          value={expiryWarnings.criticalCount ?? 0}
           icon={AlertTriangle}
-          color="red"
+          color={(expiryWarnings.criticalCount ?? 0) > 0 ? 'red' : 'green'}
         />
         <TheThongKe
-          title="Hết hàng"
-          value={outOfStockProducts.length}
-          icon={AlertTriangle}
-          color="red"
+          title="Sắp hết hạn (7-30 ngày)"
+          value={expiryWarnings.expiringCount}
+          icon={Clock}
+          color={expiryWarnings.expiringCount > 0 ? 'yellow' : 'green'}
+        />
+        <TheThongKe
+          title="Đã hết hạn"
+          value={expiryWarnings.expiredCount}
+          icon={XCircle}
+          color={expiryWarnings.expiredCount > 0 ? 'red' : 'green'}
         />
       </div>
+
+      {/* Expiry Warnings Section */}
+      {(expiryWarnings.expiredCount > 0 || expiryWarnings.expiringCount > 0 || (expiryWarnings.criticalCount ?? 0) > 0) && (
+        <TheThongTin title="⏰ Cảnh báo hạn sử dụng">
+          <div className="space-y-4">
+            {expiryWarnings.expiredItems.length > 0 && (
+              <div>
+                <h3 className="font-semibold text-red-600 dark:text-red-400 mb-2 flex items-center gap-2">
+                  <XCircle size={16} /> Sản phẩm đã hết hạn ({expiryWarnings.expiredItems.length})
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-red-50 dark:bg-red-900/20">
+                        <th className="text-left py-2 px-3 border border-red-200 dark:border-red-800">Sản phẩm</th>
+                        <th className="text-left py-2 px-3 border border-red-200 dark:border-red-800">Số lượng</th>
+                        <th className="text-left py-2 px-3 border border-red-200 dark:border-red-800">Phiếu nhập</th>
+                        <th className="text-left py-2 px-3 border border-red-200 dark:border-red-800">Ngày HSD</th>
+                        <th className="text-left py-2 px-3 border border-red-200 dark:border-red-800">Số lô</th>
+                        <th className="text-left py-2 px-3 border border-red-200 dark:border-red-800">Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {expiryWarnings.expiredItems.map((item: any, i: number) => (
+                        <tr key={i} className="border-b border-red-100 dark:border-red-900/30">
+                          <td className="py-2 px-3 border border-red-100 dark:border-red-900/30 font-medium">{item.productName}</td>
+                          <td className="py-2 px-3 border border-red-100 dark:border-red-900/30 font-semibold">{item.quantity ?? '—'}</td>
+                          <td className="py-2 px-3 border border-red-100 dark:border-red-900/30 text-gray-600 dark:text-gray-400">{item.purchaseNumber}</td>
+                          <td className="py-2 px-3 border border-red-100 dark:border-red-900/30">{new Date(item.expiryDate).toLocaleDateString('vi-VN')}</td>
+                          <td className="py-2 px-3 border border-red-100 dark:border-red-900/30">{item.lotNumber || '—'}</td>
+                          <td className="py-2 px-3 border border-red-100 dark:border-red-900/30">
+                            <HuyHieu variant="danger">Đã hết hạn</HuyHieu>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {expiryWarnings.expiringItems.length > 0 && (
+              <div>
+                <h3 className="font-semibold text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-2">
+                  <Clock size={16} /> Sản phẩm sắp hết hạn ({expiryWarnings.expiringItems.length})
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-amber-50 dark:bg-amber-900/20">
+                        <th className="text-left py-2 px-3 border border-amber-200 dark:border-amber-800">Sản phẩm</th>
+                        <th className="text-left py-2 px-3 border border-amber-200 dark:border-amber-800">Số lượng</th>
+                        <th className="text-left py-2 px-3 border border-amber-200 dark:border-amber-800">Phiếu nhập</th>
+                        <th className="text-left py-2 px-3 border border-amber-200 dark:border-amber-800">Ngày HSD</th>
+                        <th className="text-left py-2 px-3 border border-amber-200 dark:border-amber-800">Còn lại</th>
+                        <th className="text-left py-2 px-3 border border-amber-200 dark:border-amber-800">Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {expiryWarnings.expiringItems.map((item: any, i: number) => (
+                        <tr key={i} className="border-b border-amber-100 dark:border-amber-900/30">
+                          <td className="py-2 px-3 border border-amber-100 dark:border-amber-900/30 font-medium">{item.productName}</td>
+                          <td className="py-2 px-3 border border-amber-100 dark:border-amber-900/30 font-semibold">{item.quantity ?? '—'}</td>
+                          <td className="py-2 px-3 border border-amber-100 dark:border-amber-900/30 text-gray-600 dark:text-gray-400">{item.purchaseNumber}</td>
+                          <td className="py-2 px-3 border border-amber-100 dark:border-amber-900/30">{new Date(item.expiryDate).toLocaleDateString('vi-VN')}</td>
+                          <td className="py-2 px-3 border border-amber-100 dark:border-amber-900/30 font-semibold text-amber-600 dark:text-amber-400">{item.daysUntilExpiry} ngày</td>
+                          <td className="py-2 px-3 border border-amber-100 dark:border-amber-900/30">
+                            <HuyHieu variant={item.status === 'critical' ? 'danger' : 'warning'}>
+                              {item.status === 'critical' ? 'Cận hạn' : 'Sắp hết hạn'}
+                            </HuyHieu>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </TheThongTin>
+      )}
 
       {/* Alert Section */}
       {alerts.length > 0 && (
@@ -444,8 +683,95 @@ export const TrangKiemKe = () => {
 
       {/* All Products Inventory */}
       <TheThongTin title="Tồn kho tất cả sản phẩm">
-        <BangDuLieu data={paginatedProducts} columns={allProductsColumns} />
+        <BangDuLieu
+          data={paginatedProducts}
+          columns={allProductsColumns}
+          onRowClick={(product) => handleViewBatchDetail(product)}
+        />
       </TheThongTin>
+
+      {/* Modal chi tiết lô hàng */}
+      <HopThoai
+        isOpen={!!batchDetailProduct}
+        onClose={closeBatchDetail}
+        title={`Chi tiết lô hàng: ${batchDetailProduct?.name || ''}`}
+        size="lg"
+      >
+        <div className="space-y-4">
+          {batchDetailProduct && (
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Tổng tồn kho: <strong>{batchDetailProduct.stock} {batchDetailProduct.unit}</strong>
+            </p>
+          )}
+          {batchDetail.length === 0 ? (
+            <p className="text-sm text-gray-500">Chưa có thông tin lô hàng</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-gray-100 dark:bg-gray-700">
+                    <th className="text-left py-2 px-3 border">Số lượng</th>
+                    <th className="text-left py-2 px-3 border">Ngày SX</th>
+                    <th className="text-left py-2 px-3 border">Ngày HSD</th>
+                    <th className="text-left py-2 px-3 border">Còn lại</th>
+                    <th className="text-left py-2 px-3 border">Phiếu nhập</th>
+                    <th className="text-left py-2 px-3 border">Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {batchDetail.map((b: any, i: number) => (
+                    <tr key={i} className="border-b border-gray-200 dark:border-gray-600">
+                      <td className="py-2 px-3 border font-medium">{b.quantity}</td>
+                      <td className="py-2 px-3 border">{b.manufactureDate ? new Date(b.manufactureDate).toLocaleDateString('vi-VN') : '—'}</td>
+                      <td className="py-2 px-3 border">{b.expiryDate ? new Date(b.expiryDate).toLocaleDateString('vi-VN') : '—'}</td>
+                      <td className="py-2 px-3 border">{b.daysUntilExpiry != null ? `${b.daysUntilExpiry} ngày` : '—'}</td>
+                      <td className="py-2 px-3 border text-gray-600 dark:text-gray-400">{b.purchaseNumber || '—'}</td>
+                      <td className="py-2 px-3 border">{getBatchStatusBadge(b.status || 'normal')}</td>
+                    </tr>
+                  ))}
+                  {batchDetailProduct && (() => {
+                    const sumFromBatches = batchDetail.reduce((s: number, b: any) => s + Number(b.quantity || 0), 0)
+                    const orphanQty = Math.max(0, (batchDetailProduct.stock ?? 0) - sumFromBatches)
+                    if (orphanQty <= 0) return null
+                    return (
+                      <tr key="orphan" className="border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
+                        <td className="py-2 px-3 border font-medium">{orphanQty}</td>
+                        <td className="py-2 px-3 border">—</td>
+                        <td className="py-2 px-3 border">—</td>
+                        <td className="py-2 px-3 border">—</td>
+                        <td className="py-2 px-3 border text-gray-500">—</td>
+                        <td className="py-2 px-3 border">
+                          <span title="Tồn kho từ trước khi áp dụng quản lý lô, không có thông tin hạn sử dụng">
+                          <HuyHieu variant="warning">Chưa có thông tin lô</HuyHieu>
+                        </span>
+                        </td>
+                      </tr>
+                    )
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {batchDetailProduct && (() => {
+            const sumFromBatches = batchDetail.reduce((s: number, b: any) => s + Number(b.quantity || 0), 0)
+            const orphanQty = Math.max(0, (batchDetailProduct.stock ?? 0) - sumFromBatches)
+            if (orphanQty <= 0) return null
+            return (
+              <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  ⚠️ <strong>{orphanQty} {batchDetailProduct.unit}</strong> không có thông tin lô (tồn kho từ trước khi áp dụng quản lý lô). 
+                  Không xác định được hạn sử dụng — nên ưu tiên bán hoặc kiểm tra.
+                </p>
+              </div>
+            )
+          })()}
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-600">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              💡 Gợi ý xử lý hàng cận hạn: Giảm giá bán nhanh • Trả nhà cung cấp • Loại bỏ khỏi tồn kho
+            </p>
+          </div>
+        </div>
+      </HopThoai>
 
       {/* Pagination - Separate section below products table */}
       {products.length > 0 && (

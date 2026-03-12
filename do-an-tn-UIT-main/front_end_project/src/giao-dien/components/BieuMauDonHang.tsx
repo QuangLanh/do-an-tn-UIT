@@ -32,6 +32,8 @@ interface BieuMauDonHangProps {
   defaultCustomerType?: CustomerType
   /** Chi tiết đơn hàng: chỉ cho sửa tên + SĐT, nội dung đơn chỉ xem */
   readOnly?: boolean
+  /** Danh sách ID sản phẩm đã hết hạn - không cho thêm vào đơn */
+  expiredProductIds?: string[]
 }
 
 // Interface lưu thông tin khách quen
@@ -47,6 +49,7 @@ export const BieuMauDonHang = ({
   onCancel,
   defaultCustomerType = 'retail',
   readOnly: readOnlyProp,
+  expiredProductIds = [],
 }: BieuMauDonHangProps) => {
   const readOnly = readOnlyProp ?? !!existingOrder
   const [items, setItems] = useState<OrderItem[]>(existingOrder?.items || [])
@@ -194,6 +197,12 @@ export const BieuMauDonHang = ({
 
     if (product.stock <= 0) {
       toast.error(`Sản phẩm ${product.name} đã hết hàng`)
+      return
+    }
+
+    const pid = String(product.id || (product as any)._id)
+    if (expiredProductIds.includes(pid)) {
+      toast.error(`Sản phẩm ${product.name} đã hết hạn, không thể bán`)
       return
     }
 
@@ -488,7 +497,7 @@ export const BieuMauDonHang = ({
   const finalDiscount = customerType === 'retail' ? 0 : discount
   const finalTax = 0;
   
-  const { subtotal, tax: finalAmount } = orderApi.service.calculateOrderTotals(
+  const { subtotal, finalAmount } = orderApi.service.calculateOrderTotals(
     items,
     finalDiscount,
     finalTax

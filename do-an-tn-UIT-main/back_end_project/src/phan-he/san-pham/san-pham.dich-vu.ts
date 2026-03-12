@@ -86,6 +86,7 @@ export class DichVuSanPham {
       existing.salePrice = createProductDto.salePrice ?? existing.salePrice;
       existing.minStockLevel = createProductDto.minStockLevel ?? existing.minStockLevel;
       existing.unit = createProductDto.unit ?? existing.unit;
+      existing.supplier = createProductDto.supplier ?? existing.supplier;
       if (barcode) existing.barcode = barcode;
       if (createProductDto.imageUrl !== undefined) existing.imageUrl = createProductDto.imageUrl;
       existing.isActive = createProductDto.isActive ?? existing.isActive;
@@ -118,17 +119,17 @@ export class DichVuSanPham {
       filter.$expr = { $lte: ['$stock', '$minStockLevel'] };
     }
 
-    return this.productModel.find(filter).exec();
+    return this.productModel.find(filter).lean().exec();
   }
 
-  async findOne(id: string): Promise<ProductDocument> {
-    const product = await this.productModel.findById(id).exec();
+  async findOne(id: string): Promise<Product | Record<string, any>> {
+    const product = await this.productModel.findById(id).lean().exec();
 
     if (!product) {
       throw new NotFoundException('Product not found');
     }
 
-    return product;
+    return product as any;
   }
 
   async update(
@@ -161,7 +162,10 @@ export class DichVuSanPham {
     id: string,
     updateStockDto: CapNhatTonKhoDto,
   ): Promise<ProductDocument> {
-    const product = await this.findOne(id);
+    const product = await this.productModel.findById(id).exec();
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
 
     let newStock = product.stock;
 

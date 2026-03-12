@@ -42,7 +42,8 @@ export const API_ENDPOINTS = {
       const queryString = query.toString()
       return `/products${queryString ? `?${queryString}` : ''}`
     },
-    detail: (id: string) => `/products/${id}`,
+    detail: (id: string, noCache?: boolean) =>
+      `/products/${id}${noCache ? `?_t=${Date.now()}` : ''}`,
     byBarcode: (barcode: string) => `/products/barcode/${encodeURIComponent(barcode)}`,
     create: () => '/products',
     update: (id: string) => `/products/${id}`,
@@ -128,6 +129,20 @@ export const API_ENDPOINTS = {
     recommendations: () => '/purchases/recommendations',
     highPriorityRecommendations: () => '/purchases/recommendations/high-priority',
     lowPriorityRecommendations: () => '/purchases/recommendations/low-priority',
+    expiryWarnings: (days?: number) => {
+      const query = new URLSearchParams()
+      if (days) query.append('days', days.toString())
+      const queryString = query.toString()
+      return `/purchases/expiry-warnings${queryString ? `?${queryString}` : ''}`
+    },
+    expiryStatus: (days?: number) => {
+      const query = new URLSearchParams()
+      if (days) query.append('days', days.toString())
+      const queryString = query.toString()
+      return `/purchases/expiry-status${queryString ? `?${queryString}` : ''}`
+    },
+    removeExpired: () => '/purchases/remove-expired',
+    batchesByProduct: (productId: string) => `/purchases/batches/product/${productId}`,
   },
 
   // ==================== TRANSACTIONS ====================
