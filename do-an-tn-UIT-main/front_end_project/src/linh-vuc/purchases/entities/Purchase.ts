@@ -34,7 +34,18 @@ export interface Purchase {
   completedAt?: Date
 }
 
-export type CreatePurchaseDto = Omit<Purchase, 'id' | 'createdAt' | 'updatedAt'>
+/**
+ * Dữ liệu tạo phiếu nhập gửi lên backend.
+ *
+ * `purchaseNumber` và `status` do backend sinh ra (mã PURyymmdd#### và trạng thái
+ * `pending`), client không được gửi lên — ValidationPipe bật `forbidNonWhitelisted`
+ * nên gửi thừa trường sẽ bị trả về 400.
+ */
+export type CreatePurchaseDto = Omit<
+  Purchase,
+  'id' | 'createdAt' | 'updatedAt' | 'purchaseNumber' | 'status'
+> &
+  Partial<Pick<Purchase, 'purchaseNumber' | 'status'>>
 export type UpdatePurchaseDto = Partial<CreatePurchaseDto>
 
 export interface PurchaseSummary {

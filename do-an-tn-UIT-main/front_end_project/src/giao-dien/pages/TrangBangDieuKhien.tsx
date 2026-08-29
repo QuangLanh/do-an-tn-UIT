@@ -10,7 +10,6 @@ import { DollarSign, TrendingUp, ShoppingCart, Package, AlertTriangle, CreditCar
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { apiService } from '@/ha-tang/api'
 import { InventoryService } from '@/linh-vuc/inventory/services/InventoryService'
-import { Product } from '@/linh-vuc/products/entities/Product'
 import { formatCurrency } from '@/ha-tang/utils/formatters'
 import { useProductStore } from '@/kho-trang-thai/khoSanPham'
 

@@ -14,7 +14,7 @@ export const LoginPage = () => {
   const [name, setName] = useState('')
   const [otp, setOtp] = useState('')
   const [step, setStep] = useState<'phone' | 'otp'>('phone')
-  const [otpSent, setOtpSent] = useState(false)
+  const [, setOtpSent] = useState(false)
 
   const validatePhone = (phoneNumber: string): boolean => {
     return /^0\d{9}$/.test(phoneNumber)

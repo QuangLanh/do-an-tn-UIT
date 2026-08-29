@@ -254,7 +254,7 @@ export const TrangKiemKe = () => {
 
   const confirmCreatePurchases = useCallback(async () => {
     if (previewPurchases.length === 0) return
-    const missingSupplier = previewSupplierIds.some((id, i) => !id?.trim())
+    const missingSupplier = previewSupplierIds.some((id) => !id?.trim())
     if (missingSupplier) {
       toast.error('Vui lòng chọn nhà cung cấp cho tất cả phiếu nhập')
       return
@@ -283,14 +283,6 @@ export const TrangKiemKe = () => {
   // Tính toán các giá trị thống kê
   const lowStockProducts = useMemo(() => {
     return inventoryService.getLowStockProducts(products)
-  }, [products])
-
-  const criticalStockProducts = useMemo(() => {
-    return inventoryService.getCriticalStockProducts(products)
-  }, [products])
-
-  const outOfStockProducts = useMemo(() => {
-    return inventoryService.getOutOfStockProducts(products)
   }, [products])
 
   const totalInventoryValue = useMemo(() => {

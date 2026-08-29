@@ -8,7 +8,6 @@ import { FileDown, TrendingUp, DollarSign } from 'lucide-react'
 import { NutBam } from '@/giao-dien/components/NutBam'
 import { TheThongTin } from '@/giao-dien/components/TheThongTin'
 import { BangDuLieu } from '@/giao-dien/components/BangDuLieu'
-import { Product } from '@/linh-vuc/products/entities/Product'
 import { useProductStore } from '@/kho-trang-thai/khoSanPham'
 import { reportApi } from '@/ha-tang/api/reportApi'
 import { formatCurrency, formatDate } from '@/ha-tang/utils/formatters'
@@ -20,7 +19,8 @@ import jsPDF from 'jspdf'
 
 export const TrangBaoCao = () => {
   const { products, isLoading, loadProducts } = useProductStore()
-  const [isLoadingReport, setIsLoadingReport] = useState(true)
+  // Chỉ dùng setter để chặn tải trùng; cờ tải hiện không hiển thị trên giao diện
+  const [, setIsLoadingReport] = useState(true)
   const [isExporting, setIsExporting] = useState(false)
   const reportRef = useRef<HTMLDivElement>(null)
   const [dailySales, setDailySales] = useState<any[]>([])

@@ -16,7 +16,7 @@ interface NavItem {
   permission?: string
 }
 
-const PENDING_ORDERS_POLL_INTERVAL_MS = 60 * 1000 // 1 phút
+// Badge đơn chờ xử lý được cập nhật qua WebSocket (ordersSocket), không polling nữa.
 
 export const ThanhBen = () => {
   const { isOpen, close, pendingOrdersCount, refreshPendingOrdersCount } = useSidebarStore()

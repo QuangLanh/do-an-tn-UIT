@@ -5,6 +5,8 @@
 
 export interface Product {
   id: string
+  /** Id thô từ MongoDB — một số response chưa được map sang `id`. */
+  _id?: string
   name: string
   barcode?: string
   category: string

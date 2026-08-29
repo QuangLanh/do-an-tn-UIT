@@ -108,7 +108,9 @@ export class PurchaseRepository implements IPurchaseRepository {
         const newPurchase: Purchase = {
           ...purchaseDto,
           id: Date.now().toString(),
-          purchaseNumber: this.generatePurchaseNumber(),
+          // Backend sinh mã và trạng thái; bản mock này tự sinh cho khớp kiểu
+          purchaseNumber: purchaseDto.purchaseNumber ?? this.generatePurchaseNumber(),
+          status: purchaseDto.status ?? 'pending',
           createdAt: new Date(),
           updatedAt: new Date(),
         }

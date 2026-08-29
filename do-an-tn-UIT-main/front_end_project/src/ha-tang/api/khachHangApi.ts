@@ -104,7 +104,7 @@ apiClient.interceptors.response.use(
 
     if (error.response) {
       // Server trả về error
-      const { status, data } = error.response;
+      const { status } = error.response;
       const requestUrl = (error.config?.url || '').toLowerCase();
 
       if (status === 401) {
@@ -116,8 +116,7 @@ apiClient.interceptors.response.use(
         }
       }
 
-      // Throw error với message từ server (để trang đăng nhập hiển thị dưới nút)
-      const errorMessage = (data as any)?.message || 'Có lỗi xảy ra'
+      // Giữ nguyên response để trang đăng nhập tự đọc message từ server
       const err = error as any
       err.response = error.response
       return Promise.reject(err)
