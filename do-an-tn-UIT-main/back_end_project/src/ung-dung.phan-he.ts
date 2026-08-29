@@ -16,6 +16,8 @@ import { PhanHeBangDieuKhien } from './phan-he/bang-dieu-khien/bang-dieu-khien.p
 import { PhanHeDanhSachMuaHang } from './phan-he/danh-sach-mua-hang/danh-sach-mua-hang.phan-he';
 import { PhanHeNhaCungCap } from './phan-he/nha-cung-cap/nha-cung-cap.phan-he';
 import { PhanHeLichSuThaoTac } from './phan-he/lich-su-thao-tac/lich-su.phan-he';
+import { PhanHeCuaHang } from './phan-he/cua-hang/cua-hang.phan-he';
+import { NguCanhCuaHangMiddleware } from './dung-chung/da-cua-hang/ngu-canh-cua-hang.middleware';
 
 @Module({
   imports: [
@@ -26,6 +28,7 @@ import { PhanHeLichSuThaoTac } from './phan-he/lich-su-thao-tac/lich-su.phan-he'
     MongooseModule.forRootAsync({
       useClass: CauHinhCoSoDuLieu,
     }),
+    PhanHeCuaHang,
     PhanHeLichSuThaoTac,
     PhanHeXacThuc,
     PhanHeKhachHang,
@@ -40,7 +43,7 @@ import { PhanHeLichSuThaoTac } from './phan-he/lich-su-thao-tac/lich-su.phan-he'
     PhanHeNhaCungCap,
   ],
   controllers: [UngDungDieuKhien],
-  providers: [UngDungDichVu],
+  providers: [UngDungDichVu, NguCanhCuaHangMiddleware],
 })
 export class UngDungPhanHe {}
 

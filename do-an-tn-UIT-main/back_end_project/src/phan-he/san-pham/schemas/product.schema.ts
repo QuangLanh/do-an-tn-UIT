@@ -1,3 +1,4 @@
+import { pluginDaCuaHang } from '../../../dung-chung/da-cua-hang/plugin-da-cua-hang';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
@@ -5,6 +6,9 @@ export type ProductDocument = Product & Document;
 
 @Schema({ timestamps: true })
 export class Product {
+  /** Cửa hàng sở hữu bản ghi này — gán tự động bởi pluginDaCuaHang. */
+  storeId?: Types.ObjectId;
+
   @Prop({ required: true })
   name: string;
 
@@ -73,6 +77,8 @@ ProductSchema.index({ name: 'text', sku: 'text', barcode: 'text' });
 // Uniqueness constraints to prevent duplicate products
 // - SKU: required => unique
 // - Barcode: optional => unique if provided (sparse)
-ProductSchema.index({ sku: 1 }, { unique: true });
-ProductSchema.index({ barcode: 1 }, { unique: true, sparse: true });
+ProductSchema.index({ storeId: 1, sku: 1 }, { unique: true });
+ProductSchema.index({ storeId: 1, barcode: 1 }, { unique: true, sparse: true });
 
+
+ProductSchema.plugin(pluginDaCuaHang);

@@ -4,10 +4,17 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { UngDungPhanHe } from './ung-dung.phan-he';
 import { BoLocNgoaiLeHttp } from './dung-chung/bo-loc/bo-loc-ngoai-le-http';
+import { NguCanhCuaHangMiddleware } from './dung-chung/da-cua-hang/ngu-canh-cua-hang.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(UngDungPhanHe);
   const logger = new Logger('Bootstrap');
+
+  // Ngữ cảnh cửa hàng phải được thiết lập trước mọi guard và handler, nên đăng ký
+  // ở đây dưới dạng middleware toàn cục không gắn đường dẫn (tránh phụ thuộc cách
+  // Express 5 diễn giải ký tự đại diện trong forRoutes).
+  const nguCanhCuaHang = app.get(NguCanhCuaHangMiddleware);
+  app.use((req: any, res: any, next: any) => nguCanhCuaHang.use(req, res, next));
 
   // Global prefix
   app.setGlobalPrefix('api');
@@ -30,7 +37,7 @@ async function bootstrap() {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Store-Code'],
   });
 
   // Global validation pipe
@@ -61,6 +68,7 @@ async function bootstrap() {
     .addTag('giao-dich', 'Thống kê giao dịch')
     .addTag('bao-cao', 'Báo cáo và xuất file')
     .addTag('bang-dieu-khien', 'Dữ liệu tổng quan dashboard')
+    .addTag('cua-hang', 'Quản lý cửa hàng (multi-tenant)')
     .addBearerAuth()
     .build();
 

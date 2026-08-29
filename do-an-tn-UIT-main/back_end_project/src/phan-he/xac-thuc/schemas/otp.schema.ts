@@ -1,10 +1,14 @@
+import { pluginDaCuaHang } from '../../../dung-chung/da-cua-hang/plugin-da-cua-hang';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export type OtpDocument = Otp & Document;
 
 @Schema({ timestamps: true })
 export class Otp {
+  /** Cửa hàng sở hữu bản ghi này — gán tự động bởi pluginDaCuaHang. */
+  storeId?: Types.ObjectId;
+
   @Prop({ required: true, index: true })
   phone: string;
 
@@ -19,3 +23,5 @@ export class Otp {
 }
 
 export const OtpSchema = SchemaFactory.createForClass(Otp);
+
+OtpSchema.plugin(pluginDaCuaHang);

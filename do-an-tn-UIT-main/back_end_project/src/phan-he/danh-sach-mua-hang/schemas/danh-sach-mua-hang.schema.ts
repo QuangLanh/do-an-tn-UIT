@@ -1,3 +1,4 @@
+import { pluginDaCuaHang } from '../../../dung-chung/da-cua-hang/plugin-da-cua-hang';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
@@ -18,6 +19,9 @@ export class MucDanhSachMuaHang {
 
 @Schema({ timestamps: true, collection: 'shoppinglists' })
 export class DanhSachMuaHang {
+  /** Cửa hàng sở hữu bản ghi này — gán tự động bởi pluginDaCuaHang. */
+  storeId?: Types.ObjectId;
+
   @Prop({ type: Types.ObjectId, ref: 'KhachHang', required: true, index: true })
   customerId: Types.ObjectId;
 
@@ -38,3 +42,5 @@ export const DanhSachMuaHangSchema = SchemaFactory.createForClass(DanhSachMuaHan
 DanhSachMuaHangSchema.index({ customerId: 1, status: 1 });
 
 
+
+DanhSachMuaHangSchema.plugin(pluginDaCuaHang);

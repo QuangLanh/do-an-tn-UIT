@@ -1,3 +1,4 @@
+import { pluginDaCuaHang } from '../../../dung-chung/da-cua-hang/plugin-da-cua-hang';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
@@ -36,7 +37,10 @@ export class PurchaseItem {
 
 @Schema({ timestamps: true })
 export class Purchase {
-  @Prop({ required: true, unique: true })
+  /** Cửa hàng sở hữu bản ghi này — gán tự động bởi pluginDaCuaHang. */
+  storeId?: Types.ObjectId;
+
+  @Prop({ required: true })
   purchaseNumber: string;
 
   @Prop({ type: [PurchaseItem], required: true })
@@ -72,7 +76,9 @@ export class Purchase {
 export const PurchaseSchema = SchemaFactory.createForClass(Purchase);
 
 // Index for better query performance
-PurchaseSchema.index({ purchaseNumber: 1 });
+PurchaseSchema.index({ storeId: 1, purchaseNumber: 1 }, { unique: true });
 PurchaseSchema.index({ supplier: 1 });
 PurchaseSchema.index({ createdAt: -1 });
 
+
+PurchaseSchema.plugin(pluginDaCuaHang);

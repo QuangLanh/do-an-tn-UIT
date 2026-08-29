@@ -1,3 +1,4 @@
+import { pluginDaCuaHang } from '../../../dung-chung/da-cua-hang/plugin-da-cua-hang';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { TrangThaiDonHang } from '../../../dung-chung/liet-ke/trang-thai-don-hang.enum';
@@ -28,8 +29,11 @@ export class OrderItem {
 
 @Schema({ timestamps: true })
 export class Order {
+  /** Cửa hàng sở hữu bản ghi này — gán tự động bởi pluginDaCuaHang. */
+  storeId?: Types.ObjectId;
+
   // ... (Giữ nguyên các phần khác của Order)
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   orderNumber: string;
 
   @Prop({ type: [OrderItem], required: true })
@@ -115,10 +119,11 @@ export class Order {
 export const OrderSchema = SchemaFactory.createForClass(Order);
 
 // Index
-OrderSchema.index({ orderNumber: 1 });
+OrderSchema.index({ storeId: 1, orderNumber: 1 }, { unique: true });
 OrderSchema.index({ status: 1 });
 OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ orderType: 1 });
 OrderSchema.index({ relatedOrderCode: 1 });
 OrderSchema.index({ customerPhone: 1 });
 OrderSchema.index({ isOnline: 1 });
+OrderSchema.plugin(pluginDaCuaHang);

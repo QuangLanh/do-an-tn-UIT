@@ -1,3 +1,4 @@
+import { pluginDaCuaHang } from '../../../dung-chung/da-cua-hang/plugin-da-cua-hang';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
@@ -8,6 +9,9 @@ export type ExpiryStatus = 'normal' | 'near_expiry' | 'critical' | 'expired';
 
 @Schema({ timestamps: true })
 export class StockBatch {
+  /** Cửa hàng sở hữu bản ghi này — gán tự động bởi pluginDaCuaHang. */
+  storeId?: Types.ObjectId;
+
   @Prop({ type: Types.ObjectId, ref: 'Product', required: true })
   product: Types.ObjectId;
 
@@ -41,3 +45,5 @@ export const StockBatchSchema = SchemaFactory.createForClass(StockBatch);
 StockBatchSchema.index({ product: 1, expiryDate: 1 });
 StockBatchSchema.index({ purchaseId: 1 });
 StockBatchSchema.index({ expiryDate: 1 });
+
+StockBatchSchema.plugin(pluginDaCuaHang);

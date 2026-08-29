@@ -5,6 +5,8 @@ export interface JwtTaiDuLieu {
   email?: string;
   soDienThoai?: string;
   role: VaiTroNguoiDung;
+  /** Cửa hàng mà tài khoản này thuộc về — nguồn duy nhất để lọc dữ liệu theo tenant. */
+  storeId: string;
   iat?: number;
   exp?: number;
 }

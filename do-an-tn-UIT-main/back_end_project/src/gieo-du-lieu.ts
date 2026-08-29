@@ -6,6 +6,9 @@ import { getConnectionToken } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
 import * as fs from 'fs';
 import * as path from 'path';
+import { DichVuCuaHang } from './phan-he/cua-hang/cua-hang.dich-vu';
+import { chayBoQuaLoc, chayTrongNguCanh } from './dung-chung/da-cua-hang/ngu-canh-cua-hang';
+import { NganhHang } from './dung-chung/liet-ke/nganh-hang.enum';
 
 // Hàm tạo SKU an toàn (Chống lỗi undefined)
 function taoSKU(ten: string): string {
@@ -25,24 +28,34 @@ async function gieoDuLieu() {
   const app = await NestFactory.createApplicationContext(UngDungPhanHe);
   
   const dichVuSanPham = app.get(DichVuSanPham);
+  const dichVuCuaHang = app.get(DichVuCuaHang);
   const connection = app.get<Connection>(getConnectionToken());
 
   try {
+    // Cửa hàng nhận dữ liệu mẫu: npm run seed -- ma-cua-hang
+    const maCuaHang = (process.argv[2] || 'cua-hang-mac-dinh').trim().toLowerCase();
+    let cuaHang = await dichVuCuaHang.timTheoMa(maCuaHang);
+    if (!cuaHang) {
+      cuaHang = (await dichVuCuaHang.tao({
+        ma: maCuaHang,
+        ten: 'Cửa hàng mặc định',
+        nganhHang: NganhHang.TAP_HOA,
+      })) as any;
+      logger.log(`🏪 Đã tạo cửa hàng "${maCuaHang}"`);
+    }
+    const storeId = (cuaHang as any)._id.toString();
+
     console.log('\n==================================================');
     logger.log(`🔌 ĐANG KẾT NỐI DATABASE: [ ${connection.name.toUpperCase()} ]`);
     console.log('==================================================\n');
 
     // --- BƯỚC 1: XÓA DỮ LIỆU CŨ ---
-    const collections = await connection.db.listCollections().toArray();
-    const collectionNames = collections.map(c => c.name);
-    const targetCollections = ['products', 'sanphams', 'product', 'sanpham'];
-
-    for (const name of targetCollections) {
-        if (collectionNames.includes(name)) {
-            logger.log(`🗑️  Đang xóa bảng cũ: "${name}"...`);
-            await connection.db.dropCollection(name);
-        }
-    }
+    // Chỉ xóa sản phẩm CỦA CỬA HÀNG NÀY — không drop cả collection dùng chung
+    // giữa các cửa hàng, nếu không dữ liệu của tenant khác sẽ bị mất trắng.
+    const ketQuaXoa = await connection.db
+      .collection('products')
+      .deleteMany({ storeId: (cuaHang as any)._id });
+    logger.log(`🗑️  Đã xóa ${ketQuaXoa.deletedCount} sản phẩm cũ của cửa hàng "${maCuaHang}"`);
 
     // --- BƯỚC 2: ĐỌC FILE JSON ---
     const tenFileDuLieu = 'du-lieu-san-pham.json'; 
@@ -111,7 +124,7 @@ async function gieoDuLieu() {
           isActive: true,
         };
 
-        await dichVuSanPham.create(sanPhamMoi);
+        await chayTrongNguCanh({ storeId }, () => dichVuSanPham.create(sanPhamMoi));
         thanhCong++;
         process.stdout.write('✅'); 
         
@@ -133,4 +146,4 @@ async function gieoDuLieu() {
   }
 }
 
-gieoDuLieu();
+chayBoQuaLoc(gieoDuLieu);

@@ -16,6 +16,11 @@ import { VaiTroNguoiDung } from '../../dung-chung/liet-ke/vai-tro-nguoi-dung.enu
 import { UserDocument } from '../nguoi-dung/schemas/user.schema';
 import { DichVuKhachHang } from '../khach-hang/khach-hang.dich-vu';
 import { Otp, OtpDocument } from './schemas/otp.schema';
+import { DichVuCuaHang } from '../cua-hang/cua-hang.dich-vu';
+import {
+  datStoreIdHienTai,
+  layStoreIdHienTai,
+} from '../../dung-chung/da-cua-hang/ngu-canh-cua-hang';
 
 @Injectable()
 export class DichVuXacThuc {
@@ -24,9 +29,26 @@ export class DichVuXacThuc {
   constructor(
     private dichVuNguoiDung: DichVuNguoiDung,
     private dichVuKhachHang: DichVuKhachHang,
+    private dichVuCuaHang: DichVuCuaHang,
     private jwtService: JwtService,
     @InjectModel(Otp.name) private otpModel: Model<OtpDocument>,
   ) {}
+
+  /**
+   * Lấy cửa hàng của request hiện tại, dùng cho các luồng của khách hàng.
+   *
+   * Web khách hàng luôn gửi kèm `X-Store-Code` (suy ra từ mã cửa hàng trên URL),
+   * middleware đã chuyển mã đó thành storeId. Thiếu là lỗi phía client.
+   */
+  private layStoreIdBatBuoc(): string {
+    const storeId = layStoreIdHienTai();
+    if (!storeId) {
+      throw new BadRequestException(
+        'Thiếu mã cửa hàng. Vui lòng truy cập qua đường dẫn của cửa hàng.',
+      );
+    }
+    return storeId;
+  }
 
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.dichVuNguoiDung.findByEmail(email);
@@ -56,15 +78,31 @@ export class DichVuXacThuc {
       throw new UnauthorizedException('Sai tên đăng nhập hoặc mật khẩu. Vui lòng kiểm tra lại.');
     }
 
+    const storeId = user.storeId?.toString();
+    if (!storeId) {
+      throw new UnauthorizedException(
+        'Tài khoản chưa được gán cửa hàng. Vui lòng liên hệ quản trị viên.',
+      );
+    }
+
+    const cuaHang = await this.dichVuCuaHang.timTheoId(storeId);
+    if (!cuaHang || !cuaHang.isActive) {
+      throw new UnauthorizedException('Cửa hàng đã ngừng hoạt động');
+    }
+
+    // Từ đây trở đi mọi truy vấn trong request này đều thuộc về cửa hàng của user
+    datStoreIdHienTai(storeId);
+
     await this.dichVuNguoiDung.updateLastLogin(user._id.toString());
 
     const payload: JwtTaiDuLieu = {
       sub: user._id.toString(),
       email: user.email,
       role: user.role,
+      storeId,
     };
 
-    this.logger.log(`User logged in: ${user.email}`);
+    this.logger.log(`User logged in: ${user.email} (cửa hàng ${cuaHang.ma})`);
 
     return {
       access_token: this.jwtService.sign(payload),
@@ -73,6 +111,13 @@ export class DichVuXacThuc {
         email: user.email,
         fullName: user.fullName,
         role: user.role,
+        storeId,
+      },
+      cuaHang: {
+        id: storeId,
+        ma: cuaHang.ma,
+        ten: cuaHang.ten,
+        nganhHang: cuaHang.nganhHang,
       },
     };
   }
@@ -87,6 +132,7 @@ export class DichVuXacThuc {
       sub: user._id.toString(),
       email: user.email,
       role: user.role,
+      storeId: user.storeId.toString(),
     };
 
     this.logger.log(`User registered: ${user.email}`);
@@ -109,6 +155,8 @@ export class DichVuXacThuc {
    * @deprecated Sử dụng verifyOtp thay thế
    */
   async dangNhapKhachHang(dto: DangNhapKhachHangDto) {
+    const storeId = this.layStoreIdBatBuoc();
+
     const khachHang = await this.dichVuKhachHang.taoNeuChuaCo(
       dto.soDienThoai,
       dto.ten,
@@ -122,6 +170,7 @@ export class DichVuXacThuc {
       sub: khachHang._id.toString(),
       soDienThoai: khachHang.soDienThoai,
       role: VaiTroNguoiDung.CUSTOMER,
+      storeId,
     };
 
     this.logger.log(`Customer logged in: ${khachHang.soDienThoai}`);
@@ -141,6 +190,9 @@ export class DichVuXacThuc {
    * Yêu cầu mã OTP cho số điện thoại
    */
   async requestOtp(dto: RequestOtpDto) {
+    // Mỗi mã OTP chỉ có hiệu lực trong phạm vi một cửa hàng
+    this.layStoreIdBatBuoc();
+
     // Validate phone number: must be exactly 10 digits starting with 0
     if (!/^0\d{9}$/.test(dto.phone)) {
       throw new BadRequestException('Số điện thoại phải có đúng 10 số và bắt đầu bằng 0');
@@ -180,6 +232,8 @@ export class DichVuXacThuc {
    * Xác thực OTP và đăng nhập khách hàng
    */
   async verifyOtp(dto: VerifyOtpDto) {
+    const storeId = this.layStoreIdBatBuoc();
+
     // Validate phone number
     if (!/^0\d{9}$/.test(dto.phone)) {
       throw new BadRequestException('Số điện thoại phải có đúng 10 số và bắt đầu bằng 0');
@@ -216,6 +270,7 @@ export class DichVuXacThuc {
       sub: khachHang._id.toString(),
       soDienThoai: khachHang.soDienThoai,
       role: VaiTroNguoiDung.CUSTOMER,
+      storeId,
     };
 
     this.logger.log(`Customer logged in with OTP: ${khachHang.soDienThoai}`);

@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { KhachHang, KhachHangDocument, LoaiKhachHang } from './schemas/khach-hang.schema';
 import { Order, OrderDocument } from '../don-hang/schemas/order.schema';
+import { chayBoQuaLoc } from '../../dung-chung/da-cua-hang/ngu-canh-cua-hang';
 
 @Injectable()
 export class DichVuKhachHang {
@@ -21,6 +22,14 @@ export class DichVuKhachHang {
 
   async timTheoId(id: string) {
     return this.khachHangModel.findById(id).exec();
+  }
+
+  /**
+   * Tra khách hàng theo id trên toàn hệ thống — chỉ dùng cho xác thực JWT,
+   * thời điểm mà ngữ cảnh cửa hàng chưa được thiết lập.
+   */
+  async timTheoIdToanHeThong(id: string) {
+    return chayBoQuaLoc(() => this.khachHangModel.findById(id).exec());
   }
 
   async timTheoSoDienThoai(soDienThoai: string) {

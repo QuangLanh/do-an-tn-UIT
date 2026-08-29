@@ -10,6 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from './schemas/user.schema';
 import { TaoNguoiDungDto } from './dto/tao-nguoi-dung.dto';
 import { CapNhatNguoiDungDto } from './dto/cap-nhat-nguoi-dung.dto';
+import { chayBoQuaLoc } from '../../dung-chung/da-cua-hang/ngu-canh-cua-hang';
 
 @Injectable()
 export class DichVuNguoiDung {
@@ -20,9 +21,11 @@ export class DichVuNguoiDung {
   ) {}
 
   async create(createUserDto: TaoNguoiDungDto): Promise<UserDocument> {
-    const existingUser = await this.userModel.findOne({
-      email: createUserDto.email,
-    });
+    // Email là định danh đăng nhập, duy nhất trên toàn hệ thống chứ không riêng
+    // từng cửa hàng — nên phải kiểm tra ngoài phạm vi cửa hàng hiện tại.
+    const existingUser = await chayBoQuaLoc(() =>
+      this.userModel.findOne({ email: createUserDto.email }).exec(),
+    );
 
     if (existingUser) {
       throw new ConflictException('Email already exists');
@@ -60,8 +63,20 @@ export class DichVuNguoiDung {
     return this.userModel.findById(id).exec();
   }
 
+  /**
+   * Tìm theo email cho luồng đăng nhập — chưa biết cửa hàng nên phải tra toàn hệ thống.
+   * `storeId` của user tìm được sẽ được nạp vào ngữ cảnh ngay sau đó.
+   */
   async findByEmail(email: string): Promise<UserDocument> {
-    return this.userModel.findOne({ email }).exec();
+    return chayBoQuaLoc(() => this.userModel.findOne({ email }).exec());
+  }
+
+  /**
+   * Tra người dùng theo id trên toàn hệ thống — chỉ dùng cho xác thực JWT,
+   * thời điểm mà ngữ cảnh cửa hàng chưa được thiết lập.
+   */
+  async timTheoIdToanHeThong(id: string): Promise<UserDocument | null> {
+    return chayBoQuaLoc(() => this.userModel.findById(id).exec());
   }
 
   async update(id: string, updateUserDto: CapNhatNguoiDungDto): Promise<User> {

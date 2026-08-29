@@ -1,5 +1,6 @@
+import { pluginDaCuaHang } from '../../../dung-chung/da-cua-hang/plugin-da-cua-hang';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 import { VaiTroNguoiDung } from '../../../dung-chung/liet-ke/vai-tro-nguoi-dung.enum';
 
 export type KhachHangDocument = KhachHang & Document;
@@ -12,7 +13,10 @@ export enum LoaiKhachHang {
 
 @Schema({ timestamps: true, collection: 'customers' })
 export class KhachHang {
-  @Prop({ required: true, unique: true })
+  /** Cửa hàng sở hữu bản ghi này — gán tự động bởi pluginDaCuaHang. */
+  storeId?: Types.ObjectId;
+
+  @Prop({ required: true })
   soDienThoai: string;
 
   @Prop()
@@ -47,3 +51,7 @@ export class KhachHang {
 export const KhachHangSchema = SchemaFactory.createForClass(KhachHang);
 
 
+
+KhachHangSchema.index({ storeId: 1, soDienThoai: 1 }, { unique: true });
+
+KhachHangSchema.plugin(pluginDaCuaHang);

@@ -1,11 +1,15 @@
+import { pluginDaCuaHang } from '../../dung-chung/da-cua-hang/plugin-da-cua-hang';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export type TaiLieuNhaCungCap = NhaCungCap & Document;
 
 @Schema({ timestamps: true, collection: 'nha-cung-cap' })
 export class NhaCungCap {
-  @Prop({ required: true, unique: true })
+  /** Cửa hàng sở hữu bản ghi này — gán tự động bởi pluginDaCuaHang. */
+  storeId?: Types.ObjectId;
+
+  @Prop({ required: true })
   code: string;
 
   @Prop({ required: true })
@@ -29,3 +33,6 @@ export class NhaCungCap {
 }
 
 export const SchemaNhaCungCap = SchemaFactory.createForClass(NhaCungCap);
+SchemaNhaCungCap.index({ storeId: 1, code: 1 }, { unique: true });
+
+SchemaNhaCungCap.plugin(pluginDaCuaHang);
