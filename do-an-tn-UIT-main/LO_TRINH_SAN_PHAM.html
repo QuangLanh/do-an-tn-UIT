@@ -1,0 +1,1232 @@
+<title>Từ đồ án đến sản phẩm</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper: #F4F6F4;
+    --surface: #FFFFFF;
+    --surface-2: #EDF1EE;
+    --ink: #14231D;
+    --ink-2: #3E524A;
+    --ink-3: #6C7F76;
+    --line: #D8E0DA;
+    --line-strong: #BCC8C0;
+    --pine: #1F5D46;
+    --pine-2: #2C7A5C;
+    --pine-soft: #E2EEE8;
+    --amber: #8A6210;
+    --amber-soft: #F6EBD4;
+    --crimson: #9C2C2C;
+    --crimson-soft: #F7E3E1;
+    --shadow: 0 1px 2px rgba(20, 35, 29, .06), 0 8px 24px -16px rgba(20, 35, 29, .28);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0E1512;
+      --surface: #161F1A;
+      --surface-2: #1D2823;
+      --ink: #E6EDE8;
+      --ink-2: #B4C2BA;
+      --ink-3: #83958C;
+      --line: #26332C;
+      --line-strong: #35473D;
+      --pine: #64C79B;
+      --pine-2: #7FD6AF;
+      --pine-soft: #172E25;
+      --amber: #E0AE4F;
+      --amber-soft: #2E2617;
+      --crimson: #E38079;
+      --crimson-soft: #33201F;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .8);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #0E1512;
+    --surface: #161F1A;
+    --surface-2: #1D2823;
+    --ink: #E6EDE8;
+    --ink-2: #B4C2BA;
+    --ink-3: #83958C;
+    --line: #26332C;
+    --line-strong: #35473D;
+    --pine: #64C79B;
+    --pine-2: #7FD6AF;
+    --pine-soft: #172E25;
+    --amber: #E0AE4F;
+    --amber-soft: #2E2617;
+    --crimson: #E38079;
+    --crimson-soft: #33201F;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .8);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 24px 96px;
+  }
+
+  .prose { max-width: 68ch; }
+
+  h1, h2, h3, h4 { text-wrap: balance; margin: 0; line-height: 1.2; }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* ---------- Masthead ---------- */
+
+  .masthead {
+    border-bottom: 1px solid var(--line);
+    padding: 56px 0 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .masthead h1 {
+    font-size: clamp(34px, 6vw, 56px);
+    font-weight: 800;
+    letter-spacing: -.025em;
+  }
+
+  .masthead h1 em {
+    font-style: normal;
+    color: var(--pine);
+  }
+
+  .masthead .lede {
+    font-size: 18px;
+    color: var(--ink-2);
+    max-width: 60ch;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+
+  /* ---------- Stat strip ---------- */
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 36px 0 0;
+  }
+
+  .stat {
+    background: var(--surface);
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stat .num {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat .num.warn { color: var(--crimson); }
+  .stat .num.ok { color: var(--pine); }
+
+  .stat .lbl {
+    font-size: 13px;
+    color: var(--ink-3);
+    line-height: 1.4;
+  }
+
+  /* ---------- Generic section ---------- */
+
+  .band {
+    padding: 56px 0 0;
+  }
+
+  .band > h2 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -.015em;
+    margin-bottom: 16px;
+  }
+
+  .band p { color: var(--ink-2); }
+
+  .callout {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--pine);
+    border-radius: 3px;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .callout p { margin: 0; }
+  .callout strong { color: var(--ink); }
+
+  /* ---------- Phase spine ---------- */
+
+  .phase {
+    position: relative;
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: 0 28px;
+    padding-top: 56px;
+  }
+
+  .phase-rail { position: relative; }
+
+  .phase-rail::after {
+    content: "";
+    position: absolute;
+    left: 27px;
+    top: 64px;
+    bottom: -56px;
+    width: 1px;
+    background: var(--line-strong);
+  }
+
+  .phase:last-of-type .phase-rail::after { display: none; }
+
+  .marker {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    display: grid;
+    place-items: center;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .marker.hot {
+    background: var(--pine);
+    border-color: var(--pine);
+    color: #FFFFFF;
+  }
+
+  .marker.done {
+    background: var(--pine-soft);
+    border-color: var(--pine);
+    color: var(--pine);
+    font-size: 24px;
+  }
+
+  :root[data-theme="dark"] .marker.hot { color: #0E1512; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .marker.hot { color: #0E1512; }
+  }
+
+  .phase-head {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 18px;
+  }
+
+  .phase-head h2 {
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+  }
+
+  .phase-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--ink-3);
+    padding-top: 2px;
+  }
+
+  .phase-facts b { color: var(--ink-2); font-weight: 600; }
+
+  .phase-goal {
+    margin: 0 0 20px;
+    color: var(--ink-2);
+    max-width: 66ch;
+  }
+
+  /* ---------- Tables ---------- */
+
+  .table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+    min-width: 640px;
+  }
+
+  thead th {
+    background: var(--surface-2);
+    text-align: left;
+    font-size: 11px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+    color: var(--ink-2);
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  tbody td:first-child { color: var(--ink); font-weight: 500; }
+
+  td.num, th.num {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--ink-3);
+  }
+
+  code {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .86em;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: .1em .38em;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+
+  /* ---------- Chips ---------- */
+
+  .chip {
+    display: inline-block;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+
+  .chip.block { background: var(--crimson-soft); color: var(--crimson); border-color: var(--crimson); }
+  .chip.fix { background: var(--amber-soft); color: var(--amber); border-color: var(--amber); }
+  .chip.new { background: var(--pine-soft); color: var(--pine); border-color: var(--pine); }
+
+  /* ---------- Gate ---------- */
+
+  .gate {
+    margin-top: 18px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: var(--surface-2);
+    border: 1px dashed var(--line-strong);
+    border-radius: 4px;
+    padding: 14px 18px;
+    font-size: 14.5px;
+    color: var(--ink-2);
+  }
+
+  .gate .gate-label {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding-top: 3px;
+    white-space: nowrap;
+  }
+
+  /* ---------- Two-col cards ---------- */
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .card h3 {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .card p { margin: 0; font-size: 14.5px; color: var(--ink-2); }
+
+  .card.picked { border-color: var(--pine); box-shadow: var(--shadow); }
+
+  .card .verdict {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--pine);
+  }
+
+  .card .verdict.no { color: var(--ink-3); }
+
+  /* ---------- Lists ---------- */
+
+  ul.tight {
+    margin: 12px 0 0;
+    padding-left: 20px;
+    color: var(--ink-2);
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    max-width: 68ch;
+  }
+
+  ul.tight li::marker { color: var(--pine); }
+
+  /* ---------- Milestones ---------- */
+
+  .miles {
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 20px;
+  }
+
+  .mile {
+    background: var(--surface);
+    padding: 18px 22px;
+    display: grid;
+    grid-template-columns: 108px 1fr;
+    gap: 20px;
+    align-items: baseline;
+  }
+
+  .mile .when {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--pine);
+    letter-spacing: .04em;
+  }
+
+  .mile .what { font-size: 15px; color: var(--ink-2); }
+  .mile .what b { color: var(--ink); font-weight: 600; }
+
+  footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--ink-3);
+    max-width: 68ch;
+  }
+
+  @media (max-width: 640px) {
+    .phase { grid-template-columns: 1fr; gap: 16px; }
+    .phase-rail { display: flex; align-items: center; gap: 14px; }
+    .phase-rail::after { display: none; }
+    .marker { width: 44px; height: 44px; font-size: 16px; }
+    .mile { grid-template-columns: 1fr; gap: 4px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+
+  a { color: var(--pine); }
+  a:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--pine);
+    outline-offset: 2px;
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Lộ trình sản phẩm · Hệ thống quản lý tạp hóa</div>
+    <h1>Từ đồ án đến <em>sản phẩm bán được</em></h1>
+    <p class="lede">
+      Kế hoạch 5 giai đoạn: chốt lỗi đang có, sửa những gì làm chưa tới, bổ sung thứ mọi tiệm tạp hóa
+      đều đòi hỏi, rồi đóng gói thành thứ có thể giao cho khách và thu tiền.
+    </p>
+    <div class="meta-row">
+      <span>NestJS + MongoDB + React ×2</span>
+      <span>Ước tính 18–24 tuần (một người, bán thời gian)</span>
+      <span>Cập nhật 29·08·2026</span>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="num ok">~70%</div>
+      <div class="lbl">nghiệp vụ cốt lõi của một cửa hàng đã có</div>
+    </div>
+    <div class="stat">
+      <div class="num warn">12</div>
+      <div class="lbl">lỗi phải sửa trước khi dám demo cho khách</div>
+    </div>
+    <div class="stat">
+      <div class="num warn">6</div>
+      <div class="lbl">tính năng mọi tiệm đều cần nhưng chưa có</div>
+    </div>
+    <div class="stat">
+      <div class="num ok">10/10</div>
+      <div class="lbl">collection đã tách dữ liệu theo cửa hàng — nền multi-tenant đã dựng xong</div>
+    </div>
+  </div>
+
+  <section class="band">
+    <h2>Tiến độ hiện tại</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Giai đoạn</th>
+            <th>Tiến độ</th>
+            <th>Ghi chú</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>0.5 — Nền tảng nhiều cửa hàng</td>
+            <td><span class="chip new">Xong</span></td>
+            <td>10/10 collection tách theo <code>storeId</code>, đã chuyển đổi 511 bản ghi thật, đã kiểm chứng cách ly</td>
+          </tr>
+          <tr>
+            <td>0 — Chặn máu</td>
+            <td><span class="chip fix">1 / 12</span></td>
+            <td>Mới xong việc gắn guard cho API nhà cung cấp — bắt buộc phải làm kèm multi-tenant</td>
+          </tr>
+          <tr>
+            <td>1 — Làm cho tới</td>
+            <td><span class="chip">0 / 8</span></td>
+            <td>Chưa bắt đầu</td>
+          </tr>
+          <tr>
+            <td>2 — Điều kiện cần để bán</td>
+            <td><span class="chip">0 / 8</span></td>
+            <td>Chưa bắt đầu</td>
+          </tr>
+          <tr>
+            <td>3 — Đóng gói sản phẩm</td>
+            <td><span class="chip">0 / 6</span></td>
+            <td>Nhẹ hơn kế hoạch gốc vì phần multi-tenant đã tách sang giai đoạn 0.5</td>
+          </tr>
+          <tr>
+            <td>4 — Pháp lý &amp; mở rộng</td>
+            <td><span class="chip">—</span></td>
+            <td>Chưa tới lúc</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout" style="margin-top:20px">
+      <p><strong>Việc đã làm ngoài lộ trình.</strong> Bộ tài liệu dự án (giới thiệu, đề xuất chức
+      năng, kịch bản kiểm thử); sửa 11 lỗi TypeScript khiến ứng dụng quản trị không build được —
+      trong đó có một lỗi kiểu thật khiến trang kiểm kê không dùng được; đổi chuỗi kết nối
+      MongoDB sang dạng không dùng SRV vì máy dev không phân giải được bản ghi SRV. Cả ba ứng dụng
+      hiện build sạch.</p>
+      <p><strong>Nên làm tiếp.</strong> Ba mục đầu của giai đoạn 0 — chặn xem/hủy đơn của người
+      khác, sửa tìm đơn theo số điện thoại, ẩn giá vốn khỏi API công khai. Cả ba đang lộ dữ liệu
+      thật ngay lúc này và mỗi mục chỉ tốn vài giờ.</p>
+    </div>
+  </section>
+
+  <section class="band">
+    <h2>Đang đứng ở đâu</h2>
+    <div class="prose">
+      <p>
+        Về mặt chức năng, hệ thống đã đi khá xa so với một đồ án thông thường: quản lý lô hàng và
+        hạn sử dụng theo FEFO, gợi ý nhập hàng có hệ số mùa vụ, đổi/trả có ràng buộc nghiệp vụ,
+        đơn online realtime. Đó là phần khó nhất và nó đã xong.
+      </p>
+      <p>
+        Nhưng chưa bán được, vì ba lý do tách bạch: <strong>dữ liệu có thể sai lệch</strong> khi
+        nhiều người dùng cùng lúc; <strong>thiếu bốn thứ căn bản</strong> mà chủ tiệm sẽ hỏi trong
+        năm phút đầu (in bill, quét mã vạch, nhập hàng từ Excel, dùng được trên điện thoại); và
+        <strong>chưa có cách giao sản phẩm</strong> — hiện mỗi cửa hàng sẽ cần một bản cài riêng do
+        bạn tự dựng tay.
+      </p>
+      <p>
+        Ba lý do đó chính là ba giai đoạn đầu của lộ trình dưới đây.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= PHASE 0 ================= -->
+  <section class="phase">
+    <div class="phase-rail"><div class="marker hot">0</div></div>
+    <div>
+      <div class="phase-head">
+        <div class="eyebrow">Chặn máu</div>
+        <h2>Sửa lỗi làm hỏng dữ liệu và lộ dữ liệu</h2>
+        <div class="phase-facts">
+          <span><b>2–3 tuần</b></span>
+          <span>1/12 đã xong</span>
+          <span>Không có mục nào được bỏ qua</span>
+        </div>
+      </div>
+      <p class="phase-goal">
+        Đây là nhóm duy nhất mà một lỗi thôi cũng đủ giết sản phẩm: chủ tiệm phát hiện tồn kho
+        sai một lần là mất niềm tin vĩnh viễn, và không thể lấy lại bằng tính năng mới.
+      </p>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Lỗi</th>
+              <th>Hậu quả với cửa hàng thật</th>
+              <th>Vị trí</th>
+              <th class="num">Ước tính</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Không có transaction khi tạo đơn / nhận hàng</td>
+              <td>Lỗi giữa chừng để lại đơn đã lưu nhưng kho trừ thiếu — không thể tự phát hiện</td>
+              <td><code>don-hang.dich-vu.ts</code></td>
+              <td class="num">4 ngày</td>
+            </tr>
+            <tr>
+              <td>Kiểm tra tồn kho không atomic</td>
+              <td>Hai máy bán cùng lúc món cuối cùng đều thành công, tồn kho âm</td>
+              <td><code>san-pham.dich-vu.ts</code></td>
+              <td class="num">2 ngày</td>
+            </tr>
+            <tr>
+              <td>Xem và hủy được đơn của người khác chỉ với ID</td>
+              <td>Lộ tên, số điện thoại, địa chỉ khách; ai cũng hủy được đơn</td>
+              <td><code>don-hang.dieu-khien.ts</code></td>
+              <td class="num">1 ngày</td>
+            </tr>
+            <tr>
+              <td><span class="chip new">Đã xong</span><br>API nhà cung cấp không có xác thực</td>
+              <td>Bất kỳ ai cũng thêm/sửa/xóa nhà cung cấp — đã gắn guard JWT và phân quyền</td>
+              <td><code>nha-cung-cap.dieu-khien.ts</code></td>
+              <td class="num">xong</td>
+            </tr>
+            <tr>
+              <td>API sản phẩm công khai trả cả giá vốn</td>
+              <td>Khách xem web thấy được giá nhập của cửa hàng</td>
+              <td><code>san-pham.dieu-khien.ts</code></td>
+              <td class="num">3 giờ</td>
+            </tr>
+            <tr>
+              <td>Tìm đơn theo số điện thoại trả về toàn bộ đơn</td>
+              <td>Nhân viên tra cứu thấy đơn của mọi khách khác</td>
+              <td><code>findByPhone()</code> — hàm tạm</td>
+              <td class="num">1 giờ</td>
+            </tr>
+            <tr>
+              <td>Sinh mã đơn bằng <code>countDocuments()</code></td>
+              <td>Trùng mã sau khi xóa đơn ⇒ lỗi 500 ngay giữa lúc bán hàng</td>
+              <td><code>don-hang.dich-vu.ts</code></td>
+              <td class="num">1 ngày</td>
+            </tr>
+            <tr>
+              <td>Còn endpoint đăng nhập khách chỉ bằng số điện thoại</td>
+              <td>Bỏ qua toàn bộ OTP — biết số là vào được tài khoản</td>
+              <td><code>auth/customer/login</code></td>
+              <td class="num">2 giờ</td>
+            </tr>
+            <tr>
+              <td>Không giới hạn tần suất gửi OTP</td>
+              <td>Bị spam, tốn tiền SMS khi đã đấu nhà cung cấp thật</td>
+              <td><code>xac-thuc.dich-vu.ts</code></td>
+              <td class="num">4 giờ</td>
+            </tr>
+            <tr>
+              <td>Xóa phiếu nhập đã nhận không hoàn kho</td>
+              <td>Tồn kho phồng lên không rõ nguyên nhân</td>
+              <td><code>nhap-hang.dich-vu.ts</code></td>
+              <td class="num">4 giờ</td>
+            </tr>
+            <tr>
+              <td>Hủy đơn qua đổi trạng thái không hoàn kho</td>
+              <td>Hàng đã hủy vẫn bị trừ khỏi kho</td>
+              <td><code>updateStatus()</code></td>
+              <td class="num">4 giờ</td>
+            </tr>
+            <tr>
+              <td>Trả hàng nhiều hơn số đã mua</td>
+              <td>Tồn kho tăng khống, doanh thu âm bất thường</td>
+              <td><code>createReturn()</code></td>
+              <td class="num">1 ngày</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="gate">
+        <span class="gate-label">Điều kiện qua</span>
+        <span>
+          Chạy hết kịch bản trong <code>KIEM_TRA_LUONG_NGHIEP_VU.md</code>, đặc biệt mục 13
+          (end-to-end 14 bước) và bất biến cuối cùng: <b>tồn kho sản phẩm luôn bằng tổng số lượng
+          các lô</b>. Chưa đạt thì chưa demo cho bất kỳ ai.
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PHASE 0.5 ================= -->
+  <section class="phase">
+    <div class="phase-rail"><div class="marker done">✓</div></div>
+    <div>
+      <div class="phase-head">
+        <div class="eyebrow">Đã dựng xong · 30·08·2026</div>
+        <h2>Nền tảng nhiều cửa hàng</h2>
+        <div class="phase-facts">
+          <span><b>Một hệ thống, nhiều cửa hàng</b></span>
+          <span>10/10 collection đã tách dữ liệu</span>
+          <span>Chuyển lên trước vì chạm mọi schema</span>
+        </div>
+      </div>
+      <p class="phase-goal">
+        Mỗi cửa hàng là một tenant, dữ liệu tách bằng <code>storeId</code>. Điều kiện bắt buộc
+        đi kèm: lọc được <b>chặn ở tầng truy vấn</b>, không dựa vào việc nhớ thêm điều kiện lọc
+        ở từng câu query — thiếu ngữ cảnh cửa hàng thì hệ thống báo lỗi ngay chứ không âm thầm
+        trả dữ liệu của mọi cửa hàng.
+      </p>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Hạng mục</th>
+              <th>Cách làm</th>
+              <th>Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Ngữ cảnh theo request</td>
+              <td><code>AsyncLocalStorage</code> giữ <code>storeId</code>; middleware khởi tạo, JWT ghi đè</td>
+              <td><span class="chip new">Xong</span></td>
+            </tr>
+            <tr>
+              <td>Chặn ở tầng truy vấn</td>
+              <td>Mongoose plugin chèn <code>storeId</code> vào find / count / update / delete / aggregate</td>
+              <td><span class="chip new">Xong</span></td>
+            </tr>
+            <tr>
+              <td>Unique index ghép</td>
+              <td><code>sku</code>, <code>barcode</code>, <code>orderNumber</code>, <code>purchaseNumber</code>, <code>soDienThoai</code>, <code>code</code></td>
+              <td><span class="chip new">Xong</span></td>
+            </tr>
+            <tr>
+              <td>Web khách hàng</td>
+              <td>Mã cửa hàng trên URL <code>/s/&lt;ma&gt;</code> làm basename router + header <code>X-Store-Code</code></td>
+              <td><span class="chip new">Xong</span></td>
+            </tr>
+            <tr>
+              <td>Chuyển dữ liệu cũ</td>
+              <td><code>npm run migrate:multi-store</code> — gán storeId, xóa index unique cũ, chạy lại được nhiều lần</td>
+              <td><span class="chip new">Xong</span></td>
+            </tr>
+            <tr>
+              <td>Đăng ký, dùng thử, gói cước</td>
+              <td>Mới có trường dữ liệu trên cửa hàng, chưa có luồng nghiệp vụ</td>
+              <td><span class="chip fix">Giai đoạn 3</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="gate">
+        <span class="gate-label">Còn phải kiểm chứng</span>
+        <span>
+          Tạo hai cửa hàng thử, đăng nhập chéo, xác nhận <b>không truy vấn nào nhìn thấy dữ liệu
+          của cửa hàng kia</b> — kể cả tra theo mã đơn, theo số điện thoại, và các API công khai.
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PHASE 1 ================= -->
+  <section class="phase">
+    <div class="phase-rail"><div class="marker">1</div></div>
+    <div>
+      <div class="phase-head">
+        <div class="eyebrow">Làm cho tới</div>
+        <h2>Sửa các tính năng đang có nhưng chưa đủ dùng</h2>
+        <div class="phase-facts">
+          <span><b>3–4 tuần</b></span>
+          <span>8 mục</span>
+          <span>Chức năng đã có, chỉ thiếu phần thực tế cần</span>
+        </div>
+      </div>
+      <p class="phase-goal">
+        Những thứ này đã tồn tại trong hệ thống nhưng dừng ở mức đủ để bảo vệ đồ án, chưa đủ để
+        một cửa hàng dùng hằng ngày trong sáu tháng.
+      </p>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Hạng mục</th>
+              <th>Hiện tại</th>
+              <th>Cần thành</th>
+              <th class="num">Ước tính</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Công nợ</td>
+              <td>Chỉ đánh dấu đơn nợ, thu nợ toàn phần</td>
+              <td>Sổ nợ theo khách, tổng dư nợ, <b>trả góp từng phần</b>, hạn nợ, nhắc nợ</td>
+              <td class="num">5 ngày</td>
+            </tr>
+            <tr>
+              <td>Đổi / trả hàng</td>
+              <td>Mỗi đơn chỉ đổi/trả được một lần, không giới hạn thời gian</td>
+              <td>Trả từng phần nhiều lần theo số lượng còn lại, có hạn đổi trả (vd 7 ngày)</td>
+              <td class="num">4 ngày</td>
+            </tr>
+            <tr>
+              <td>Cách tính lợi nhuận</td>
+              <td>Ba nơi tính giá vốn khác nhau, có nơi lấy tạm 75% giá bán</td>
+              <td>Một nguồn duy nhất — hai màn hình không được ra hai con số</td>
+              <td class="num">3 ngày</td>
+            </tr>
+            <tr>
+              <td>Danh sách đơn / sản phẩm</td>
+              <td>Trả toàn bộ bản ghi rồi lọc ở trình duyệt</td>
+              <td>Phân trang, sắp xếp, lọc phía server; báo cáo chuyển sang aggregation</td>
+              <td class="num">5 ngày</td>
+            </tr>
+            <tr>
+              <td>Nhật ký thao tác</td>
+              <td>Chỉ ghi phân hệ nhập hàng</td>
+              <td>Phủ đơn hàng, sản phẩm, kho, tài khoản, đăng nhập — dùng interceptor chung</td>
+              <td class="num">3 ngày</td>
+            </tr>
+            <tr>
+              <td>Xuất báo cáo</td>
+              <td>PDF ba dòng, chữ không dấu; không có Excel</td>
+              <td>PDF nhúng font tiếng Việt, có bảng chi tiết; thêm xuất Excel</td>
+              <td class="num">3 ngày</td>
+            </tr>
+            <tr>
+              <td>Phân loại khách</td>
+              <td>Phải bấm nút &ldquo;phân loại lại&rdquo; thủ công</td>
+              <td>Tự cập nhật hạng sau mỗi đơn hoàn thành</td>
+              <td class="num">1 ngày</td>
+            </tr>
+            <tr>
+              <td>Sao lưu</td>
+              <td>Xuất JSON 3 collection, không phục hồi được</td>
+              <td>Xuất đủ dữ liệu, có phục hồi, có sao lưu tự động hằng đêm</td>
+              <td class="num">3 ngày</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="gate">
+        <span class="gate-label">Điều kiện qua</span>
+        <span>
+          Đưa vào chạy thử tại <b>một tiệm quen, miễn phí</b>, ít nhất hai tuần. Đây là lần đầu
+          tiên hệ thống gặp dữ liệu thật và thói quen thật — hầu hết yêu cầu của giai đoạn 2 sẽ
+          đến từ đây chứ không phải từ suy đoán.
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PHASE 2 ================= -->
+  <section class="phase">
+    <div class="phase-rail"><div class="marker">2</div></div>
+    <div>
+      <div class="phase-head">
+        <div class="eyebrow">Điều kiện cần để bán</div>
+        <h2>Bổ sung thứ mọi tiệm tạp hóa đều đòi hỏi</h2>
+        <div class="phase-facts">
+          <span><b>5–7 tuần</b></span>
+          <span>8 mục</span>
+          <span>Thiếu bất kỳ mục nào là mất đơn hàng</span>
+        </div>
+      </div>
+      <p class="phase-goal">
+        Đây không phải tính năng &ldquo;hay thì có&rdquo;. Chủ tiệm so sánh bạn với KiotViet hay Sapo,
+        và những mục dưới đây là thứ họ kiểm tra trước khi hỏi giá.
+      </p>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Tính năng</th>
+              <th>Vì sao bắt buộc</th>
+              <th>Ghi chú kỹ thuật</th>
+              <th class="num">Ước tính</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>In hóa đơn máy in nhiệt K80</td>
+              <td>Khách mua xong phải có bill. Hiện <code>/invoice</code> chỉ trả JSON</td>
+              <td>Mẫu bill khổ 80mm, in qua trình duyệt hoặc ESC/POS</td>
+              <td class="num">5 ngày</td>
+            </tr>
+            <tr>
+              <td>Quét mã vạch bằng máy quét và camera</td>
+              <td>Không ai chịu gõ tay tên hàng khi có 5 khách đứng đợi</td>
+              <td>API <code>products/barcode/:barcode</code> đã có, cần phần nhập liệu</td>
+              <td class="num">3 ngày</td>
+            </tr>
+            <tr>
+              <td>Nhập danh mục hàng từ Excel</td>
+              <td>Tiệm có 500–2000 mặt hàng; nhập tay là lý do bỏ phần mềm ngay tuần đầu</td>
+              <td>Mẫu file + xem trước + báo lỗi từng dòng + gộp trùng SKU</td>
+              <td class="num">5 ngày</td>
+            </tr>
+            <tr>
+              <td>Giao diện dùng được trên điện thoại và tablet</td>
+              <td>Nhiều tiệm bán bằng điện thoại, không có máy tính ở quầy</td>
+              <td>Toàn bộ trang admin hiện gần như chỉ chạy desktop</td>
+              <td class="num">7 ngày</td>
+            </tr>
+            <tr>
+              <td>Ca làm việc và kiểm quỹ</td>
+              <td>Chủ cần biết ca nào bán bao nhiêu, tiền mặt thừa thiếu bao nhiêu</td>
+              <td>Mở ca, đóng ca, đếm tiền đầu/cuối ca, chênh lệch, báo cáo theo ca</td>
+              <td class="num">5 ngày</td>
+            </tr>
+            <tr>
+              <td>Đơn vị quy đổi (thùng / lốc / lon)</td>
+              <td>Đặc thù tạp hóa: nhập theo thùng, bán theo lon</td>
+              <td>Hệ số quy đổi trên sản phẩm, tồn kho quy về đơn vị nhỏ nhất</td>
+              <td class="num">4 ngày</td>
+            </tr>
+            <tr>
+              <td>Khuyến mãi và giá theo nhóm khách</td>
+              <td>Đã có hạng VIP nhưng chưa dùng để giảm giá</td>
+              <td>Mã giảm giá, giảm theo %/số tiền, mua X tặng Y, có thời hạn</td>
+              <td class="num">6 ngày</td>
+            </tr>
+            <tr>
+              <td>Thanh toán chuyển khoản bằng QR</td>
+              <td>Tỷ lệ chuyển khoản ở tiệm nhỏ giờ rất cao</td>
+              <td>Sinh QR VietQR theo số tiền; đối soát thủ công trước, tự động sau</td>
+              <td class="num">3 ngày</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="gate">
+        <span class="gate-label">Điều kiện qua</span>
+        <span>
+          <b>Ba cửa hàng dùng thật</b>, không phải bạn bè dùng thử cho vui, trong ít nhất một tháng
+          — và không tiệm nào bỏ giữa chừng. Đó là bằng chứng duy nhất đáng tin rằng sản phẩm bán được.
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PHASE 3 ================= -->
+  <section class="phase">
+    <div class="phase-rail"><div class="marker">3</div></div>
+    <div>
+      <div class="phase-head">
+        <div class="eyebrow">Đóng gói</div>
+        <h2>Biến hệ thống thành thứ có thể giao và thu tiền</h2>
+        <div class="phase-facts">
+          <span><b>4–6 tuần</b></span>
+          <span>7 mục</span>
+          <span>Phần lớn là việc mới, không phải sửa code cũ</span>
+        </div>
+      </div>
+      <p class="phase-goal">
+        Hết giai đoạn 2 bạn có một phần mềm tốt. Giai đoạn này biến nó thành một sản phẩm: khách
+        tự đăng ký, tự dùng thử, tự trả tiền, và bạn không phải dựng tay cho từng người.
+      </p>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Hạng mục</th>
+              <th>Nội dung</th>
+              <th class="num">Ước tính</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Tách dữ liệu theo cửa hàng</td>
+              <td>Thêm <code>storeId</code> vào toàn bộ collection, gắn vào JWT, chặn ở tầng truy vấn để không bao giờ lẫn dữ liệu giữa hai tiệm. <b>Phải chốt trước giai đoạn 1</b> vì nó chạm mọi schema</td>
+              <td class="num">8 ngày</td>
+            </tr>
+            <tr>
+              <td>Đăng ký, dùng thử, gói cước</td>
+              <td>Tự tạo cửa hàng, dùng thử 14–30 ngày, hết hạn thì khóa ghi nhưng vẫn cho xem và xuất dữ liệu</td>
+              <td class="num">6 ngày</td>
+            </tr>
+            <tr>
+              <td>Hướng dẫn khởi tạo</td>
+              <td>Wizard: tạo cửa hàng → nhập hàng từ Excel → tạo tài khoản nhân viên → bán thử một đơn</td>
+              <td class="num">4 ngày</td>
+            </tr>
+            <tr>
+              <td>Khách tự lấy lại dữ liệu của mình</td>
+              <td>Xuất toàn bộ dữ liệu bất cứ lúc nào. Đây là thứ xóa bỏ nỗi sợ &ldquo;giao dữ liệu cho người lạ&rdquo; khi chốt hợp đồng</td>
+              <td class="num">3 ngày</td>
+            </tr>
+            <tr>
+              <td>Trang giới thiệu và bảng giá</td>
+              <td>Landing page, ảnh chụp màn hình thật, bảng giá, tài khoản demo dùng thử ngay không cần đăng ký</td>
+              <td class="num">5 ngày</td>
+            </tr>
+            <tr>
+              <td>Hạ tầng vận hành</td>
+              <td>VPS, tên miền, SSL, CI/CD, theo dõi lỗi (Sentry), cảnh báo khi server chết, sao lưu tự động hằng đêm và <b>có thử phục hồi</b></td>
+              <td class="num">5 ngày</td>
+            </tr>
+            <tr>
+              <td>Tài liệu và hỗ trợ</td>
+              <td>Hướng dẫn có ảnh, vài video ngắn, kênh Zalo hỗ trợ, cam kết thời gian phản hồi</td>
+              <td class="num">4 ngày</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PHASE 4 ================= -->
+  <section class="phase">
+    <div class="phase-rail"><div class="marker">4</div></div>
+    <div>
+      <div class="phase-head">
+        <div class="eyebrow">Sau khi có khách trả tiền</div>
+        <h2>Tuân thủ pháp lý và mở rộng</h2>
+        <div class="phase-facts">
+          <span><b>Liên tục</b></span>
+          <span>Chỉ làm khi có khách yêu cầu</span>
+        </div>
+      </div>
+      <p class="phase-goal">
+        Mọi thứ ở đây đều hấp dẫn và đều là cái bẫy nếu làm sớm. Chỉ động vào khi có khách hàng
+        thật trả tiền và hỏi đến.
+      </p>
+
+      <ul class="tight">
+        <li><b>Hóa đơn điện tử</b> theo Nghị định 123 / Thông tư 78 — bắt buộc nếu bán cho hộ kinh doanh có mã số thuế; tích hợp qua nhà cung cấp trung gian (Viettel, VNPT, MISA).</li>
+        <li><b>Bảo vệ dữ liệu cá nhân</b> theo Nghị định 13/2023 — bạn đang lưu tên, số điện thoại, địa chỉ khách của cửa hàng; cần chính sách và cơ chế xóa theo yêu cầu.</li>
+        <li><b>Điều khoản sử dụng, chính sách bảo mật, hợp đồng mẫu</b> — kể cả bán một lần cũng phải có, nêu rõ trách nhiệm khi mất dữ liệu.</li>
+        <li><b>Nhiều chi nhánh, chuyển hàng giữa kho</b> — dành cho khách lớn hơn, và họ trả tiền nhiều hơn.</li>
+        <li><b>App di động cho chủ tiệm</b> — xem doanh thu từ xa; chỉ làm sau khi bản web đã có người trả tiền.</li>
+        <li><b>Tích điểm, chăm sóc khách hàng, thanh toán online</b> cho trang khách hàng.</li>
+        <li><b>Nâng cấp dự báo nhập hàng</b> — hệ số mùa vụ đang cứng trong code, nên đưa ra cấu hình và tính riêng theo từng ngành hàng.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ================= DECISION ================= -->
+  <section class="band">
+    <h2>Quyết định kiến trúc — đã chốt</h2>
+    <p class="prose">
+      Mô hình bán là lựa chọn ảnh hưởng tới toàn bộ lộ trình và càng để muộn càng đắt vì nó chạm
+      vào mọi schema. Đã chốt và đã dựng xong ở giai đoạn 0.5.
+    </p>
+
+    <div class="cards">
+      <div class="card picked">
+        <div class="verdict">Đã chọn và đã dựng</div>
+        <h3>Một hệ thống, nhiều cửa hàng</h3>
+        <p>
+          <code>storeId</code> trên mọi collection, mỗi tiệm là một tenant. Sửa lỗi một lần là tất
+          cả khách được vá; chi phí hạ tầng chia đều nên bán được giá thấp cho tiệm nhỏ.
+        </p>
+        <p>
+          Rủi ro đi kèm đã được xử lý bằng cách chặn lọc ở tầng truy vấn: thiếu ngữ cảnh cửa hàng
+          thì hệ thống ném lỗi ngay lúc phát triển, thay vì âm thầm trả dữ liệu của tenant khác
+          trên môi trường thật.
+        </p>
+      </div>
+      <div class="card">
+        <div class="verdict no">Không chọn</div>
+        <h3>Mỗi cửa hàng một bản cài riêng</h3>
+        <p>
+          Không phải sửa code ngay, dữ liệu tách bạch tuyệt đối, khách nào cũng có thể đòi tùy chỉnh riêng.
+        </p>
+        <p>
+          Nhưng đến bản thứ năm là phần lớn thời gian sẽ dành cho việc cập nhật từng bản một, và
+          giá bán phải cao mới bù nổi công vận hành.
+        </p>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:20px">
+      <p>
+        <strong>Tính trước cho ngành hàng khác.</strong> Cửa hàng có trường
+        <code>nganhHang</code> (tạp hóa, vật liệu xây dựng) để sau này bật/tắt tính năng và đổi
+        thuật ngữ theo ngành. Nguyên tắc: lõi hệ thống — sản phẩm, đơn hàng, nhập hàng, công nợ —
+        phải dùng chung cho mọi ngành; chỉ phần đặc thù mới rẽ nhánh. Hạn sử dụng và quản lý lô là
+        đặc thù thực phẩm, còn đơn vị quy đổi (thùng/lốc/lon ở tạp hóa, bao/tấn/m³ ở vật liệu) thì
+        dùng chung được nên đáng làm tổng quát ngay từ giai đoạn 2.
+      </p>
+      <p>
+        Ngược lại: <strong>đừng xây khung đa ngành trước khi bán được cho ngành đầu tiên.</strong>
+        Giữ cho lõi không bị khóa cứng vào tạp hóa là đủ.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= MILESTONES ================= -->
+  <section class="band">
+    <h2>Cột mốc kiểm chứng</h2>
+    <p class="prose">
+      Đừng đo tiến độ bằng số tính năng đã code. Đo bằng bốn mốc dưới đây — mỗi mốc là một câu
+      hỏi có thật, trả lời được mới đi tiếp.
+    </p>
+
+    <div class="miles">
+      <div class="mile">
+        <div class="when">Hết GĐ 0</div>
+        <div class="what"><b>Dữ liệu có đáng tin không?</b> Chạy hết bộ kịch bản nghiệp vụ, tồn kho khớp tuyệt đối sau mọi thao tác bán, trả, nhập, hủy.</div>
+      </div>
+      <div class="mile">
+        <div class="when">Hết GĐ 1</div>
+        <div class="what"><b>Một tiệm quen dùng được hai tuần không?</b> Miễn phí, bạn ngồi cạnh quan sát. Ghi lại mọi lần họ khựng lại — đó là danh sách việc thật.</div>
+      </div>
+      <div class="mile">
+        <div class="when">Hết GĐ 2</div>
+        <div class="what"><b>Ba tiệm lạ dùng một tháng mà không bỏ không?</b> Nếu có tiệm bỏ, hỏi cho ra lý do trước khi viết thêm bất kỳ dòng code nào.</div>
+      </div>
+      <div class="mile">
+        <div class="when">Hết GĐ 3</div>
+        <div class="what"><b>Có ai trả tiền không?</b> Khách đầu tiên trả tiền quan trọng hơn mọi tính năng ở giai đoạn 4.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= RISKS ================= -->
+  <section class="band">
+    <h2>Những việc đừng làm</h2>
+    <ul class="tight">
+      <li><b>Đừng đổi database.</b> Đã cân nhắc và đã chốt: chi phí viết lại quá lớn so với lợi ích, và MongoDB vốn hợp với mô hình đơn hàng có mảng nhúng ở đây.</li>
+      <li><b>Đừng làm app mobile trước khi bản web có khách trả tiền.</b> Nó nhân đôi khối lượng bảo trì trong khi chưa chứng minh được có người mua.</li>
+      <li><b>Đừng làm đa chi nhánh khi chưa có khách đầu tiên.</b> Tiệm tạp hóa một cửa hàng là thị trường bạn nhắm tới; đa chi nhánh là bài toán của phần mềm đắt hơn.</li>
+      <li><b>Đừng cạnh tranh bằng số lượng tính năng.</b> KiotViet, Sapo, Nhanh.vn đã đi trước nhiều năm. Chỗ trống nằm ở tiệm nhỏ thấy các phần mềm đó quá phức tạp và quá đắt — nên lợi thế của bạn phải là <b>đơn giản và rẻ</b>, và mọi tính năng thêm vào đều làm mòn lợi thế đó.</li>
+      <li><b>Đừng hứa hóa đơn điện tử khi chưa tích hợp.</b> Đây là phần có ràng buộc pháp lý, sai là khách chịu hậu quả thật.</li>
+    </ul>
+  </section>
+
+  <!-- ================= COST ================= -->
+  <section class="band">
+    <h2>Chi phí vận hành cần tính vào giá bán</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Khoản</th>
+            <th>Ghi chú</th>
+            <th class="num">Ước tính / tháng</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>VPS 4GB RAM</td>
+            <td>Chạy backend + MongoDB self-host cho vài chục cửa hàng đầu tiên</td>
+            <td class="num">300–600k</td>
+          </tr>
+          <tr>
+            <td>MongoDB Atlas (nếu không self-host)</td>
+            <td>Bản M0 miễn phí không dùng cho sản phẩm thật; M10 trở lên mới có sao lưu tự động</td>
+            <td class="num">~1.4tr</td>
+          </tr>
+          <tr>
+            <td>Tên miền + SSL</td>
+            <td>SSL dùng Let&rsquo;s Encrypt miễn phí</td>
+            <td class="num">~25k</td>
+          </tr>
+          <tr>
+            <td>SMS OTP</td>
+            <td>Chỉ phát sinh khi trang khách hàng có người dùng thật</td>
+            <td class="num">300–800đ / tin</td>
+          </tr>
+          <tr>
+            <td>Theo dõi lỗi, sao lưu ngoài</td>
+            <td>Sentry bản miễn phí đủ dùng giai đoạn đầu; sao lưu đẩy sang cloud storage</td>
+            <td class="num">0–200k</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="prose" style="margin-top:16px">
+      Với chi phí này, mức giá quanh 150–300 nghìn/tháng cho một cửa hàng là khả thi, và chỉ cần
+      khoảng mười khách là hòa vốn hạ tầng. Con số đó cũng cho biết vì sao mô hình nhiều tenant
+      trên một hệ thống là lựa chọn đúng ở phần trước.
+    </p>
+  </section>
+
+  <footer>
+    Ước tính thời gian tính cho một người làm bán thời gian, đã trừ hao thời gian sửa lỗi phát
+    sinh. Chi tiết kỹ thuật từng mục nằm trong <code>DE_XUAT_CHUC_NANG.md</code>; kịch bản kiểm
+    thử tương ứng nằm trong <code>KIEM_TRA_LUONG_NGHIEP_VU.md</code> của kho mã nguồn.
+  </footer>
+
+</div>
