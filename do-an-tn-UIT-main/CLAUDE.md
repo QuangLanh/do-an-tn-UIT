@@ -21,6 +21,9 @@ npm run build && npm run start:prod
 npm run lint               # eslint --fix over src/apps/libs/test
 npm run seed               # wipes `products` collection, reseeds from du-lieu-san-pham.json
 npm run dedupe:products    # merge duplicate products (src/cong-cu/gop-san-pham-trung.ts)
+npm run tao-admin          # tạo admin đầu tiên (POST /auth/register là admin-only, không tự bootstrap được)
+npm run export:json        # xuất mọi collection ra du-lieu-mau/*.json (Extended JSON)
+npm run import:json        # nạp lại; bỏ qua collection đã có dữ liệu trừ khi --ghi-de
 
 # Admin app (from front_end_project/) / Customer app (from customer_app/)
 npm run dev

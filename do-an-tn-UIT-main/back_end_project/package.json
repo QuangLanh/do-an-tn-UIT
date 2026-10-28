@@ -20,7 +20,10 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "migrate:multi-store": "ts-node src/cong-cu/chuyen-doi-da-cua-hang.ts"
+    "migrate:multi-store": "ts-node src/cong-cu/chuyen-doi-da-cua-hang.ts",
+    "export:json": "ts-node src/cong-cu/xuat-du-lieu-json.ts",
+    "import:json": "ts-node src/cong-cu/nap-du-lieu-json.ts",
+    "tao-admin": "ts-node src/cong-cu/tao-tai-khoan-admin.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
